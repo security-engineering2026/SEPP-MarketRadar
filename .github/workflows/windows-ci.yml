@@ -29,6 +29,15 @@ jobs:
         shell: pwsh
         run: python -m pytest -q
 
+      - name: Clean generated test artifacts
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path . -Recurse -Directory -Force |
+            Where-Object { $_.Name -eq '__pycache__' -or $_.Name -eq '.pytest_cache' } |
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+          Get-ChildItem -Path . -Recurse -File -Filter '*.pyc' -Force |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+
       - name: Product audit
         shell: pwsh
         run: python -B tools/product_audit.py
