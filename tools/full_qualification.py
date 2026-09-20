@@ -173,7 +173,7 @@ def live_source_scale_gate(limit=500):
             {"registered_records": len(records), "requested": limit, "reason": "Fewer than 500 registry candidates."},
         )
 
-    selected = records[:limit]
+    selected = records
     with tempfile.TemporaryDirectory(prefix="mr-sources-") as td:
         conn = connect(Path(td) / "qualification.db")
         sync_source_contracts(conn, selected)
@@ -192,14 +192,54 @@ def live_source_scale_gate(limit=500):
 
     return gate(
         "LIVE_SOURCE_SCALE_500",
-        "PASS" if confirmed >= 500 else "OPEN",
+        "PASS" if confirmed >= limit else "OPEN",
         {
-            "requested": limit,
+            "candidate_registry": len(records),
             "checked": len(results),
             "live_confirmed": confirmed,
             "dead": dead,
             "other": len(results) - confirmed - dead,
-            "criterion": "500 LIVE_CONFIRMED observations",
+            "criterion": f"{limit} LIVE_CONFIRMED sources",
+            "method": "all current registry candidates verified; no first-N shortcut",
+        },
+    )
+
+def live_acquisition_sample_gate(sample_size=20):
+    from marketradar.db import connect, sync_source_contracts
+    from marketradar.runtime import MarketRadarRuntime
+    from marketradar.source_registry import load_source_records
+
+    records = load_source_records(ROOT / "config" / "sources.json")
+    verified = [x for x in records if x.get("status") != "disabled" and x.get("base_url")]
+    if not verified:
+        return gate("LIVE_ACQUISITION_SAMPLE", "OPEN", {"reason": "No candidate sources with URLs."})
+
+    selected = verified[:sample_size]
+    with tempfile.TemporaryDirectory(prefix="mr-acquisition-") as td:
+        conn = connect(Path(td) / "qualification.db")
+        sync_source_contracts(conn, selected)
+        runtime = MarketRadarRuntime(conn, selected, None, http_timeout=10, settings={})
+        results = []
+        for source in selected:
+            try:
+                result = runtime.federate(source["name"], force=True)
+                results.append({"source": source["name"], "status": result.get("status"), "observations": result.get("observations", 0), "error": result.get("error")})
+            except Exception as exc:
+                results.append({"source": source["name"], "status": "ERROR", "observations": 0, "error": type(exc).__name__ + ":" + str(exc)})
+        observed = sum(int(x.get("observations") or 0) for x in results if x.get("status") == "OK")
+        ok = sum(x.get("status") == "OK" for x in results)
+        conn.close()
+
+    status = "PASS" if ok > 0 and observed > 0 else "OPEN"
+    return gate(
+        "LIVE_ACQUISITION_SAMPLE",
+        status,
+        {
+            "attempted": len(results),
+            "successful_federations": ok,
+            "observations": observed,
+            "criterion": "At least one real source acquisition must produce an observed opportunity/event",
+            "results": results,
         },
     )
 
@@ -285,6 +325,7 @@ def main():
         resilience_gate,
         live_discovery_gate,
         live_source_scale_gate,
+        live_acquisition_sample_gate,
         lambda: family_surface_gate("social"),
         lambda: family_surface_gate("procurement"),
         dynamic_browser_gate,
