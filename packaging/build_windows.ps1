@@ -31,7 +31,7 @@ Copy-Item (Join-Path $PSScriptRoot "install_scheduled_scan.ps1") (Join-Path $por
 $smokeRoot = Join-Path $env:RUNNER_TEMP "SEPP-MarketRadar-Smoke-$version"
 if (Test-Path $smokeRoot) { Remove-Item $smokeRoot -Recurse -Force -ErrorAction SilentlyContinue }
 New-Item -ItemType Directory -Force -Path $smokeRoot | Out-Null
-Copy-Item $portableRoot $smokeRoot -Recurse -Force
+Copy-Item (Join-Path $portableRoot "*") $smokeRoot -Recurse -Force
 New-Item -ItemType File -Force -Path (Join-Path $smokeRoot ".portable") | Out-Null
 
 function Remove-SmokeRootWithRetry([string]$Path) {
@@ -49,6 +49,7 @@ function Remove-SmokeRootWithRetry([string]$Path) {
 
 try {
   $smokeExe = Join-Path $smokeRoot "MarketRadar.exe"
+  if (-not (Test-Path $smokeExe)) { throw "Portable smoke EXE missing at $smokeExe" }
   & $smokeExe --smoke-test
   if ($LASTEXITCODE -ne 0) { throw "Portable EXE smoke test failed: $LASTEXITCODE" }
   & $smokeExe --ui-smoke-test
