@@ -120,6 +120,10 @@ jobs:
           if (Test-Path $target) { Remove-Item $target -Recurse -Force -ErrorAction SilentlyContinue }
           Start-Process -FilePath $installer.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$target" -Wait -PassThru | Out-Null
           if (-not (Test-Path "$target/MarketRadar.exe")) { throw "Installed EXE missing" }
+          $installedData = Join-Path $env:RUNNER_TEMP "MarketRadarInstalledData"
+          if (Test-Path $installedData) { Remove-Item $installedData -Recurse -Force -ErrorAction SilentlyContinue }
+          New-Item -ItemType Directory -Force -Path $installedData | Out-Null
+          $env:MARKETRADAR_DATA_ROOT = $installedData
           & "$target/MarketRadar.exe" --smoke-test
           $smokeExit = $LASTEXITCODE
           $installedLog = Join-Path $target "installed-smoke.log"
