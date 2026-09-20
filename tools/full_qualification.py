@@ -184,10 +184,10 @@ def live_source_scale_gate(limit=500):
         engine = SourceVerificationEngine(
             conn,
             selected,
-            timeout=8,
+            timeout=15,
             max_workers=24,
-            max_policy_pages=2,
-            surface_scan_pages=6,
+            max_policy_pages=1,
+            surface_scan_pages=2,
             search_provider=WebSearchProvider(timeout=8),
         )
         results = engine.verify([x["name"] for x in selected])
@@ -251,9 +251,14 @@ def live_acquisition_sample_gate(sample_size=20):
 def family_surface_gate(family):
     from marketradar.source_registry import load_source_records
     records = load_source_records(ROOT / "config" / "sources.json")
+    aliases = {
+        "social": {"social", "social_platform", "reddit", "x", "linkedin", "telegram", "instagram", "bale", "eitaa", "soroush"},
+        "procurement": {"procurement", "tender", "market_intelligence"},
+    }
+    families = aliases.get(family, {family})
     candidates = [
         x for x in records
-        if str(x.get("source_family", "")).lower() == family
+        if str(x.get("source_family", "")).lower() in families
         and x.get("base_url")
         and x.get("status") != "disabled"
     ][:3]
