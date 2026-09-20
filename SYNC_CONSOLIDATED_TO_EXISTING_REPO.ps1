@@ -10,8 +10,8 @@ if ($remote -notmatch 'github\.com/security-engineering2026/SEPP-MarketRadar(?:\
     throw "Unexpected origin remote: $remote"
 }
 $head = (git rev-parse --short HEAD).Trim()
-if ($head -ne 'f957a12') {
-    throw "Expected existing repository HEAD f957a12 before consolidation, found $head. Abort without changes."
+if ($head -ne '92e8881') {
+    throw "Expected existing repository HEAD 92e8881 before consolidation, found $head. Abort without changes."
 }
 
 Write-Host "Syncing complete consolidated candidate into existing Git repository..."
@@ -46,7 +46,7 @@ git status --short
 
 git diff --cached --stat
 
-git commit -m 'Fix Windows PyInstaller spec root resolution'
+git commit -m 'Align Windows release integrity test with spec root resolution'
 git push origin main
 
 Write-Host 'Consolidated source pushed. Dispatching Windows Release validation...'
@@ -68,4 +68,5 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host 'WINDOWS RELEASE VALIDATION PASS'
 Write-Host 'Manual validation completed; no GitHub Release was published.'
+
 

@@ -67,4 +67,5 @@ def test_operational_gate_does_not_call_discovered_opportunity_execution_ready()
 def test_provider_spec_points_to_repository_root():
     spec=Path(__file__).parents[1]/"packaging"/"marketradar.spec"
     text=spec.read_text(encoding="utf-8")
-    assert "parent.parent" in text
+    assert "ROOT = Path(SPECPATH).resolve().parent" in text
+    assert 'ROOT / "desktop" / "MarketRadar.pyw"' in text

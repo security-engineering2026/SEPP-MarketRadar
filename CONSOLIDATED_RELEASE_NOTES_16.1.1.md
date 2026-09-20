@@ -17,3 +17,10 @@ This archive consolidates the source state that produced the GitHub Windows CI P
 - Windows builder uses `python -m PyInstaller` rather than the Windows `py` launcher.
 
 This archive is a consolidated candidate, not a claim that the Windows Release workflow itself has already passed end-to-end.
+
+
+## Windows Release Validation follow-up
+
+- Corrected the repository-integrity test to validate the actual PyInstaller spec root resolution: `SPECPATH/parent` (the spec is under `packaging/` and the desktop entry point is under `desktop/`).
+- This follows GitHub Windows Release validation run `35455069574`, where the full Windows test suite reached one remaining stale integrity assertion before the EXE build stage.
+
