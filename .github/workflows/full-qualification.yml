@@ -16,7 +16,6 @@ permissions:
 concurrency:
   group: full-qualification-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
-  queue: max
 
 jobs:
   windows-qualification:
