@@ -62,23 +62,29 @@ jobs:
           Get-ChildItem -Path . -Recurse -File -Filter '*.pyc' -Force |
             Remove-Item -Force -ErrorAction SilentlyContinue
       - name: Product audit
+        if: always()
         shell: pwsh
         run: python -B tools/product_audit.py
       - name: Release audit
+        if: always()
         shell: pwsh
         run: python -B tools/release_audit.py
       - name: Build portable EXE and smoke test
+        if: always()
         shell: pwsh
         run: ./packaging/build_windows.ps1
 
       - name: Capture UI visual qualification
+        if: always()
         shell: pwsh
         run: python -B tools/ui_visual_smoke.py
       - name: Install Inno Setup
+        if: always()
         shell: pwsh
         run: choco install innosetup -y --no-progress
 
       - name: Build installer
+        if: always()
         shell: pwsh
         run: |
           $version = (python -c "from marketradar import __version__; print(__version__)").Trim()
@@ -86,6 +92,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
 
       - name: Installer install / EXE / UI / uninstall smoke
+        if: always()
         shell: pwsh
         run: |
           $installer = Get-ChildItem release/installer/*Setup-*.exe | Select-Object -First 1
@@ -104,11 +111,25 @@ jobs:
           if (Test-Path "$target/MarketRadar.exe") { throw "Uninstall did not remove MarketRadar.exe" }
 
       - name: Build source archive
+        if: always()
         shell: pwsh
         run: |
           $version = (python -c "from marketradar import __version__; print(__version__)").Trim()
           New-Item -ItemType Directory -Force -Path release/source | Out-Null
           git archive --format=zip --output="release/source/SEPP-MarketRadar-v$version-SOURCE.zip" "HEAD"
+
+      - name: Final qualification decision
+        if: always()
+        shell: pwsh
+        run: |
+          if (-not (Test-Path qualification-artifacts/full_qualification.json)) {
+            throw "Full qualification report missing"
+          }
+          $r = Get-Content qualification-artifacts/full_qualification.json -Raw | ConvertFrom-Json
+          Write-Host ("PASS=" + $r.summary.pass + " OPEN=" + $r.summary.open + " FAIL=" + $r.summary.fail)
+          if ([int]$r.summary.open -gt 0 -or [int]$r.summary.fail -gt 0) {
+            throw "FULL_QUALIFICATION_NOT_FINAL"
+          }
 
       - name: Upload qualification artifacts
         if: always()
@@ -157,3 +178,4 @@ jobs:
           path: |
             android-qualification/**
             android-companion/app/build/outputs/apk/debug/*.apk
+
