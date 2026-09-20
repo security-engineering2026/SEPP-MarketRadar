@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.*
+import android.graphics.Color
 import android.graphics.Typeface
 import android.text.InputType
 import java.net.HttpURLConnection
