@@ -183,8 +183,9 @@ def live_source_scale_gate(limit=500):
             conn,
             selected,
             timeout=8,
-            max_workers=16,
-            max_policy_pages=3,
+            max_workers=24,
+            max_policy_pages=2,
+            surface_scan_pages=6,
             search_provider=WebSearchProvider(timeout=8),
         )
         results = engine.verify([x["name"] for x in selected])
