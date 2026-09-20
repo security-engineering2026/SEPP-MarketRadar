@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - 'qualification/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
   schedule:
     - cron: '17 2 * * *'
@@ -14,6 +16,7 @@ permissions:
 
 jobs:
   windows-qualification:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     name: Windows qualification
     runs-on: windows-latest
     timeout-minutes: 45
@@ -26,37 +29,29 @@ jobs:
       QUALIFY_PUSH_URL: ${{ secrets.QUALIFY_PUSH_URL }}
       PYTHONUNBUFFERED: '1'
       QUALIFICATION_ARTIFACT_DIR: qualification-artifacts
-
     steps:
       - uses: actions/checkout@v7
-
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-
       - name: Install dependencies
         shell: pwsh
         run: python -m pip install -r requirements-dev.txt
-
       - name: Compile
         shell: pwsh
         run: python -m compileall -q marketradar tools
-
       - name: Core regression suite
         shell: pwsh
         run: python -m pytest -q
-
       - name: Optional Playwright runtime
         if: ${{ env.QUALIFY_DYNAMIC_URL != '' }}
         shell: pwsh
         run: |
           python -m pip install playwright
           python -m playwright install chromium
-
       - name: Full qualification gates
         shell: pwsh
         run: python -B tools/full_qualification.py
-
       - name: Clean generated test artifacts
         if: always()
         shell: pwsh
@@ -66,19 +61,15 @@ jobs:
             Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
           Get-ChildItem -Path . -Recurse -File -Filter '*.pyc' -Force |
             Remove-Item -Force -ErrorAction SilentlyContinue
-
       - name: Product audit
         shell: pwsh
         run: python -B tools/product_audit.py
-
       - name: Release audit
         shell: pwsh
         run: python -B tools/release_audit.py
-
       - name: Build portable EXE and smoke test
         shell: pwsh
         run: ./packaging/build_windows.ps1
-
       - name: Upload qualification artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -90,26 +81,22 @@ jobs:
             reports/**
 
   android-qualification:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     name: Android qualification
     runs-on: ubuntu-latest
     timeout-minutes: 45
-
     steps:
       - uses: actions/checkout@v7
-
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-
       - uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '8.10'
-
       - name: Assemble Android companion
         shell: bash
         run: gradle -p android-companion assembleDebug
-
       - name: Android emulator E2E
         uses: ReactiveCircus/android-emulator-runner@v2.38.0
         with:
@@ -120,7 +107,6 @@ jobs:
           disable-animations: true
           emulator-options: -no-snapshot -no-window -no-boot-anim -gpu swiftshader_indirect
           script: bash tools/android_e2e.sh
-
       - name: Upload Android qualification artifact
         if: always()
         uses: actions/upload-artifact@v4
