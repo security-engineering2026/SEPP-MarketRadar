@@ -1,0 +1,30 @@
+{
+  "version": "16.1.1",
+  "test_collection": 264,
+  "pytest": {
+    "passed": 263,
+    "skipped": 1,
+    "failed": 0,
+    "errors": 0
+  },
+  "compileall": "PASS",
+  "release_audit": {
+    "status": "PASS",
+    "errors": [],
+    "sources": 679,
+    "active": 48,
+    "invalid": 0,
+    "warnings": 49
+  },
+  "product_audit": "PASS",
+  "architecture_audit": "PASS",
+  "windows_locking_hotfix": "PASS_LOCAL_REGRESSION",
+  "external_gates": {
+    "windows_native_e2e": "NOT_EXECUTED",
+    "live_source_verification": "NOT_EXECUTED",
+    "external_engine_execution": "NOT_EXECUTED",
+    "android_device_e2e": "NOT_EXECUTED",
+    "external_application_submission": "NOT_EXECUTED",
+    "external_payment_settlement": "NOT_EXECUTED"
+  }
+}

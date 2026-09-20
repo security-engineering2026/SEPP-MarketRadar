@@ -1,0 +1,10 @@
+{
+  "version": "4.20.0",
+  "architecture_ready": true,
+  "live_discovery_proven": false,
+  "reason": "No configured reachable live search provider in the build environment.",
+  "supported_provider_paths": ["Brave", "Bing", "Serper", "SearXNG-compatible local endpoint"],
+  "windows_primary": true,
+  "android_core_dependency": false,
+  "next_live_test": "Run SearXNG on Windows, set SEARXNG_URL, run tools/live_search_doctor.py, then autonomous-discovery --search-provider searxng"
+}

@@ -1,0 +1,2 @@
+# Runtime dependency: defusedxml is used for bounded, hardened XML parsing.
+defusedxml>=0.7.1,<0.8

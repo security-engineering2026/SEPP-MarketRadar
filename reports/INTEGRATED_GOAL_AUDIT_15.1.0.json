@@ -1,0 +1,59 @@
+{
+  "version": "15.1.0",
+  "release_type": "INTEGRATED_CANDIDATE",
+  "generated_from": "SEPP-MarketRadar-15.0.0-FINAL-OPERATIONAL + POLICY-INTELLIGENCE-PATCH + verified working-session changes",
+  "local_verification": {
+    "pytest": "PASS: all tests passed; 1 skip",
+    "compileall": "PASS",
+    "product_audit_pass": true,
+    "release_hardening_pass": true,
+    "fresh_final_verification_pass": true
+  },
+  "source_pool_inventory": {
+    "configured_records": 679,
+    "unique_hosts": 600,
+    "duplicate_host_groups": 11,
+    "meaning": "discovery inventory; not execution eligibility"
+  },
+  "architecture_completed": [
+    "source lane classification: execution / market-intelligence / blacklist / review",
+    "hourly project scan cadence and 12-hour market-intelligence cadence",
+    "canonical host deduplication for runtime scanning",
+    "Iran-compatible foreign execution policy with no-document-KYC and crypto evidence gate",
+    "domestic Iranian execution policy",
+    "blacklist archive without deletion",
+    "Work Taxonomy and Task Understanding",
+    "Python, Android, Web Bug Bounty, Android Bug Bounty, Services recommendation domains",
+    "user level/course/skills based suitability filter",
+    "Top 7 with 3 visible by default",
+    "provider-aware capabilities with manual fallback",
+    "independent Provider/Engine manifests",
+    "manual request route and automatic readiness route",
+    "market-intelligence Product Build Specs"
+  ],
+  "external_gates_open": [
+    "live network verification of the source pool on Windows",
+    "real hourly scan behavior over eligible live sources",
+    "real twice-daily market-intelligence scan behavior over live sources",
+    "actual execution by the future standalone Engines",
+    "Windows EXE/installer and clean-machine E2E verification"
+  ],
+  "important_warnings": [
+    "DUPLICATE_SOURCE_HOSTS:api.hh.ru,bugbounty.bi.zone,bugloud.com,hackenproof.com,tumar.one,wellfound.com,weworkremotely.com,www.gulftalent.com,www.linkedin.com,www.talent.com,www.tokyodev.com"
+  ],
+  "product_audit_warnings": [
+    "COVERAGE_TARGET_GAP:Russia:8/10",
+    "COVERAGE_TARGET_GAP:Türkiye:7/10",
+    "COVERAGE_TARGET_GAP:Qatar:7/8",
+    "COVERAGE_TARGET_GAP:Oman:6/8",
+    "COVERAGE_TARGET_GAP:Bahrain:6/8",
+    "COVERAGE_TARGET_GAP:China:8/10",
+    "COVERAGE_TARGET_GAP:Taiwan:4/5",
+    "COVERAGE_TARGET_GAP:Malaysia:6/8",
+    "COVERAGE_TARGET_GAP:Australia:6/8",
+    "COVERAGE_TARGET_GAP:New Zealand:7/8",
+    "COVERAGE_TARGET_GAP:Caucasus:7/8",
+    "COVERAGE_TARGET_GAP:Central Asia:5/10",
+    "BUG_BOUNTY_DISCOVERY_TARGET_GAP"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "version": "16.1.1",
+  "generated_from": "config/sources.json",
+  "sources": 679,
+  "active": 48,
+  "daily": 20,
+  "daily_execution_ready": 0,
+  "global_discovery": 87,
+  "needs_analysis": 556,
+  "blocked_iran": 15,
+  "verification_counts": {
+    "UNVERIFIED": 664,
+    "VERIFIED_BLOCKED_IRAN": 15
+  },
+  "updated_for": "final jury round 16.1.0"
+}

@@ -1,0 +1,4 @@
+SEPP-MarketRadar 16.1.1 FINAL
+Basis: SEPP-MarketRadar-15.0.0-FINAL-OPERATIONAL + cumulative 10-15 day architecture/bugfix integration + final jury remediation cycle.
+Local verification evidence: PASS (263 passed, 1 skipped from 264 collected; compileall PASS; release audit PASS; product audit PASS; architecture audit PASS).
+External evidence gates: Windows native E2E, live source verification, 500+ live verification, external engine execution, Android device E2E, external application/payment remain NOT EXECUTED in the current build environment.

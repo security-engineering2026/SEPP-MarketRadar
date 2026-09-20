@@ -1,0 +1,183 @@
+{
+  "version": 4,
+  "search_limit_per_query": 8,
+  "max_queries_per_cycle": 200,
+  "country_batch_size": 50,
+  "crawl_result_pages": true,
+  "max_crawl_pages_per_cycle": 80,
+  "max_outbound_links_per_page": 40,
+  "queries": [
+    {
+      "id": "global_forums_experience",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "community",
+      "q": "\"freelance platform\" forum experience KYC payout payment"
+    },
+    {
+      "id": "global_bug_forums",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "community",
+      "q": "\"bug bounty\" forum experience payout KYC platform"
+    },
+    {
+      "id": "global_review_forums",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "community",
+      "q": "\"freelance\" \"platform\" forum review payment withdrawal"
+    },
+    {
+      "id": "global_hashtags",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "community",
+      "q": "#freelance #bugbounty #remotework #KYC #payout platform"
+    },
+    {
+      "id": "global_security_txt",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "bug_bounty",
+      "q": "\"security.txt\" \"responsible disclosure\" \"bug bounty\""
+    },
+    {
+      "id": "iran_fa_jobs",
+      "country": "Iran",
+      "region": "Iran",
+      "language": "fa",
+      "family": "jobs",
+      "q": "ایران سایت کاریابی استخدام برنامه نویسی فریلنسری پروژه"
+    },
+    {
+      "id": "iran_fa_forum",
+      "country": "Iran",
+      "region": "Iran",
+      "language": "fa",
+      "family": "community",
+      "q": "ایران انجمن تالار گفتگو تجربه فریلنسری باگ بانتی احراز هویت پرداخت"
+    },
+    {
+      "id": "iran_fa_hashtag",
+      "country": "Iran",
+      "region": "Iran",
+      "language": "fa",
+      "family": "community",
+      "q": "#فریلنسری #باگ_بانتی #freelance #bugbounty #remotework #پرداخت #احراز_هویت #کسب_درآمد"
+    },
+    {
+      "id": "iran_fa_social",
+      "country": "Iran",
+      "region": "Iran",
+      "language": "fa",
+      "family": "social",
+      "q": "ایران پیام رسان شبکه اجتماعی روبیکا ایتا بله سروش گپ آی گپ"
+    }
+  ],
+  "country_templates": [
+    {
+      "family": "jobs",
+      "template": "\"{country}\" freelance developer jobs platform"
+    },
+    {
+      "family": "bug_bounty",
+      "template": "\"{country}\" bug bounty vulnerability disclosure VDP"
+    },
+    {
+      "family": "community",
+      "template": "\"{country}\" forum freelance platform experience payment KYC"
+    },
+    {
+      "family": "community",
+      "template": "\"{country}\" forum bug bounty payout experience"
+    },
+    {
+      "family": "community",
+      "template": "\"{country}\" #freelance #bugbounty #remotework"
+    },
+    {
+      "family": "policy",
+      "template": "\"{country}\" platform Iran KYC payment payout restrictions"
+    }
+  ],
+  "community_domains": [
+    "reddit.com",
+    "stackoverflow.com",
+    "stackexchange.com",
+    "quora.com",
+    "news.ycombinator.com"
+  ],
+  "intelligence": {
+    "operator_support": [
+      "site:",
+      "exact_phrase",
+      "-exclusion",
+      "after:",
+      "before:"
+    ],
+    "adaptive_ranking": true,
+    "community_as_sensor": true,
+    "evidence_graph": true,
+    "multi_engine_attribution": true
+  },
+  "priority_regions": [
+    {
+      "country": "Iran",
+      "languages": [
+        "fa",
+        "multi"
+      ],
+      "families": [
+        "jobs",
+        "freelance",
+        "marketplace",
+        "procurement",
+        "bug_bounty",
+        "community",
+        "social"
+      ],
+      "priority_boost": 5.0,
+      "reason": "local execution and payment advantage; continuous coverage priority"
+    }
+  ],
+  "priority_queries": [
+    {
+      "id": "iran_fa_freelance",
+      "country": "Iran",
+      "region": "Iran",
+      "language": "fa",
+      "family": "freelance",
+      "q": "ایران پلتفرم فریلنسری پروژه برنامه نویسی طراحی تایپ ترجمه اکسل pdf word powerpoint"
+    },
+    {
+      "id": "iran_fa_marketplace",
+      "country": "Iran",
+      "region": "Iran",
+      "language": "fa",
+      "family": "marketplace",
+      "q": "ایران بازار پروژه خدمات آنلاین فریلنسری سایت سفارش پروژه"
+    },
+    {
+      "id": "iran_fa_procurement",
+      "country": "Iran",
+      "region": "Iran",
+      "language": "fa",
+      "family": "procurement",
+      "q": "ایران مناقصه مزایده RFP تامین خدمات نرم افزار پیمانکاری آنلاین"
+    },
+    {
+      "id": "iran_fa_services",
+      "country": "Iran",
+      "region": "Iran",
+      "language": "fa",
+      "family": "services",
+      "q": "ایران تایپ ترجمه OCR PDF Word Excel PowerPoint ورود داده پروژه آنلاین"
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "architecture_module:taxonomy.py",
+      "status": "PASS"
+    },
+    {
+      "name": "architecture_module:engine_contract.py",
+      "status": "PASS"
+    },
+    {
+      "name": "architecture_module:foreign_language.py",
+      "status": "PASS"
+    },
+    {
+      "name": "architecture_module:source_workflow.py",
+      "status": "PASS"
+    },
+    {
+      "name": "architecture_module:source_identity.py",
+      "status": "PASS"
+    },
+    {
+      "name": "architecture_module:policy_evidence.py",
+      "status": "PASS"
+    },
+    {
+      "name": "source_pool_500_benchmark",
+      "status": "PASS",
+      "count": 679
+    },
+    {
+      "name": "engine_registry",
+      "status": "PASS",
+      "missing": []
+    },
+    {
+      "name": "engine_standalone_contract",
+      "status": "PASS"
+    },
+    {
+      "name": "windows_py_launcher",
+      "status": "PASS"
+    },
+    {
+      "name": "static_eval_exec_scan",
+      "status": "PASS",
+      "files": []
+    }
+  ]
+}

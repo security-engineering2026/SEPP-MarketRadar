@@ -1,0 +1,18 @@
+{
+  "version": "4.20.0",
+  "cycles": [
+    {
+      "cycle": 1,
+      "queries": 200,
+      "coverage_entities_queried": 50,
+      "candidates": 0,
+      "new_sources": 0,
+      "verified": 0,
+      "blocked": 0,
+      "live": 0,
+      "errors": 8
+    }
+  ],
+  "new_sources_total": 0,
+  "generated_at": "2026-09-11T10:58:33.240053+00:00"
+}

@@ -1,0 +1,15 @@
+{
+  "name": "User",
+  "headline": "Python / Android / Security Engineering",
+  "summary": "Personalized MarketRadar profile. Replace sample levels and skills with the user's actual current course state.",
+  "skills": ["Python", "Android", "Automation", "APIs", "Security"],
+  "selected_domains": ["python", "android", "web_bug_bounty", "android_bug_bounty", "services"],
+  "domains": {
+    "python": {"enabled": true, "level": 2, "course_day": 0, "course_total_days": 0, "stretch": false, "skills": ["python", "automation", "apis"]},
+    "android": {"enabled": true, "level": 2, "course_day": 0, "course_total_days": 504, "stretch": false, "skills": ["android", "kotlin"]},
+    "web_bug_bounty": {"enabled": true, "level": 2, "course_day": 0, "course_total_days": 0, "stretch": false, "skills": ["web security", "http", "recon"]},
+    "android_bug_bounty": {"enabled": true, "level": 2, "course_day": 0, "course_total_days": 0, "stretch": false, "skills": ["android security", "apk", "recon"]},
+    "services": {"enabled": true, "level": 2, "course_day": 0, "course_total_days": 0, "stretch": false, "skills": ["typing", "translation", "pdf", "word", "powerpoint", "excel", "ocr"]}
+  },
+  "learning": {"level": 2, "tracks": ["software_engineering", "red_team", "blue_team"], "stretch": false, "max_complexity": 3}
+}

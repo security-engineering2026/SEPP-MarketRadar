@@ -1,0 +1,21 @@
+{
+  "version": "15.1.0",
+  "providers": [
+    {
+      "name": "example-authorized-api",
+      "mode": "AUTHORIZED_API",
+      "domains": [],
+      "endpoint": "",
+      "method": "POST",
+      "token_env": "MARKETRADAR_PROVIDER_TOKEN",
+      "headers": {},
+      "body_template": {
+        "opportunity_id": "{{opportunity.id}}",
+        "proposal": "{{proposal}}"
+      },
+      "expected_status": [200, 201, 202, 204],
+      "timeout": 20,
+      "enabled": false
+    }
+  ]
+}

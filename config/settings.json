@@ -1,0 +1,62 @@
+{
+  "db": "data/marketradar.db",
+  "http_timeout": 10,
+  "scan_times": [
+    "08:00",
+    "20:00"
+  ],
+  "project_scan_interval_minutes": 60,
+  "market_intelligence_scan_interval_hours": 12,
+  "execution_blacklist_countries": [
+    "Israel"
+  ],
+  "default_profile": "config/profile.example.json",
+  "principle": "MarketRadar discovers and classifies opportunities; deterministic evidence/policy rules decide source lanes; external Engines execute work only when connected and authorized.",
+  "automation": {
+    "manual_browser": true,
+    "authorized_api_only": true,
+    "captcha_bypass": false,
+    "credential_exfiltration": false,
+    "browser_guided": true,
+    "auto_submit_requires_approval": true,
+    "manual_execution_allowed_when_no_engine": true
+  },
+  "source_policy": {
+    "foreign_execution_requires": [
+      "iran_allow",
+      "kyc_not_required",
+      "crypto_payment",
+      "evidence_confidence_0.85"
+    ],
+    "domestic_iran_execution": [
+      "evidence_confidence_0.85",
+      "public_or_authorized_access"
+    ],
+    "foreign_ineligible_sources_retained_for_market_intelligence": true,
+    "blacklist_archive_instead_of_delete": true
+  },
+  "recommendation_policy": {
+    "projects_per_domain": 3,
+    "top_overall": 7,
+    "top_visible_by_default": 3,
+    "show_more_supported": true,
+    "no_provider_does_not_reject": true,
+    "manual_execution_remains_allowed": true
+  },
+  "language": "fa",
+  "policy_search_interval_days": 7,
+  "user_origin_country": "Iran",
+  "jurisdiction_policy": "Operational-jurisdiction evidence only; do not infer a person's nationality, religion, ethnicity, or political identity.",
+  "learning_profile": {
+    "level": 2,
+    "tracks": [
+      "software_engineering",
+      "red_team",
+      "blue_team"
+    ],
+    "stretch": false,
+    "max_complexity": 3
+  },
+  "scan_policy": "twice_daily_when_online",
+  "source_verification_batch_size": 100
+}

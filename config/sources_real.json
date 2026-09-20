@@ -1,0 +1,52 @@
+[
+  {
+    "name": "RemoteOK",
+    "base_url": "https://remoteok.com/api",
+    "adapter": "remoteok_json",
+    "status": "active",
+    "allow_hosts": [
+      "remoteok.com"
+    ],
+    "verification_basis": "public_documented_feed"
+  },
+  {
+    "name": "WeWorkRemotely",
+    "base_url": "https://weworkremotely.com/remote-jobs.rss",
+    "adapter": "rss",
+    "status": "active",
+    "allow_hosts": [
+      "weworkremotely.com"
+    ],
+    "verification_basis": "public_rss_feed"
+  },
+  {
+    "name": "Remotive",
+    "base_url": "https://remotive.com/feed",
+    "adapter": "rss",
+    "status": "active",
+    "allow_hosts": [
+      "remotive.com"
+    ],
+    "verification_basis": "public_rss_feed"
+  },
+  {
+    "name": "Jobicy",
+    "base_url": "https://jobicy.com/api/v2/remote-jobs",
+    "adapter": "jobicy_json",
+    "status": "active",
+    "allow_hosts": [
+      "jobicy.com"
+    ],
+    "verification_basis": "public_api"
+  },
+  {
+    "name": "JobRemotely",
+    "base_url": "https://jobremotely.io/api/v1/jobs?limit=50&sort=newest",
+    "adapter": "jobremotely_json",
+    "status": "active",
+    "allow_hosts": [
+      "jobremotely.io"
+    ],
+    "verification_basis": "public_read_api"
+  }
+]

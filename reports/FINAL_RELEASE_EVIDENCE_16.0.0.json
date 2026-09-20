@@ -1,0 +1,49 @@
+{
+  "version": "16.0.0",
+  "source_basis": "SEPP-MarketRadar-15.0.0-FINAL-OPERATIONAL + cumulative 10-15 day architecture/bugfix integration",
+  "source_registry_records": 679,
+  "source_registry_unique_hosts": 600,
+  "local_test": {
+    "status": "PASS",
+    "pytest": "252 passed, 1 skipped in 20.77s",
+    "skip": "Tk display is unavailable",
+    "compileall": "PASS",
+    "100_pass_audit": "PASS",
+    "product_audit_errors": [],
+    "architecture_audit": "PASS",
+    "release_audit": []
+  },
+  "windows_hardening": {
+    "status": "NOT EXECUTED",
+    "reason": "Windows native execution environment is not available in this build environment",
+    "prepared_scripts": [
+      "packaging/windows_preflight.ps1",
+      "packaging/prepare_windows.ps1"
+    ],
+    "scheduler_contract": "Execution hourly; Market Intelligence 08:00 and 20:00; Operations every 15 minutes"
+  },
+  "live_source_verification": {
+    "status": "NOT EXECUTED",
+    "reason": "No usable outbound DNS/live web access in current environment"
+  },
+  "live_500_plus_verification": {
+    "status": "NOT EXECUTED",
+    "reason": "679 registry records / 600 hosts meet discovery-pool benchmark, but live verification of all sources was not performed"
+  },
+  "external_engine_execution": {
+    "status": "NOT EXECUTED",
+    "reason": "Engine manifests and contract are implemented; external Engine processes are not connected in this environment"
+  },
+  "android_device_e2e": {
+    "status": "NOT EXECUTED"
+  },
+  "external_application_submission_payment": {
+    "status": "NOT EXECUTED"
+  },
+  "notes": [
+    "Source lanes are stored canonically in source_lane while legacy policy_lane values remain readable for compatibility.",
+    "No provider/engine removes an opportunity; unconnected engines surface ENGINE_UNCONNECTED and manual execution remains available.",
+    "Translated foreign-language text remains assistive; original source observations remain the evidence root.",
+    "The release is a source candidate, not a claim of Windows-clean-machine PASS or live-market PASS."
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "version": "15.0.0",
+  "generated_at": "2026-09-11T14:22:11.938796+00:00",
+  "pass": true,
+  "targets": {
+    "verified_source_target": 500,
+    "opportunity_target": 1000,
+    "top7_target": 7,
+    "action_target": 3
+  },
+  "registered_sources": 679,
+  "source_state_counts_before_live_gate": {
+    "DISCOVERED": 676,
+    "LIVE_CONFIRMED": 3
+  },
+  "network_preflight": [
+    {
+      "host": "remoteok.com",
+      "dns": "ERROR",
+      "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+    },
+    {
+      "host": "weworkremotely.com",
+      "dns": "ERROR",
+      "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+    },
+    {
+      "host": "www.python.org",
+      "dns": "ERROR",
+      "error": "gaierror: [Errno -3] Temporary failure in name resolution"
+    }
+  ],
+  "live_source_check": {
+    "attempted": false,
+    "checked": 0,
+    "live": 0,
+    "errors": 0,
+    "note": "Live verification was not executed by default."
+  },
+  "local_market_operationalization": {
+    "pass": true,
+    "mode": "LOCAL_REPLAYABLE_OPERATIONAL_ACCEPTANCE",
+    "opportunities": 1000,
+    "evidence": 1000,
+    "top7": 7,
+    "do_now": 3,
+    "lifecycle": {
+      "opportunity_id": 24,
+      "state_after_claim": "DELIVERED",
+      "final_state": "PAID"
+    },
+    "market_signals": 7,
+    "demand_clusters": 8,
+    "product_recommendations": 8,
+    "skill_gaps": 8,
+    "portfolio_recommendations": 8,
+    "fixture_warning": "Fixture data proves executable integration only; it is not live market evidence."
+  },
+  "external_evidence_gates": {
+    "live_500_plus_sources": "REQUIRES_REAL_NETWORK_AND_SOURCE_EVIDENCE",
+    "real_market_1000_to_7_to_3": "REQUIRES_REAL_MARKET_DATA; local replay passed",
+    "external_application": "REQUIRES_CONFIGURED_AUTHORIZED_PROVIDER_AND_HUMAN_APPROVAL",
+    "external_payment_settlement": "REQUIRES_EXTERNAL_VERIFIER",
+    "windows_exe_installer": "REQUIRES_WINDOWS_HOST"
+  }
+}

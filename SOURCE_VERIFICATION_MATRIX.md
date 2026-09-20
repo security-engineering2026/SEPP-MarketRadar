@@ -1,0 +1,258 @@
+# SOURCE VERIFICATION MATRIX — SEPP-MarketRadar v15.0.0
+
+Total registered source contracts: **679**.
+
+## Classification
+
+- `VERIFIED_IRAN_COMPATIBLE`: **0**
+- `VERIFIED_BLOCKED_IRAN`: **15**
+- `VERIFIED_MARKET_INTELLIGENCE`: **0**
+- `UNVERIFIED`: **664**
+- `STALE`: **0**
+- `DEAD`: **0**
+- `LOW_QUALITY`: **0**
+
+## Policy rule
+
+- `DAILY_PROJECT_SCAN` is not execution authorization. `execution_ready=true` is a separate gate.
+- No source is promoted to execution-ready from existence alone; current policy, KYC, payout and terms evidence are required.
+- Unknown Iran compatibility remains discovery/research-only.
+- Explicit Iran restrictions remain blocked; no bypass logic is permitted.
+
+## Regional coverage snapshot
+
+- Argentina: 5
+- Armenia: 1
+- Australia: 6
+- Austria: 5
+- Azerbaijan: 6
+- Bahrain: 6
+- Bangladesh: 6
+- Belgium: 5
+- Brazil: 6
+- Canada: 5
+- Chile: 5
+- China: 8
+- Colombia: 5
+- Croatia: 5
+- Czech Republic: 5
+- Denmark: 5
+- Egypt: 5
+- Estonia: 6
+- Europe: 2
+- Finland: 6
+- France: 5
+- Georgia: 6
+- Germany: 6
+- Global: 239
+- Greece: 5
+- Hungary: 5
+- India: 8
+- Indonesia: 5
+- Iran: 20
+- Iraq: 1
+- Ireland: 5
+- Italy: 5
+- Japan: 11
+- Jordan: 5
+- Kazakhstan: 8
+- Kenya: 6
+- Kosovo: 1
+- Kuwait: 5
+- Latvia: 5
+- Lithuania: 6
+- local: 1
+- Malaysia: 6
+- MENA: 1
+- Mexico: 5
+- Middle East: 1
+- Morocco: 5
+- Nepal: 1
+- Netherlands: 7
+- New Zealand: 7
+- Nigeria: 5
+- Norway: 5
+- Oman: 6
+- Pakistan: 5
+- Peru: 5
+- Philippines: 5
+- Poland: 6
+- Portugal: 5
+- Qatar: 7
+- Romania: 5
+- Russia: 8
+- Saudi Arabia: 6
+- Serbia: 5
+- Singapore: 9
+- South Africa: 5
+- South Korea: 8
+- Spain: 5
+- Sri Lanka: 6
+- Sweden: 6
+- Switzerland: 7
+- Taiwan: 4
+- Thailand: 5
+- Tunisia: 5
+- Türkiye: 7
+- UAE: 1
+- UK: 2
+- Ukraine: 5
+- United Arab Emirates: 9
+- United Kingdom: 5
+- United States: 3
+- USA: 8
+- Uzbekistan: 6
+- Vietnam: 6
+
+## Lane counts
+
+- BLOCKED_IRAN: 15
+- DAILY_PROJECT_SCAN: 20
+- GLOBAL_DISCOVERY: 87
+- NEEDS_ANALYSIS: 556
+- REVIEW: 1
+
+## Newly verified / newly discovered in v4.15
+
+- **FL_ru** — Russia — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 40% — Active remote projects; Iran eligibility and payout policy still require source-specific verification.
+- **Freelance_ru** — Russia — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 40% — Active project marketplace; Iran eligibility and payout policy require verification.
+- **Ureed_MENA** — MENA — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 40% — MENA freelance marketplace; Iran eligibility, KYC and payout policy remain UNKNOWN.
+- **Tasklink_Qatar** — Qatar — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 40% — Qatar tech/freelance marketplace; registration asks phone/entity details; Iran policy not confirmed.
+- **Kaasb_Iraq** — Iraq — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 40% — Iraq-native marketplace; payouts are IQD via Zain Cash/Key Card, not crypto.
+- **Freelancing_my** — Malaysia — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 15% — Malaysia freelance marketplace; Iran eligibility/KYC/payout UNKNOWN.
+- **FreelanceZone_Singapore** — Singapore — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 40% — Singapore freelance portal; Iran eligibility/KYC/payout UNKNOWN.
+- **ELancer_Korea** — South Korea — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 40% — Korean IT freelance matching platform; local eligibility/KYC needs verification.
+- **CrowdWorks_Japan** — Japan — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 15% — Large Japanese crowdsourcing marketplace; Iran eligibility/KYC/payout UNKNOWN.
+- **Lancers_Japan** — Japan — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 40% — Japanese marketplace; legal-work eligibility and identity requirements make it unsuitable for no-KYC execution until verified.
+- **Standoff365_BugBounty** — Russia — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 40% — Discovery source only; Iran eligibility, KYC and payout must be verified before execution.
+- **BIZONE_BugBounty** — Russia — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 40% — Discovery source only; Iran eligibility, KYC and payout must be verified before execution.
+- **Bugloud_UAE** — UAE — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 40% — Discovery source only; Iran eligibility, KYC and payout must be verified before execution.
+- **BugBounty_Singapore** — Singapore — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 25% — Discovery source only; Iran eligibility, KYC and payout must be verified before execution.
+- **BugBounter_Turkey** — Türkiye — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 25% — Discovery source only; Iran eligibility, KYC and payout must be verified before execution.
+- **PatchDay_Korea** — South Korea — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 25% — Discovery source only; Iran eligibility, KYC and payout must be verified before execution.
+- **TumarOne_Kazakhstan** — Kazakhstan — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 25% — Discovery source only; Iran eligibility, KYC and payout must be verified before execution.
+- **Vulbox_China** — China — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 25% — Discovery source only; Iran eligibility, KYC and payout must be verified before execution.
+- **CaptureTheBug_NZ** — New Zealand — `GLOBAL_DISCOVERY` — `UNKNOWN` — evidence 25% — Discovery source only; Iran eligibility, KYC and payout must be verified before execution.
+
+## Remaining verification queue
+
+- 0din — USA — `NEEDS_ANALYSIS` — evidence 15% — https://0din.ai
+- 104_Taiwan — Taiwan — `GLOBAL_DISCOVERY` — evidence 15% — https://www.104.com.tw/
+- 1111_Taiwan — Taiwan — `GLOBAL_DISCOVERY` — evidence 15% — https://www.1111.com.tw/
+- 360_SRC — China — `NEEDS_ANALYSIS` — evidence 15% — https://src.360.net
+- AIJobs — Global — `NEEDS_ANALYSIS` — evidence 15% — https://www.moaijobs.com/
+- AIJobsNet — Global — `NEEDS_ANALYSIS` — evidence 15% — https://ai-jobs.net/
+- AIMLJobs — Global — `NEEDS_ANALYSIS` — evidence 15% — https://aimljobs.fyi/
+- AI_Tech_Suite_Jobs — Global — `NEEDS_ANALYSIS` — evidence 15% — https://www.aitechsuite.com/jobs
+- ActirisBE — Global — `NEEDS_ANALYSIS` — evidence 15% — https://www.actiris.be/
+- Adzuna — Global — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.com/
+- Adzuna_AE — United Arab Emirates — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.ae/
+- Adzuna_AR — Argentina — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.com.ar/
+- Adzuna_AT — Austria — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.at/
+- Adzuna_AU — Australia — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.com.au/
+- Adzuna_AZ — Azerbaijan — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.az/
+- Adzuna_BD — Bangladesh — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.bd/
+- Adzuna_BE — Belgium — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.be/
+- Adzuna_BH — Bahrain — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.bh/
+- Adzuna_BR — Brazil — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.com.br/
+- Adzuna_CA — Canada — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.ca/
+- Adzuna_CH — Switzerland — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.ch/
+- Adzuna_CL — Chile — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.cl/
+- Adzuna_CO — Colombia — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.co/
+- Adzuna_CZ — Czech Republic — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.cz/
+- Adzuna_DE — Germany — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.de/
+- Adzuna_DK — Denmark — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.dk/
+- Adzuna_EE — Estonia — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.ee/
+- Adzuna_EG — Egypt — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.eg/
+- Adzuna_ES — Spain — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.es/
+- Adzuna_FI — Finland — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.fi/
+- Adzuna_FR — France — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.fr/
+- Adzuna_GB — United Kingdom — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.co.uk/
+- Adzuna_GE — Georgia — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.ge/
+- Adzuna_GR — Greece — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.gr/
+- Adzuna_HR — Croatia — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.hr/
+- Adzuna_HU — Hungary — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.hu/
+- Adzuna_ID — Indonesia — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.id/
+- Adzuna_IE — Ireland — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.ie/
+- Adzuna_IN — India — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.co.in/
+- Adzuna_IT — Italy — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.it/
+- Adzuna_JO — Jordan — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.jo/
+- Adzuna_JP — Japan — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.jp/
+- Adzuna_KE — Kenya — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.ke/
+- Adzuna_KR — South Korea — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.kr/
+- Adzuna_KW — Kuwait — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.kw/
+- Adzuna_KZ — Kazakhstan — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.kz/
+- Adzuna_LK — Sri Lanka — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.lk/
+- Adzuna_LT — Lithuania — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.lt/
+- Adzuna_LV — Latvia — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.lv/
+- Adzuna_MA — Morocco — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.ma/
+- Adzuna_MX — Mexico — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.com.mx/
+- Adzuna_MY — Malaysia — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.my/
+- Adzuna_NG — Nigeria — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.ng/
+- Adzuna_NL — Netherlands — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.nl/
+- Adzuna_NO — Norway — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.no/
+- Adzuna_NZ — New Zealand — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.co.nz/
+- Adzuna_OM — Oman — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.om/
+- Adzuna_PE — Peru — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.pe/
+- Adzuna_PH — Philippines — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.ph/
+- Adzuna_PK — Pakistan — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.pk/
+- Adzuna_PL — Poland — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.pl/
+- Adzuna_PT — Portugal — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.pt/
+- Adzuna_QA — Qatar — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.qa/
+- Adzuna_RO — Romania — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.ro/
+- Adzuna_RS — Serbia — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.rs/
+- Adzuna_SA — Saudi Arabia — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.sa/
+- Adzuna_SE — Sweden — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.se/
+- Adzuna_SG — Singapore — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.sg/
+- Adzuna_TH — Thailand — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.th/
+- Adzuna_TN — Tunisia — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.tn/
+- Adzuna_TR — Türkiye — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.com.tr/
+- Adzuna_UA — Ukraine — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.ua/
+- Adzuna_UZ — Uzbekistan — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.uz/
+- Adzuna_VN — Vietnam — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.vn/
+- Adzuna_ZA — South Africa — `NEEDS_ANALYSIS` — evidence 15% — https://www.adzuna.co.za/
+- AiJobsTracker — Global — `NEEDS_ANALYSIS` — evidence 15% — https://www.aijobstracker.com/
+- AirtaskerAU — Global — `NEEDS_ANALYSIS` — evidence 15% — https://www.airtasker.com/
+- Akhtaboot_Jordan — Global — `GLOBAL_DISCOVERY` — evidence 55% — https://www.akhtaboot.com/
+- AmazonJobs — Global — `NEEDS_ANALYSIS` — evidence 15% — https://www.amazon.jobs/en
+- AnalyticsVidhya_Jobs — Global — `NEEDS_ANALYSIS` — evidence 15% — https://jobsnew.analyticsvidhya.com/jobs/all
+- AndroidDevCareers — Global — `NEEDS_ANALYSIS` — evidence 15% — https://androiddev.careers/
+- AngularJobs — Global — `NEEDS_ANALYSIS` — evidence 15% — https://angularjobs.com/
+- AnjamMidam_Iran — Iran — `DAILY_PROJECT_SCAN` — evidence 55% — https://anjammidam.com/
+- Arbeitnow — Germany — `GLOBAL_DISCOVERY` — evidence 55% — https://www.arbeitnow.com/api/job-board-api
+- Arc — Global — `NEEDS_ANALYSIS` — evidence 15% — https://arc.dev/
+- AuditOne — Europe — `GLOBAL_DISCOVERY` — evidence 15% — https://auditone.io
+- AuthenticJobs — Global — `NEEDS_ANALYSIS` — evidence 15% — https://authenticjobs.com/
+- BBHunt_Japan — Japan — `NEEDS_ANALYSIS` — evidence 15% — https://bbhunt.jp
+- BIZONE_BugBounty — Russia — `GLOBAL_DISCOVERY` — evidence 40% — https://bugbounty.bi.zone/
+- BI_ZONE_BugBounty — Russia — `NEEDS_ANALYSIS` — evidence 15% — https://bugbounty.bi.zone
+- BOSS_Zhipin_CN — China — `GLOBAL_DISCOVERY` — evidence 15% — https://www.zhipin.com/
+- Bayt_MENA — Global — `GLOBAL_DISCOVERY` — evidence 55% — https://www.bayt.com/
+- BeInCrypto_Jobs — Global — `NEEDS_ANALYSIS` — evidence 15% — https://beincrypto.com/jobs/
+- BigCloud — Global — `NEEDS_ANALYSIS` — evidence 15% — https://bigcloud.global/find-a-job/
+- Bionluk_TR — Türkiye — `GLOBAL_DISCOVERY` — evidence 15% — https://bionluk.com/
+- Blockew — Global — `NEEDS_ANALYSIS` — evidence 15% — https://blockew.com/
+- Boss_Azerbaijan — Global — `GLOBAL_DISCOVERY` — evidence 55% — https://boss.az/
+- BountyTeam — China — `NEEDS_ANALYSIS` — evidence 15% — https://www.bountyteam.com
+- Braintrust — Global — `NEEDS_ANALYSIS` — evidence 15% — https://www.usebraintrust.com/
+- Bubble_Jobs — Global — `NEEDS_ANALYSIS` — evidence 15% — https://www.bubble-jobs.co.uk/
+- BugBank — China — `NEEDS_ANALYSIS` — evidence 15% — https://www.bugbank.cn
+- BugBase — Global — `NEEDS_ANALYSIS` — evidence 15% — https://bugbase.in/
+- BugBounter_Turkey — Türkiye — `GLOBAL_DISCOVERY` — evidence 25% — https://bugbounter.com/
+- BugBounty.jp — Global — `NEEDS_ANALYSIS` — evidence 15% — https://bugbounty.jp/
+- BugBountyBox — Kenya — `GLOBAL_DISCOVERY` — evidence 15% — https://bugbountybox.com
+- BugBountySwitzerland — Switzerland — `NEEDS_ANALYSIS` — evidence 15% — https://bugbounty.ch
+- BugBounty_Singapore — Singapore — `GLOBAL_DISCOVERY` — evidence 25% — https://buglab.sg/
+- BugBounty_am — Armenia — `NEEDS_ANALYSIS` — evidence 15% — https://bugbounty.am
+- BugBounty_ru — Russia — `NEEDS_ANALYSIS` — evidence 40% — https://bugbounty.ru
+- BugHunt_BR — Brazil — `NEEDS_ANALYSIS` — evidence 15% — https://bughunt.com.br
+- BugRakshak — India — `NEEDS_ANALYSIS` — evidence 15% — https://www.bugrakshak.com
+- BugRap — Global — `GLOBAL_DISCOVERY` — evidence 15% — https://bugrap.io
+- BugZero — Sri Lanka — `NEEDS_ANALYSIS` — evidence 15% — https://bugzero.io
+- Bugbop — Australia — `NEEDS_ANALYSIS` — evidence 15% — https://bugbop.com
+- Buglab — Singapore — `NEEDS_ANALYSIS` — evidence 15% — https://buglab.io
+- Bugloud — United Arab Emirates — `NEEDS_ANALYSIS` — evidence 15% — https://bugloud.com
+- Bugloud_UAE — UAE — `GLOBAL_DISCOVERY` — evidence 40% — https://bugloud.com/
+- Bugv — Nepal — `NEEDS_ANALYSIS` — evidence 15% — https://bugv.io
+- BumeranAR — Global — `NEEDS_ANALYSIS` — evidence 15% — https://www.bumeran.com.ar/
+- Butian — China — `NEEDS_ANALYSIS` — evidence 15% — https://butian.net

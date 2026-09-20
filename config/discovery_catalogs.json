@@ -1,0 +1,54 @@
+[
+  {
+    "name": "awesome-job-boards",
+    "url": "https://github.com/idimetrix/awesome-job-boards",
+    "purpose": "Global and regional job/freelance discovery seed; 700+ boards claimed by the catalog.",
+    "last_reviewed": "2026-09-11",
+    "status": "reviewed_as_discovery_input"
+  },
+  {
+    "name": "disclose-bug-bounty-platforms",
+    "url": "https://github.com/disclose/bug-bounty-platforms",
+    "purpose": "Regional and global bug bounty / VDP discovery seed.",
+    "last_reviewed": "2026-09-11",
+    "status": "reviewed_as_discovery_input"
+  },
+  {
+    "name": "GigDir",
+    "url": "https://gigdir.com/",
+    "purpose": "Freelance/gig marketplace discovery seed across regions.",
+    "last_reviewed": "2026-09-11",
+    "status": "reviewed_as_discovery_input"
+  },
+  {
+    "name": "awesome-local-job-boards",
+    "url": "https://github.com/Job-Boards/awesome-local-job-boards",
+    "purpose": "Country-level job-board discovery seed.",
+    "last_reviewed": "2026-09-11",
+    "status": "reviewed_as_discovery_input"
+  },
+  {
+    "name": "disclose-bug-bounty-platforms-raw",
+    "url": "https://raw.githubusercontent.com/disclose/bug-bounty-platforms/main/README.md",
+    "purpose": "Machine-readable markdown seed for bug bounty and VDP platform discovery.",
+    "last_reviewed": "2026-09-11",
+    "status": "active",
+    "format": "markdown"
+  },
+  {
+    "name": "disclose-diodb",
+    "url": "https://github.com/disclose/diodb/raw/master/program-list.json",
+    "purpose": "Open program-level VDP/bug-bounty dataset for deep program discovery.",
+    "last_reviewed": "2026-09-11",
+    "status": "active",
+    "format": "json"
+  },
+  {
+    "name": "awesome-job-boards-raw",
+    "url": "https://raw.githubusercontent.com/idimetrix/awesome-job-boards/master/README.md",
+    "purpose": "Machine-readable global job/freelance discovery seed.",
+    "last_reviewed": "2026-09-11",
+    "status": "active",
+    "format": "markdown"
+  }
+]

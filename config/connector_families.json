@@ -1,0 +1,74 @@
+[
+  {
+    "family": "http_json",
+    "scope": "public",
+    "status": "ready",
+    "notes": "Generic public JSON acquisition"
+  },
+  {
+    "family": "rss",
+    "scope": "public",
+    "status": "ready",
+    "notes": "RSS/Atom feeds"
+  },
+  {
+    "family": "html",
+    "scope": "public",
+    "status": "planned",
+    "notes": "Only where permitted and stable"
+  },
+  {
+    "family": "telegram",
+    "scope": "public_or_authorized",
+    "status": "architecture_ready",
+    "notes": "Public/authorized API access only"
+  },
+  {
+    "family": "linkedin",
+    "scope": "authorized",
+    "status": "architecture_ready",
+    "notes": "Official/approved API or authorized integration only"
+  },
+  {
+    "family": "x",
+    "scope": "authorized",
+    "status": "architecture_ready",
+    "notes": "Official/authorized API access only"
+  },
+  {
+    "family": "reddit",
+    "scope": "public_or_authorized",
+    "status": "architecture_ready",
+    "notes": "API/public access according to platform rules"
+  },
+  {
+    "family": "business_integration",
+    "scope": "authorized",
+    "status": "architecture_ready",
+    "notes": "User/business-authorized integrations such as messaging platforms"
+  },
+  {
+    "family": "instagram",
+    "scope": "authorized",
+    "status": "architecture_ready",
+    "notes": "Meta/Instagram Graph API; official permissions required"
+  },
+  {
+    "family": "bale",
+    "scope": "authorized_or_public",
+    "status": "architecture_ready",
+    "notes": "Bale bot/public-channel integration; verify current official access"
+  },
+  {
+    "family": "eitaa",
+    "scope": "authorized_or_public",
+    "status": "architecture_ready",
+    "notes": "Eitaa bot/public-channel integration; verify current official access"
+  },
+  {
+    "family": "soroush",
+    "scope": "authorized_or_public",
+    "status": "architecture_ready",
+    "notes": "Soroush/Plus integration; verify current official access"
+  }
+]

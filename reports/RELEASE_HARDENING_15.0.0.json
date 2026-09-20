@@ -1,0 +1,141 @@
+{
+  "generated_at": "2026-09-11T13:59:24.847632+00:00",
+  "config": {
+    "errors": [],
+    "warnings": [
+      "DUPLICATE_SOURCE_HOSTS:api.hh.ru,bugbounty.bi.zone,bugloud.com,hackenproof.com,tumar.one,wellfound.com,weworkremotely.com,www.gulftalent.com,www.linkedin.com,www.talent.com,www.tokyodev.com"
+    ],
+    "pass": true,
+    "source_count": 679,
+    "promotable": 0,
+    "duplicate_hosts": {
+      "weworkremotely.com": [
+        "WeWorkRemotely",
+        "WeWorkRemotely_Global"
+      ],
+      "api.hh.ru": [
+        "HH_RU",
+        "HH_KZ",
+        "HH_UZ",
+        "HH_GE",
+        "HH_AZ"
+      ],
+      "www.gulftalent.com": [
+        "GulfTalent_UAE",
+        "GulfTalent"
+      ],
+      "www.tokyodev.com": [
+        "TokyoDev_Japan",
+        "TokyoDev"
+      ],
+      "wellfound.com": [
+        "Wellfound",
+        "Wellfound_Talent"
+      ],
+      "www.talent.com": [
+        "Talent.com",
+        "Talent_US",
+        "Talent_CA",
+        "Talent_GB",
+        "Talent_DE",
+        "Talent_FR",
+        "Talent_IT",
+        "Talent_ES",
+        "Talent_NL",
+        "Talent_BE",
+        "Talent_AT",
+        "Talent_CH",
+        "Talent_SE",
+        "Talent_NO",
+        "Talent_DK",
+        "Talent_FI",
+        "Talent_IE",
+        "Talent_PT",
+        "Talent_PL",
+        "Talent_CZ",
+        "Talent_HU",
+        "Talent_RO",
+        "Talent_GR",
+        "Talent_TR",
+        "Talent_AE",
+        "Talent_SA",
+        "Talent_QA",
+        "Talent_KW",
+        "Talent_BH",
+        "Talent_OM",
+        "Talent_JO",
+        "Talent_EG",
+        "Talent_MA",
+        "Talent_TN",
+        "Talent_ZA",
+        "Talent_NG",
+        "Talent_KE",
+        "Talent_IN",
+        "Talent_PK",
+        "Talent_BD",
+        "Talent_LK",
+        "Talent_JP",
+        "Talent_KR",
+        "Talent_SG",
+        "Talent_MY",
+        "Talent_ID",
+        "Talent_PH",
+        "Talent_VN",
+        "Talent_TH",
+        "Talent_AU",
+        "Talent_NZ",
+        "Talent_BR",
+        "Talent_MX",
+        "Talent_AR",
+        "Talent_CL",
+        "Talent_CO",
+        "Talent_PE",
+        "Talent_KZ",
+        "Talent_UZ",
+        "Talent_GE",
+        "Talent_AZ",
+        "Talent_UA",
+        "Talent_RS",
+        "Talent_HR",
+        "Talent_EE",
+        "Talent_LT",
+        "Talent_LV"
+      ],
+      "www.linkedin.com": [
+        "LinkedIn_Jobs",
+        "LinkedIn"
+      ],
+      "hackenproof.com": [
+        "HackenProof",
+        "HackenProof_Alt"
+      ],
+      "bugbounty.bi.zone": [
+        "BI_ZONE_BugBounty",
+        "BIZONE_BugBounty"
+      ],
+      "bugloud.com": [
+        "Bugloud",
+        "Bugloud_UAE"
+      ],
+      "tumar.one": [
+        "TumarOne_Kazakhstan",
+        "TumarOne"
+      ]
+    }
+  },
+  "database": {
+    "errors": [],
+    "warnings": [],
+    "pass": true,
+    "integrity": "ok",
+    "database_bytes": 1486848
+  },
+  "filesystem": {
+    "errors": [],
+    "warnings": [],
+    "pass": true
+  },
+  "pass": true,
+  "blocking_errors": 0,
+  "warnings": 1
+}

@@ -1,0 +1,20 @@
+{
+  "discovery_pool_reference_minimum": 500,
+  "principle": "The 500 figure is a discovery-pool benchmark, not a claim that 500 sources are execution-eligible.",
+  "no_fixed_execution_target": true,
+  "execution_source_policy": "Use the maximum number of evidence-qualified Iran-compatible foreign sources plus eligible domestic Iranian sources.",
+  "market_intelligence_policy": "Retain foreign/incompatible sources for demand and product discovery; check them twice daily when online.",
+  "project_scan_interval_minutes": 60,
+  "market_intelligence_scan_interval_minutes": 720,
+  "duplicate_policy": "One canonical host per scan cycle; duplicates are archived as duplicate candidates, not counted twice.",
+  "blacklist_policy": "Blacklist sources are archived, never deleted, and excluded from all recommendations.",
+  "families": {
+    "freelance": 0,
+    "bug_bounty": 0,
+    "developer": 0,
+    "student_services": 0,
+    "direct_employers": 0,
+    "market_intelligence": 0
+  },
+  "target_registered_sources": 500
+}
