@@ -6,11 +6,18 @@ test -f "$APK"
 
 adb start-server >/dev/null
 state=""
-for _ in $(seq 1 180); do
+for i in $(seq 1 180); do
   state="$(adb get-state 2>/dev/null || true)"
   if [ "$state" = "device" ]; then break; fi
   if [ "$state" = "offline" ]; then
     adb reconnect offline >/dev/null 2>&1 || true
+    if [ $((i % 10)) -eq 0 ]; then
+      adb kill-server >/dev/null 2>&1 || true
+      sleep 2
+      adb start-server >/dev/null 2>&1 || true
+    fi
+  else
+    adb start-server >/dev/null 2>&1 || true
   fi
   sleep 1
 done
