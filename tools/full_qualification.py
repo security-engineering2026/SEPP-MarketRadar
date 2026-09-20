@@ -385,7 +385,7 @@ def main():
     (out / "full_qualification.md").write_text("\n".join(md) + "\n", encoding="utf-8")
 
     print(json.dumps(report, ensure_ascii=False, indent=2))
-    return 1 if summary["fail"] else 0
+    return 1 if (summary["fail"] or summary["open"]) else 0
 
 if __name__ == "__main__":
     raise SystemExit(main())
