@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $source = Split-Path -Parent $MyInvocation.MyCommand.Path
 $target = 'C:\Users\Lotus Store\Downloads\SEPP-MarketRadar-16.1.1-CI\SEPP-MarketRadar-16.1.1-FINAL'
 
@@ -10,8 +10,8 @@ if ($remote -notmatch 'github\.com/security-engineering2026/SEPP-MarketRadar(?:\
     throw "Unexpected origin remote: $remote"
 }
 $head = (git rev-parse --short HEAD).Trim()
-if ($head -ne 'e317560') {
-    throw "Expected existing repository HEAD e317560 before consolidation, found $head. Abort without changes."
+if ($head -ne 'f957a12') {
+    throw "Expected existing repository HEAD f957a12 before consolidation, found $head. Abort without changes."
 }
 
 Write-Host "Syncing complete consolidated candidate into existing Git repository..."
@@ -68,3 +68,4 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host 'WINDOWS RELEASE VALIDATION PASS'
 Write-Host 'Manual validation completed; no GitHub Release was published.'
+
