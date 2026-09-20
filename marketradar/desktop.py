@@ -12,7 +12,7 @@ from tkinter import BOTH, END, LEFT, RIGHT, X, Y, StringVar, Tk, Toplevel, messa
 
 from . import __version__
 from .db import connect, sync_source_contracts, load_dynamic_source_records
-from .logging_setup import configure_logging, install_exception_logging
+from .logging_setup import configure_logging, install_exception_logging, close_logging
 from .paths import app_root, data_root
 from .pipeline import Pipeline
 from .runtime import MarketRadarRuntime

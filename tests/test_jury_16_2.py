@@ -38,7 +38,9 @@ def test_email_reply_updates_application_lifecycle_and_communication():
         assert r[0]['opportunity_id']==1 and r[0]['transitioned'] is True
         assert c.execute('SELECT state FROM opportunities WHERE id=1').fetchone()['state']=='ACCEPTED'
         assert c.execute('SELECT COUNT(*) n FROM project_communications WHERE opportunity_id=1').fetchone()['n']==1
-    finally: td.cleanup()
+    finally:
+        c.close()
+        td.cleanup()
 
 
 def test_email_reply_rejection_is_tracked():
@@ -50,7 +52,9 @@ def test_email_reply_rejection_is_tracked():
         r=process_inbox_messages(c,aid,[{'message_id':'<reply-2@test>','in_reply_to':mid,'references':mid,'from':'client@example.test','subject':'Re: Excel project - Not selected','body':'We declined the proposal.','date':'2026-09-18T10:00:00+00:00'}])
         assert r[0]['intent']=='REJECTED' and r[0]['transitioned'] is True
         assert c.execute('SELECT state FROM opportunities WHERE id=1').fetchone()['state']=='REJECTED'
-    finally: td.cleanup()
+    finally:
+        c.close()
+        td.cleanup()
 
 
 def test_priority_query_planner_puts_iran_in_high_priority_bucket():
@@ -67,4 +71,6 @@ def test_android_gateway_rejects_bad_token():
             def issue_submission_approval(self,*a,**k): raise AssertionError
         g=AndroidGateway(c,R(),'secret')
         assert g.token_ok('secret') is True and g.token_ok('wrong') is False
-    finally: td.cleanup()
+    finally:
+        c.close()
+        td.cleanup()

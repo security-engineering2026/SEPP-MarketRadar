@@ -39,7 +39,9 @@ def test_finance_accounts_routing_reports_and_project_report():
         assert '@page{size:A4' in Path(files['html']).read_text(encoding='utf-8')
         with zipfile.ZipFile(files['xlsx']) as z: assert 'xl/workbook.xml' in z.namelist()
         assert Path(files['pdf']).read_bytes().startswith(b'%PDF-1.4')
-    finally: td.cleanup()
+    finally:
+        c.close()
+        td.cleanup()
 
 
 def test_source_constraints_are_persisted_and_gate_recommendations():
@@ -56,7 +58,9 @@ def test_source_constraints_are_persisted_and_gate_recommendations():
         c.commit(); gate2=source_application_gate(c,'Iran_Platform')
         assert gate2['allowed'] is False and gate2['reason']=='PENDING_APPLICATION_LIMIT'
         assert _eligible_rows(c)==[]
-    finally: td.cleanup()
+    finally:
+        c.close()
+        td.cleanup()
 
 
 def test_notifications_deadline_and_email_approval_gate():
@@ -77,7 +81,9 @@ def test_notifications_deadline_and_email_approval_gate():
         else: raise AssertionError('EMAIL_SEND_MUST_REQUIRE_APPROVAL')
         approve(c,draft)
         row=c.execute('SELECT status FROM email_drafts WHERE id=?',(draft,)).fetchone(); assert row['status']=='APPROVED'
-    finally: td.cleanup()
+    finally:
+        c.close()
+        td.cleanup()
 
 
 def test_profile_package_localized_and_android_device_binding():
@@ -89,4 +95,6 @@ def test_profile_package_localized_and_android_device_binding():
         assert 'proposal' in pack and 'resume' in pack
         assert 'بودجه پیشنهادی' in pack['proposal'] and 'IRR' in pack['proposal']
         b=AndroidBridge('secret',c); b.bind_device('phone-1','device-token'); assert b.authorize_device('phone-1','device-token') is True; assert b.authorize_device('phone-1','wrong') is False
-    finally: td.cleanup()
+    finally:
+        c.close()
+        td.cleanup()
