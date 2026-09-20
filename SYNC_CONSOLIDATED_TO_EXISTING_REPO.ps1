@@ -10,8 +10,8 @@ if ($remote -notmatch 'github\.com/security-engineering2026/SEPP-MarketRadar(?:\
     throw "Unexpected origin remote: $remote"
 }
 $head = (git rev-parse --short HEAD).Trim()
-if ($head -ne 'f842afe') {
-    throw "Expected existing repository HEAD f842afe before consolidation, found $head. Abort without changes."
+if ($head -ne 'e317560') {
+    throw "Expected existing repository HEAD e317560 before consolidation, found $head. Abort without changes."
 }
 
 Write-Host "Syncing complete consolidated candidate into existing Git repository..."
@@ -46,7 +46,7 @@ git status --short
 
 git diff --cached --stat
 
-git commit -m 'Consolidate Windows CI and release hardening'
+git commit -m 'Fix Windows PyInstaller spec root resolution'
 git push origin main
 
 Write-Host 'Consolidated source pushed. Dispatching Windows Release validation...'

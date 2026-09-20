@@ -2,7 +2,7 @@
 from pathlib import Path
 from PyInstaller.utils.hooks import collect_submodules
 
-ROOT = Path(SPECPATH).resolve().parent.parent
+ROOT = Path(SPECPATH).resolve().parent
 hiddenimports = collect_submodules("marketradar") + collect_submodules("tools")
 
 a = Analysis(
