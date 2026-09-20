@@ -12,49 +12,73 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
       - name: Validate tag matches application version
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
         shell: pwsh
         run: |
           $version = (python -c "from marketradar import __version__; print(__version__)").Trim()
           if ("v$version" -ne $env:GITHUB_REF_NAME) { throw "Tag $env:GITHUB_REF_NAME does not match application version v$version" }
+
+      - name: Confirm manual validation mode
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        shell: pwsh
+        run: Write-Host 'Windows Release validation run - manual dispatch; GitHub Release publishing is disabled for this run.'
+
       - name: Install test dependencies
         shell: pwsh
         run: python -m pip install -r requirements-dev.txt pip-audit
+
       - name: Dependency vulnerability audit
         shell: pwsh
         run: python -m pip_audit -r requirements.txt
+
       - name: Run Windows test suite
         shell: pwsh
         run: python -m pytest -q
+
       - name: Clean test artifacts
         shell: pwsh
         run: |
           if (Test-Path .pytest_cache) { Remove-Item .pytest_cache -Recurse -Force }
           Get-ChildItem -Path . -Recurse -Directory -Filter __pycache__ | Remove-Item -Recurse -Force
+
       - name: Release audit
         shell: pwsh
         run: python -B tools/release_audit.py
+
       - name: Product capability audit
         shell: pwsh
         run: python -B tools/product_audit.py
+
       - name: Build portable EXE and smoke test
         shell: pwsh
         run: ./packaging/build_windows.ps1
+
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup -y --no-progress
-      - name: Windows security hardening and signature check
+
+      - name: Windows security hardening and signature verification
         shell: pwsh
+        env:
+          REQUIRE_AUTHENTICODE_SIGNING: ${{ vars.REQUIRE_AUTHENTICODE_SIGNING || '0' }}
         run: |
           ./packaging/harden_windows.ps1
           ./packaging/verify_windows_security.ps1
+
       - name: Build installer
         shell: pwsh
         run: |
           $version = (python -c "from marketradar import __version__; print(__version__)").Trim()
           & iscc "/DMyAppVersion=$version" packaging/installer.iss
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
+
       - name: Installer install and uninstall smoke test
         shell: pwsh
         run: |
@@ -72,12 +96,14 @@ jobs:
           if (-not (Test-Path $uninstaller)) { throw "Uninstaller missing" }
           Start-Process -FilePath $uninstaller -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait | Out-Null
           if (Test-Path "$target\MarketRadar.exe") { throw "Uninstall did not remove MarketRadar.exe" }
+
       - name: Build source archive
         shell: pwsh
         run: |
           $version = (python -c "from marketradar import __version__; print(__version__)").Trim()
           New-Item -ItemType Directory -Force -Path release\source | Out-Null
           git archive --format=zip --output="release\source\SEPP-MarketRadar-v$version-SOURCE.zip" "HEAD"
+
       - name: Upload CI artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -86,7 +112,9 @@ jobs:
             release/portable/**
             release/installer/**
             release/source/**
+
       - name: Publish GitHub Release
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh

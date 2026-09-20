@@ -1,4 +1,23 @@
-SEPP-MarketRadar 16.1.1 FINAL
-Basis: SEPP-MarketRadar-15.0.0-FINAL-OPERATIONAL + cumulative 10-15 day architecture/bugfix integration + final jury remediation cycle.
-Local verification evidence: PASS (263 passed, 1 skipped from 264 collected; compileall PASS; release audit PASS; product audit PASS; architecture audit PASS).
-External evidence gates: Windows native E2E, live source verification, 500+ live verification, external engine execution, Android device E2E, external application/payment remain NOT EXECUTED in the current build environment.
+SEPP-MarketRadar 16.1.1 CONSOLIDATED CANDIDATE
+Basis: SEPP-MarketRadar-16.1.1-FINAL + Windows CI resource-cleanup remediation + Windows CI cleanup gate + Windows Release workflow hardening.
+
+Verified evidence:
+- GitHub Windows CI run 35453669137: PASS.
+- Windows CI compile gate: PASS.
+- Windows CI pytest gate: PASS.
+- Windows CI product audit: PASS.
+- Windows CI release audit: PASS.
+
+Release validation status:
+- Windows Release workflow hardening is included in this consolidated candidate.
+- Manual Windows Release validation using workflow_dispatch: NOT EXECUTED for this consolidated candidate.
+- GitHub Release publication: NOT EXECUTED.
+- Authenticode signing enforcement: controlled by repository variable REQUIRE_AUTHENTICODE_SIGNING; signing is not claimed unless the variable is enabled and the runner verifies it.
+
+External evidence gates:
+- live source verification
+- 500+ live source verification
+- external engine execution
+- Android device E2E
+- external application/payment execution
+remain NOT EXECUTED in the current environment.

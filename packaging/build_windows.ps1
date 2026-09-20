@@ -1,11 +1,11 @@
 $ErrorActionPreference = "Stop"
-$version = (py -c "from marketradar import __version__; print(__version__)").Trim()
-py -m pip install --upgrade pip
-py -m pip install -r requirements.txt pyinstaller
+$version = (python -c "from marketradar import __version__; print(__version__)").Trim()
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt pyinstaller
 if (Test-Path dist) { Remove-Item dist -Recurse -Force }
 if (Test-Path build) { Remove-Item build -Recurse -Force }
 if (Test-Path release) { Remove-Item release -Recurse -Force }
-py -m PyInstaller packaging/marketradar.spec --clean --noconfirm
+python -m PyInstaller packaging/marketradar.spec --clean --noconfirm
 if (-not (Test-Path dist\MarketRadar.exe)) { throw "PyInstaller did not create MarketRadar.exe" }
 New-Item -ItemType Directory -Force -Path release\portable\MarketRadar | Out-Null
 Copy-Item dist\MarketRadar.exe release\portable\MarketRadar\MarketRadar.exe -Force
