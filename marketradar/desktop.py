@@ -1239,15 +1239,32 @@ class MarketRadarDesktop:
 
 
 def smoke_test():
-    root, settings, sources, conn, runtime = open_runtime()
+    root = None
+    conn = None
     try:
-        assert __version__
-        target = json.loads((root / "config" / "source_targets.json").read_text(encoding="utf-8"))["target_registered_sources"]
-        assert target >= 500 and len(sources) >= 5 and runtime is not None
-        assert conn.execute("SELECT COUNT(*) FROM source_contracts").fetchone()[0] == len(sources)
+        root, settings, sources, conn, runtime = open_runtime()
+        target_path = root / "config" / "source_targets.json"
+        target = json.loads(target_path.read_text(encoding="utf-8"))["target_registered_sources"]
+        contracts = conn.execute("SELECT COUNT(*) FROM source_contracts").fetchone()[0]
+        if not __version__:
+            raise RuntimeError("SMOKE_VERSION_MISSING")
+        if target < 500:
+            raise RuntimeError(f"SMOKE_TARGET_BELOW_MINIMUM target={target}")
+        if len(sources) < 5:
+            raise RuntimeError(f"SMOKE_SOURCE_REGISTRY_TOO_SMALL count={len(sources)}")
+        if runtime is None:
+            raise RuntimeError("SMOKE_RUNTIME_MISSING")
+        if contracts != len(sources):
+            raise RuntimeError(f"SMOKE_SOURCE_CONTRACT_MISMATCH sources={len(sources)} contracts={contracts}")
+        logger.info("Installed/portable smoke PASS version=%s root=%s sources=%s contracts=%s target=%s",
+                    __version__, root, len(sources), contracts, target)
         return 0
+    except Exception:
+        logger.exception("Desktop smoke test FAILED root=%s", root)
+        return 1
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 def ui_smoke_test():
