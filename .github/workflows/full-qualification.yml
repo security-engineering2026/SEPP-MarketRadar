@@ -120,9 +120,19 @@ jobs:
           Start-Process -FilePath $installer.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$target" -Wait -PassThru | Out-Null
           if (-not (Test-Path "$target/MarketRadar.exe")) { throw "Installed EXE missing" }
           & "$target/MarketRadar.exe" --smoke-test
-          if ($LASTEXITCODE -ne 0) { throw "Installed EXE smoke test failed: $LASTEXITCODE" }
+          $smokeExit = $LASTEXITCODE
+          $installedLog = Join-Path $target "installed-smoke.log"
+          $defaultLog = Join-Path $env:LOCALAPPDATA "SEPP-MarketRadar\logs\marketradar.log"
+          if (Test-Path $defaultLog) { Copy-Item $defaultLog $installedLog -Force }
+          if ($smokeExit -ne 0) {
+            if (-not (Test-Path $installedLog)) { "Installed smoke produced no application log at $defaultLog" | Set-Content $installedLog }
+            Copy-Item $installedLog (Join-Path $env:QUALIFICATION_ARTIFACT_DIR "installed-smoke.log") -Force
+            throw "Installed EXE smoke test failed: $smokeExit"
+          }
           & "$target/MarketRadar.exe" --ui-smoke-test
-          if ($LASTEXITCODE -ne 0) { throw "Installed EXE UI smoke test failed: $LASTEXITCODE" }
+          $uiSmokeExit = $LASTEXITCODE
+          if (Test-Path $defaultLog) { Copy-Item $defaultLog (Join-Path $env:QUALIFICATION_ARTIFACT_DIR "installed-ui-smoke.log") -Force }
+          if ($uiSmokeExit -ne 0) { throw "Installed EXE UI smoke test failed: $uiSmokeExit" }
           $uninstaller = Join-Path $target "unins000.exe"
           if (-not (Test-Path $uninstaller)) { throw "Uninstaller missing" }
           Start-Process -FilePath $uninstaller -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait | Out-Null
