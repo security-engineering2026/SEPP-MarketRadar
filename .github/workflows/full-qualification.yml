@@ -195,8 +195,11 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_6
+          ram-size: 4096M
+          cores: 4
+          emulator-boot-timeout: 600
           disable-animations: true
-          emulator-options: -no-snapshot -no-window -no-boot-anim -gpu swiftshader_indirect
+          emulator-options: -no-snapshot-save -no-window -no-boot-anim -noaudio -gpu swiftshader_indirect
           script: bash tools/android_e2e.sh
       - name: Upload Android qualification artifact
         if: always()
