@@ -11,14 +11,14 @@ AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\SEPP-MarketRadar
 DefaultGroupName={#MyAppName}
-OutputDir=release\installer
+OutputDir=..\release\installer
 OutputBaseFilename=SEPP-MarketRadar-Setup-{#MyAppVersion}
 Compression=lzma
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
 [Files]
-Source: "release\portable\MarketRadar\*"; DestDir: "{app}"; Excludes: ".portable"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\release\portable\MarketRadar\*"; DestDir: "{app}"; Excludes: ".portable"; Flags: ignoreversion recursesubdirs createallsubdirs
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
