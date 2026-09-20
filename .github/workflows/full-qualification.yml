@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: full-qualification-${{ github.event.pull_request.head.ref || github.ref_name }}
+  group: full-qualification-v2-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
