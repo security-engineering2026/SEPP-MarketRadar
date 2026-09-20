@@ -122,19 +122,24 @@ jobs:
           if (Test-Path $installedData) { Remove-Item $installedData -Recurse -Force -ErrorAction SilentlyContinue }
           New-Item -ItemType Directory -Force -Path $installedData | Out-Null
           $env:MARKETRADAR_DATA_ROOT = $installedData
-          & "$target/MarketRadar.exe" --smoke-test
-          $smokeExit = $LASTEXITCODE
-          $installedLog = Join-Path $target "installed-smoke.log"
-          $defaultLog = Join-Path $env:LOCALAPPDATA "SEPP-MarketRadar\logs\marketradar.log"
-          if (Test-Path $defaultLog) { Copy-Item $defaultLog $installedLog -Force }
+          $stdout = Join-Path $env:RUNNER_TEMP "installed-smoke.stdout.log"
+          $stderr = Join-Path $env:RUNNER_TEMP "installed-smoke.stderr.log"
+          $smoke = Start-Process -FilePath "$target/MarketRadar.exe" -ArgumentList "--smoke-test" -WorkingDirectory $target -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          $smokeExit = $smoke.ExitCode
+          $installedLog = Join-Path $env:MARKETRADAR_DATA_ROOT "logs\marketradar.log"
+          if (Test-Path $installedLog) { Copy-Item $installedLog (Join-Path $env:QUALIFICATION_ARTIFACT_DIR "installed-smoke.log") -Force }
+          if (Test-Path $stdout) { Copy-Item $stdout (Join-Path $env:QUALIFICATION_ARTIFACT_DIR "installed-smoke.stdout.log") -Force }
+          if (Test-Path $stderr) { Copy-Item $stderr (Join-Path $env:QUALIFICATION_ARTIFACT_DIR "installed-smoke.stderr.log") -Force }
           if ($smokeExit -ne 0) {
-            if (-not (Test-Path $installedLog)) { "Installed smoke produced no application log at $defaultLog" | Set-Content $installedLog }
-            Copy-Item $installedLog (Join-Path $env:QUALIFICATION_ARTIFACT_DIR "installed-smoke.log") -Force
+            if (-not (Test-Path $installedLog) -and -not (Test-Path $stdout) -and -not (Test-Path $stderr)) { "Installed smoke produced no diagnostic output" | Set-Content (Join-Path $env:QUALIFICATION_ARTIFACT_DIR "installed-smoke.log") }
             throw "Installed EXE smoke test failed: $smokeExit"
           }
-          & "$target/MarketRadar.exe" --ui-smoke-test
-          $uiSmokeExit = $LASTEXITCODE
-          if (Test-Path $defaultLog) { Copy-Item $defaultLog (Join-Path $env:QUALIFICATION_ARTIFACT_DIR "installed-ui-smoke.log") -Force }
+          $uiStdout = Join-Path $env:RUNNER_TEMP "installed-ui-smoke.stdout.log"
+          $uiStderr = Join-Path $env:RUNNER_TEMP "installed-ui-smoke.stderr.log"
+          $uiSmoke = Start-Process -FilePath "$target/MarketRadar.exe" -ArgumentList "--ui-smoke-test" -WorkingDirectory $target -Wait -PassThru -RedirectStandardOutput $uiStdout -RedirectStandardError $uiStderr
+          $uiSmokeExit = $uiSmoke.ExitCode
+          if (Test-Path $uiStdout) { Copy-Item $uiStdout (Join-Path $env:QUALIFICATION_ARTIFACT_DIR "installed-ui-smoke.stdout.log") -Force }
+          if (Test-Path $uiStderr) { Copy-Item $uiStderr (Join-Path $env:QUALIFICATION_ARTIFACT_DIR "installed-ui-smoke.stderr.log") -Force }
           if ($uiSmokeExit -ne 0) { throw "Installed EXE UI smoke test failed: $uiSmokeExit" }
           $uninstaller = Join-Path $target "unins000.exe"
           if (-not (Test-Path $uninstaller)) { throw "Uninstaller missing" }
