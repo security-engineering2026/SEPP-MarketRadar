@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: source-scale-${{ github.ref }}
+  group: source-scale-v2-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
