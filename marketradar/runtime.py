@@ -122,7 +122,7 @@ class MarketRadarRuntime:
             if token: headers.setdefault('Authorization','Bearer '+token)
         return Source(
             s['name'], url, s.get('adapter', 'json'), s.get('status', 'candidate'),
-            tuple(s.get('allow_hosts', [])), s.get('access_scope', 'public'), tuple(headers.items())
+            tuple(s.get('allow_hosts', [])), s.get('access_scope', 'public'), tuple(headers.items()), s.get('max_bytes')
         )
 
     def refresh_intelligence(self):
