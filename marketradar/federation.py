@@ -43,7 +43,7 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
 
 class Federation:
     def __init__(self, sources, timeout=5, max_workers=8, retries=2, max_bytes=2_000_000, max_redirects=5):
-        self.sources={s.name:s for s in sources}; self.timeout=max(.1,float(timeout)); self.max_workers=max(1,min(int(max_workers),32)); self.retries=max(0,int(retries)); self.max_bytes=max(1024,int(max_bytes)); self.max_redirects=max(0,min(int(max_redirects),10))
+        self.sources={s.name:s for s in sources}; self.timeout=max(.1,float(timeout)); self.max_workers=max(1,min(int(max_workers),64)); self.retries=max(0,int(retries)); self.max_bytes=max(1024,int(max_bytes)); self.max_redirects=max(0,min(int(max_redirects),10))
 
     def _validate_target(self, source, target, require_public=None):
         if source.access_scope not in {'public','local','authorized','private'}: raise ValueError('ACCESS_SCOPE_INVALID')
