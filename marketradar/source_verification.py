@@ -131,11 +131,11 @@ class SourceVerificationEngine:
     auto-blocks when it sees explicit source-level Iran restriction evidence.
     It never infers ALLOW or "no KYC" from silence.
     """
-    def __init__(self, connection, source_records, timeout=10, max_workers=12, max_policy_pages=2, search_provider=None, policy_search_interval_days=7, surface_scan_pages=24):
+    def __init__(self, connection, source_records, timeout=10, max_workers=12, max_policy_pages=2, search_provider=None, policy_search_interval_days=7, surface_scan_pages=24, http_retries=2):
         self.c=connection
         self.records={r['name']:r for r in source_records}
         sources=[Source(r['name'],r['base_url'],r.get('adapter','json'),r.get('status','candidate'),tuple(r.get('allow_hosts',[])),r.get('access_scope','public'),tuple((r.get('headers') or {}).items())) for r in source_records]
-        self.http=Federation(sources, timeout=timeout, max_workers=max_workers)
+        self.http=Federation(sources, timeout=timeout, max_workers=max_workers, retries=max(0,int(http_retries)))
         self.max_workers=max(1,min(int(max_workers),64)); self.max_policy_pages=max(1,min(max_policy_pages,8)); self.surface_scan_pages=max(1,min(int(surface_scan_pages),64)); self.search=search_provider or WebSearchProvider(timeout=timeout); self.policy_search_interval_days=max(1,int(policy_search_interval_days))
 
     def _policy_search(self, r, text, links):
