@@ -190,6 +190,7 @@ def live_source_scale_gate(limit=500):
             max_policy_pages=1,
             surface_scan_pages=2,
             search_provider=WebSearchProvider(timeout=8),
+            http_retries=0,
         )
         results = engine.verify([x["name"] for x in selected])
         confirmed = sum(x.get("source_verification_state") == "LIVE_CONFIRMED" for x in results)
@@ -398,59 +399,3 @@ def main():
         lambda: sandbox_endpoint_gate("EXTERNAL_ENGINE_E2E", "QUALIFY_ENGINE_URL"),
         lambda: sandbox_endpoint_gate("APPLICATION_SANDBOX_E2E", "QUALIFY_APPLICATION_URL"),
         lambda: sandbox_endpoint_gate("PAYMENT_SANDBOX_E2E", "QUALIFY_PAYMENT_URL"),
-        lambda: sandbox_endpoint_gate("PUSH_NOTIFICATION_E2E", "QUALIFY_PUSH_URL"),
-    ]
-
-    gates = []
-    for fn in funcs:
-        try:
-            gates.append(fn())
-        except Exception as exc:
-            gates.append(gate(getattr(fn, "__name__", "UNKNOWN_GATE"), "FAIL", {"error": type(exc).__name__ + ":" + str(exc)}))
-
-    summary = {
-        "pass": sum(x["status"] == "PASS" for x in gates),
-        "open": sum(x["status"] == "OPEN" for x in gates),
-        "fail": sum(x["status"] == "FAIL" for x in gates),
-        "skipped": sum(x["status"] == "SKIPPED" for x in gates),
-    }
-    report = {
-        "qualification_version": "FULL-QUALIFICATION-V1",
-        "product_version": "16.1.1",
-        "generated_at": now(),
-        "summary": summary,
-        "gates": gates,
-        "policy": {
-            "open_is_not_pass": True,
-            "production_side_effects_forbidden": True,
-            "sandbox_only_for_external_application_payment_push": True,
-            "fixture_data_is_not_live_market_evidence": True,
-        },
-    }
-
-    (out / "full_qualification.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    md = [
-        "MarketRadar Full Qualification V1",
-        "",
-        "Product version: " + report["product_version"],
-        "Generated: " + report["generated_at"],
-        "",
-        "PASS: " + str(summary["pass"]),
-        "OPEN: " + str(summary["open"]),
-        "FAIL: " + str(summary["fail"]),
-        "SKIPPED: " + str(summary["skipped"]),
-        "",
-        "Gate | Status",
-        "--- | ---",
-    ]
-    md.extend(x["name"] + " | " + x["status"] for x in gates)
-    (out / "full_qualification.md").write_text("\n".join(md) + "\n", encoding="utf-8")
-
-    print(json.dumps(report, ensure_ascii=False, indent=2))
-    return 1 if (summary["fail"] or summary["open"]) else 0
-
-if __name__ == "__main__":
-    raise SystemExit(main())
