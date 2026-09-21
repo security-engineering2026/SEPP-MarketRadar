@@ -47,7 +47,17 @@ class QueryPlanner:
             plans.append(dict(x, operator_mode='explicit', operator_score=1.0))
         templates=self.config.get('country_templates', [])
         batch=int(self.config.get('country_batch_size',50))
+        platform_targets = self.config.get('platform_targets', [])
+        platform_countries = list(self.config.get('platform_priority_countries', []))
+        entity_by_country = {str(x.get('country','')).strip(): x for x in entities}
+        platform_entities = []
+        for country in platform_countries:
+            if country in entity_by_country:
+                platform_entities.append(entity_by_country[country])
         for entity in entities[:batch]:
+            if entity not in platform_entities:
+                platform_entities.append(entity)
+        for entity in platform_entities:
             country=entity.get('country','Global'); language=entity.get('language','multi')
             for t in templates:
                 fam=t.get('family','jobs'); signal=self._signals(fam)[0]
@@ -64,6 +74,32 @@ class QueryPlanner:
                     variants.append(('forum_site',f'site:{domain} "{topic}" {signal} "{country}" -jobs -course'))
                 for mode,q in variants:
                     plans.append({'id':f'{entity.get("iso2",country)}_{fam}_{mode}','country':country,'region':entity.get('region','Global'),'language':language,'family':fam,'q':q,'operator_mode':mode,'operator_score':self._priority(fam,mode)})
+        # Platform discovery is generated from platform families, not a hand-curated
+        # list of individual opportunities/sites. Search engines/indexers find the
+        # actual channels, profiles, groups, pages and communities.
+        for target in platform_targets:
+            domains = target.get('domains') or []
+            terms = target.get('terms') or target.get('name','')
+            family = target.get('family','social')
+            for entity in platform_entities[:max(1, batch)]:
+                country=entity.get('country','Global'); language=entity.get('language','multi')
+                for domain in domains:
+                    plans.append({
+                        'id':f'{entity.get("iso2",country)}_{target.get("id",family)}_site_{domain}',
+                        'country':country,'region':entity.get('region','Global'),'language':language,
+                        'family':family,
+                        'q':f'site:{domain} ({terms}) "{country}" (freelance OR project OR hiring OR job OR contract OR opportunity)',
+                        'operator_mode':'platform_site','operator_score':self._priority(family,'site') + 0.12,
+                        'platform':target.get('id',family),'platform_discovery':'public_index'
+                    })
+                plans.append({
+                    'id':f'{entity.get("iso2",country)}_{target.get("id",family)}_broad',
+                    'country':country,'region':entity.get('region','Global'),'language':language,
+                    'family':family,
+                    'q':f'"{country}" {terms} (freelance OR project OR hiring OR job OR contract OR opportunity)',
+                    'operator_mode':'platform_broad','operator_score':self._priority(family,'broad'),
+                    'platform':target.get('id',family),'platform_discovery':'public_index'
+                })
         priority_cfg={str(x.get('country')):float(x.get('priority_boost',0)) for x in self.config.get('priority_regions',[]) if x.get('country')}
         for p in plans:
             p['operator_score']=float(p.get('operator_score',0))+priority_cfg.get(str(p.get('country','')),0.0)
