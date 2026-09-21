@@ -188,7 +188,7 @@
   {
     "name": "JobRemotely",
     "base_url": "https://jobremotely.io/api/v1/jobs?limit=50&sort=newest",
-    "adapter": "html_jobs",
+    "adapter": "jobremotely_json",
     "status": "active",
     "allow_hosts": [
       "jobremotely.io"
