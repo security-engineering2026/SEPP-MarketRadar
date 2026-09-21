@@ -38,3 +38,7 @@ jobs:
       - name: Run source-scale gate
         shell: pwsh
         run: python -B tools/full_qualification.py --gate LIVE_SOURCE_SCALE_500
+      - name: Run live acquisition diversity gate
+        shell: pwsh
+        timeout-minutes: 12
+        run: python -B -c "from tools.full_qualification import live_acquisition_sample_gate; import json; r=live_acquisition_sample_gate(30); print(json.dumps(r, ensure_ascii=False, indent=2)); raise SystemExit(0 if r['status']=='PASS' else 1)"
