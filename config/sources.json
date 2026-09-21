@@ -267,7 +267,7 @@
   {
     "name": "Arbeitnow",
     "base_url": "https://www.arbeitnow.com/api/job-board-api?page=1",
-    "adapter": "json",
+    "adapter": "arbeitnow_json",
     "max_bytes": 8000000,
     "status": "active",
     "allow_hosts": [
