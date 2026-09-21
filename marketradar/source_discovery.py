@@ -213,6 +213,17 @@ class SourceDiscoveryEngine:
         url=result.get('url','')
         p=urlparse(url)
         if p.scheme not in {'http','https'} or not p.hostname: return
+        protected_hosts = {
+            'instagram.com','www.instagram.com','linkedin.com','www.linkedin.com',
+            'x.com','www.x.com','twitter.com','www.twitter.com',
+            'facebook.com','www.facebook.com','t.me','telegram.me',
+            'telegram.org','rubika.ir','www.rubika.ir','eitaa.com','www.eitaa.com',
+            'eitaa.ir','www.eitaa.ir','splus.ir','www.splus.ir','ble.ir','www.ble.ir'
+        }
+        if (p.hostname and p.hostname.lower() in protected_hosts):
+            # Search/index evidence is valid discovery evidence. Direct crawling of
+            # protected platforms is delegated to authorized connectors.
+            return
         try:
             req=Request(url,headers={'User-Agent':'SEPP-MarketRadar/16.1.1 DiscoveryCrawler'})
             with urlopen(req,timeout=self.timeout) as resp:
