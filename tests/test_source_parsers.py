@@ -25,3 +25,11 @@ def test_parse_rss1_namespaced_items():
     body=b'''<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://purl.org/rss/1.0/"><item><title>Python</title><link>https://example.test/job</link><description>Build software</description></item></rdf:RDF>'''
     rows=parse_rss(body,'https://example.test/feed')
     assert rows and rows[0]['title']=='Python'
+
+def test_parser_contract_bounds_prevent_pipeline_rejection():
+    long_title='T'*400
+    long_description='D'*12000
+    body=('<rss><channel><item><title>'+long_title+'</title><link>https://jobs.example/long</link><description>'+long_description+'</description></item></channel></rss>').encode()
+    row=parse_rss(body,'https://example.com/feed')[0]
+    assert len(row['title'])==240
+    assert len(row['description'])==10_000
