@@ -7,6 +7,7 @@ import sys
 import tempfile
 import threading
 import time
+import argparse
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -184,8 +185,8 @@ def live_source_scale_gate(limit=500):
         engine = SourceVerificationEngine(
             conn,
             selected,
-            timeout=15,
-            max_workers=24,
+            timeout=float(os.environ.get('MR_SOURCE_VERIFY_TIMEOUT', '15')),
+            max_workers=int(os.environ.get('MR_SOURCE_VERIFY_WORKERS', '24')),
             max_policy_pages=1,
             surface_scan_pages=2,
             search_provider=WebSearchProvider(timeout=8),
@@ -362,6 +363,15 @@ def sandbox_endpoint_gate(name, env_name):
     return gate(name, status, {"url": url, "probe": probe})
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--gate", choices=["LIVE_SOURCE_SCALE_500"], default=None)
+    args = parser.parse_args()
+
+    if args.gate == "LIVE_SOURCE_SCALE_500":
+        result = live_source_scale_gate()
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0 if result["status"] == "PASS" else 1
+
     out = Path(os.environ.get("QUALIFICATION_ARTIFACT_DIR", "qualification-artifacts"))
     out.mkdir(parents=True, exist_ok=True)
 
