@@ -1,4 +1,5 @@
 name: Source Scale Fast Lane
+# qualification trigger: source-scale verification lane
 
 on:
   push:
