@@ -266,7 +266,7 @@
   },
   {
     "name": "Arbeitnow",
-    "base_url": "https://www.arbeitnow.com/api/job-board-api",
+    "base_url": "https://www.arbeitnow.com/api/job-board-api?page=1",
     "adapter": "json",
     "status": "active",
     "allow_hosts": [
