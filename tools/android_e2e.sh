@@ -30,7 +30,7 @@ fi
 
 boot=""
 for _ in $(seq 1 180); do
-  boot="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+  boot="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '' || true)"
   if [ "$boot" = "1" ]; then break; fi
   sleep 1
 done
@@ -41,9 +41,9 @@ if [ "$boot" != "1" ]; then
   exit 1
 fi
 
-adb install -r "$APK"
+timeout 60s adb install -r "$APK"
 adb shell am force-stop com.sepp.marketradar || true
-adb shell am start -n com.sepp.marketradar/.MainActivity >/tmp/marketradar-android-start.txt 2>&1 || {
+timeout 30s adb shell am start -n com.sepp.marketradar/.MainActivity >/tmp/marketradar-android-start.txt 2>&1 || {
   adb logcat -d -t 500 > android-qualification/logcat-start-failure.txt || true
   cat /tmp/marketradar-android-start.txt
   exit 1
@@ -62,5 +62,5 @@ if [ "$process_ready" != "1" ]; then
   echo "ANDROID_E2E_PROCESS_NOT_READY" >&2
   exit 1
 fi
-adb shell dumpsys package com.sepp.marketradar | grep -E 'versionName=16\.1\.1|versionCode=16110'
+timeout 30s adb shell dumpsys package com.sepp.marketradar | grep -E 'versionName=16\.1\.1|versionCode=16110'
 printf '%s\n' 'ANDROID_E2E=PASS' | tee android-qualification/result.txt
