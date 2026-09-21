@@ -17,8 +17,13 @@ if (Test-Path $distRoot) { Remove-Item $distRoot -Recurse -Force }
 if (Test-Path $buildRoot) { Remove-Item $buildRoot -Recurse -Force }
 if (Test-Path $releaseRoot) { Remove-Item $releaseRoot -Recurse -Force }
 
-python -m PyInstaller (Join-Path $PSScriptRoot "marketradar.spec") --clean --noconfirm
-if (-not (Test-Path $distExe)) { throw "PyInstaller did not create MarketRadar.exe at $distExe" }
+python -m PyInstaller (Join-Path $PSScriptRoot "marketradar.spec") --clean --noconfirm --distpath $distRoot --workpath $buildRoot
+$builtExe = Get-ChildItem -LiteralPath $distRoot -Filter "MarketRadar.exe" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $builtExe) {
+  $candidates = Get-ChildItem -LiteralPath $distRoot -Filter "*.exe" -File -ErrorAction SilentlyContinue
+  throw "PyInstaller did not create MarketRadar.exe in $distRoot. Found: $($candidates.FullName -join ", ")"
+}
+$distExe = $builtExe.FullName
 
 New-Item -ItemType Directory -Force -Path $portableRoot | Out-Null
 Copy-Item $distExe (Join-Path $portableRoot "MarketRadar.exe") -Force
