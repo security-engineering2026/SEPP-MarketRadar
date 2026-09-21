@@ -194,6 +194,13 @@ def live_source_scale_gate(limit=500):
         results = engine.verify([x["name"] for x in selected])
         confirmed = sum(x.get("source_verification_state") == "LIVE_CONFIRMED" for x in results)
         dead = sum(x.get("source_verification_state") == "DEAD" for x in results)
+        error_counts = {}
+        for item in results:
+            if item.get("source_verification_state") != "DEAD":
+                continue
+            error = str(item.get("error") or "UNKNOWN_ERROR")
+            error_counts[error] = error_counts.get(error, 0) + 1
+        top_errors = sorted(error_counts.items(), key=lambda kv: (-kv[1], kv[0]))[:20]
         conn.close()
 
     return gate(
@@ -205,6 +212,7 @@ def live_source_scale_gate(limit=500):
             "live_confirmed": confirmed,
             "dead": dead,
             "other": len(results) - confirmed - dead,
+            "top_dead_errors": [{"error": k, "count": v} for k, v in top_errors],
             "criterion": f"{limit} LIVE_CONFIRMED sources",
             "method": "all current registry candidates verified; no first-N shortcut",
         },
