@@ -14,6 +14,7 @@ class Source:
     allow_hosts: tuple = ()
     access_scope: str = "public"
     headers: tuple = ()
+    max_bytes: int | None = None
 
     def __post_init__(self):
         if self.access_scope not in {"public", "local", "authorized", "private"}:
@@ -108,8 +109,10 @@ class Federation:
                 response.read(4096); conn.close()
                 if not location: raise ValueError('REDIRECT_WITHOUT_LOCATION')
                 return response.status, None, None, urljoin(target,location)
-            body=response.read(self.max_bytes+1)
-            if len(body)>self.max_bytes: conn.close(); raise ValueError('RESPONSE_TOO_LARGE')
+            limit = int(source.max_bytes) if source.max_bytes is not None else self.max_bytes
+            if limit < 1024: raise ValueError("SOURCE_MAX_BYTES_INVALID")
+            body=response.read(limit+1)
+            if len(body)>limit: conn.close(); raise ValueError('RESPONSE_TOO_LARGE')
             ctype=(response.getheader('Content-Type') or '').lower()
             status=response.status; final=target
             if status < 200 or status >= 300:
