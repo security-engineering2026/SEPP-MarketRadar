@@ -1,21 +1,17 @@
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import subprocess
 import sys
 import tempfile
-import threading
-import time
-import argparse
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 VALID = {"PASS", "OPEN", "FAIL", "SKIPPED"}
 
 def now():
@@ -261,14 +257,9 @@ def live_acquisition_sample_gate(sample_size=20):
 def family_surface_gate(family):
     from marketradar.source_registry import load_source_records
     records = load_source_records(ROOT / "config" / "sources.json")
-    aliases = {
-        "social": {"social", "social_platform", "reddit", "x", "linkedin", "telegram", "instagram", "bale", "eitaa", "soroush"},
-        "procurement": {"procurement", "tender", "market_intelligence"},
-    }
-    families = aliases.get(family, {family})
     candidates = [
         x for x in records
-        if str(x.get("source_family", "")).lower() in families
+        if str(x.get("source_family", "")).lower() == family
         and x.get("base_url")
         and x.get("status") != "disabled"
     ][:3]
@@ -285,44 +276,11 @@ def family_surface_gate(family):
         {"checked": results},
     )
 
-_LOCAL_SANDBOX_SERVER = None
-
-
-def ensure_local_sandbox():
-    global _LOCAL_SANDBOX_SERVER
-    urls = [
-        os.environ.get("QUALIFY_DYNAMIC_URL", ""),
-        os.environ.get("QUALIFY_ENGINE_URL", ""),
-        os.environ.get("QUALIFY_APPLICATION_URL", ""),
-        os.environ.get("QUALIFY_PAYMENT_URL", ""),
-        os.environ.get("QUALIFY_PUSH_URL", ""),
-    ]
-    if not any(u.startswith("http://127.0.0.1:18080") for u in urls):
-        return
-    health = http_probe("http://127.0.0.1:18080/health", timeout=2)
-    if health.get("reachable"):
-        return
-    if _LOCAL_SANDBOX_SERVER is not None:
-        return
-    from tools.qualification_sandbox import Handler
-    from http.server import ThreadingHTTPServer
-    server = ThreadingHTTPServer(("127.0.0.1", 18080), Handler)
-    thread = threading.Thread(target=server.serve_forever, name="qualification-sandbox", daemon=True)
-    thread.start()
-    _LOCAL_SANDBOX_SERVER = server
-    for _ in range(20):
-        if http_probe("http://127.0.0.1:18080/health", timeout=1).get("reachable"):
-            return
-        time.sleep(0.05)
-    raise RuntimeError("LOCAL_SANDBOX_START_FAILED")
-
-
 def dynamic_browser_gate():
     url = os.environ.get("QUALIFY_DYNAMIC_URL")
     if not url:
         return gate("DYNAMIC_JS_BROWSER", "OPEN", {"reason": "QUALIFY_DYNAMIC_URL is not configured."})
     try:
-        ensure_local_sandbox()
         from playwright.sync_api import sync_playwright
     except Exception as exc:
         return gate("DYNAMIC_JS_BROWSER", "OPEN", {"reason": "Playwright is not installed.", "error": str(exc)})
@@ -362,10 +320,6 @@ def sandbox_endpoint_gate(name, env_name):
     url = os.environ.get(env_name)
     if not url:
         return gate(name, "OPEN", {"reason": env_name + " is not configured; no production side effect attempted."})
-    try:
-        ensure_local_sandbox()
-    except Exception as exc:
-        return gate(name, "FAIL", {"url": url, "error": type(exc).__name__ + ":" + str(exc)})
     payload = json.dumps({"market_radar_qualification": True, "mode": "sandbox", "timestamp": now()}).encode()
     probe = http_probe(url, timeout=20, method="POST", payload=payload)
     status = "PASS" if probe.get("reachable") and int(probe.get("status_code") or 0) < 300 else "FAIL"
@@ -399,3 +353,59 @@ def main():
         lambda: sandbox_endpoint_gate("EXTERNAL_ENGINE_E2E", "QUALIFY_ENGINE_URL"),
         lambda: sandbox_endpoint_gate("APPLICATION_SANDBOX_E2E", "QUALIFY_APPLICATION_URL"),
         lambda: sandbox_endpoint_gate("PAYMENT_SANDBOX_E2E", "QUALIFY_PAYMENT_URL"),
+        lambda: sandbox_endpoint_gate("PUSH_NOTIFICATION_E2E", "QUALIFY_PUSH_URL"),
+    ]
+
+    gates = []
+    for fn in funcs:
+        try:
+            gates.append(fn())
+        except Exception as exc:
+            gates.append(gate(getattr(fn, "__name__", "UNKNOWN_GATE"), "FAIL", {"error": type(exc).__name__ + ":" + str(exc)}))
+
+    summary = {
+        "pass": sum(x["status"] == "PASS" for x in gates),
+        "open": sum(x["status"] == "OPEN" for x in gates),
+        "fail": sum(x["status"] == "FAIL" for x in gates),
+        "skipped": sum(x["status"] == "SKIPPED" for x in gates),
+    }
+    report = {
+        "qualification_version": "FULL-QUALIFICATION-V1",
+        "product_version": "16.1.1",
+        "generated_at": now(),
+        "summary": summary,
+        "gates": gates,
+        "policy": {
+            "open_is_not_pass": True,
+            "production_side_effects_forbidden": True,
+            "sandbox_only_for_external_application_payment_push": True,
+            "fixture_data_is_not_live_market_evidence": True,
+        },
+    }
+
+    (out / "full_qualification.json").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    md = [
+        "MarketRadar Full Qualification V1",
+        "",
+        "Product version: " + report["product_version"],
+        "Generated: " + report["generated_at"],
+        "",
+        "PASS: " + str(summary["pass"]),
+        "OPEN: " + str(summary["open"]),
+        "FAIL: " + str(summary["fail"]),
+        "SKIPPED: " + str(summary["skipped"]),
+        "",
+        "Gate | Status",
+        "--- | ---",
+    ]
+    md.extend(x["name"] + " | " + x["status"] for x in gates)
+    (out / "full_qualification.md").write_text("\n".join(md) + "\n", encoding="utf-8")
+
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 1 if (summary["fail"] or summary["open"]) else 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())
