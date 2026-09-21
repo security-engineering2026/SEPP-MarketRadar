@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import traceback
 import threading
 import time
 import urllib.error
@@ -311,6 +312,7 @@ def live_acquisition_sample_gate(sample_size=30):
                     "status": "ERROR",
                     "observations": 0,
                     "error": type(exc).__name__ + ":" + str(exc),
+                    "traceback": traceback.format_exc(),
                 })
         observed = sum(int(x.get("observations") or 0) for x in results if x.get("status") == "OK")
         successful = [x for x in results if x.get("status") == "OK" and int(x.get("observations") or 0) > 0]
