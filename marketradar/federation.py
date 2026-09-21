@@ -49,7 +49,12 @@ class Federation:
         if source.access_scope not in {'public','local','authorized','private'}: raise ValueError('ACCESS_SCOPE_INVALID')
         if not isinstance(target,str) or len(target)>4096: raise ValueError('URL_TOO_LONG')
         p=urlparse(target); allowed={h.lower().rstrip('.') for h in (source.allow_hosts or (urlparse(source.base_url).hostname,)) if h}; host=(p.hostname or '').lower().rstrip('.')
-        if p.scheme not in ('http','https') or host not in allowed or not host or p.username or p.password: raise ValueError('HOST_BOUNDARY_BLOCK')
+        def host_allowed(candidate):
+            if candidate in allowed:
+                return True
+            bare = candidate[4:] if candidate.startswith('www.') else candidate
+            return any((a[4:] if a.startswith('www.') else a) == bare and (candidate.startswith('www.') or a.startswith('www.')) for a in allowed)
+        if p.scheme not in ('http','https') or not host or not host_allowed(host) or p.username or p.password: raise ValueError('HOST_BOUNDARY_BLOCK')
         if require_public is None: require_public=source.access_scope in {'public','authorized'}
         try: literal=ipaddress.ip_address(host)
         except ValueError: literal=None
