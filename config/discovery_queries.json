@@ -297,7 +297,7 @@
       "q": "ایران تایپ ترجمه OCR PDF Word Excel PowerPoint ورود داده پروژه آنلاین"
     }
   ],
-  "deep_web": {
+  "discovery_lanes": {\n    "community": ["forum freelance projects payment Iran", "forum sites freelance USDT Iran", "community discussion remote work Iran"],\n    "policy": ["freelance platform Iran payment KYC policy", "remote work Iran terms payment restrictions"],\n    "social": ["#freelance Iran projects Telegram", "#bugbounty Iran Telegram LinkedIn X"]\n  },\n  "deep_web": {
     "enabled": true,
     "search_fabric": [
       "brave",
