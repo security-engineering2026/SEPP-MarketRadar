@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - qualification/full-cycle-2
   workflow_dispatch:
   schedule:
     - cron: '17 2 * * *'
