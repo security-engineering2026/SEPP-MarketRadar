@@ -6,12 +6,16 @@ import os
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 VALID = {"PASS", "OPEN", "FAIL", "SKIPPED"}
 
 def now():
@@ -257,9 +261,14 @@ def live_acquisition_sample_gate(sample_size=20):
 def family_surface_gate(family):
     from marketradar.source_registry import load_source_records
     records = load_source_records(ROOT / "config" / "sources.json")
+    aliases = {
+        "social": {"social", "social_platform", "reddit", "x", "linkedin", "telegram", "instagram", "bale", "eitaa", "soroush"},
+        "procurement": {"procurement", "tender", "market_intelligence"},
+    }
+    families = aliases.get(family, {family})
     candidates = [
         x for x in records
-        if str(x.get("source_family", "")).lower() == family
+        if str(x.get("source_family", "")).lower() in families
         and x.get("base_url")
         and x.get("status") != "disabled"
     ][:3]
@@ -276,11 +285,43 @@ def family_surface_gate(family):
         {"checked": results},
     )
 
+_LOCAL_SANDBOX_SERVER = None
+
+def ensure_local_sandbox():
+    global _LOCAL_SANDBOX_SERVER
+    urls = [
+        os.environ.get("QUALIFY_DYNAMIC_URL", ""),
+        os.environ.get("QUALIFY_ENGINE_URL", ""),
+        os.environ.get("QUALIFY_APPLICATION_URL", ""),
+        os.environ.get("QUALIFY_PAYMENT_URL", ""),
+        os.environ.get("QUALIFY_PUSH_URL", ""),
+    ]
+    if not any(u.startswith("http://127.0.0.1:18080") for u in urls):
+        return
+    health = http_probe("http://127.0.0.1:18080/health", timeout=2)
+    if health.get("reachable"):
+        return
+    if _LOCAL_SANDBOX_SERVER is not None:
+        return
+    from tools.qualification_sandbox import Handler
+    from http.server import ThreadingHTTPServer
+    server = ThreadingHTTPServer(("127.0.0.1", 18080), Handler)
+    thread = threading.Thread(target=server.serve_forever, name="qualification-sandbox", daemon=True)
+    thread.start()
+    _LOCAL_SANDBOX_SERVER = server
+    for _ in range(20):
+        if http_probe("http://127.0.0.1:18080/health", timeout=1).get("reachable"):
+            return
+        time.sleep(0.05)
+    raise RuntimeError("LOCAL_SANDBOX_START_FAILED")
+
+
 def dynamic_browser_gate():
     url = os.environ.get("QUALIFY_DYNAMIC_URL")
     if not url:
         return gate("DYNAMIC_JS_BROWSER", "OPEN", {"reason": "QUALIFY_DYNAMIC_URL is not configured."})
     try:
+        ensure_local_sandbox()
         from playwright.sync_api import sync_playwright
     except Exception as exc:
         return gate("DYNAMIC_JS_BROWSER", "OPEN", {"reason": "Playwright is not installed.", "error": str(exc)})
@@ -320,6 +361,10 @@ def sandbox_endpoint_gate(name, env_name):
     url = os.environ.get(env_name)
     if not url:
         return gate(name, "OPEN", {"reason": env_name + " is not configured; no production side effect attempted."})
+    try:
+        ensure_local_sandbox()
+    except Exception as exc:
+        return gate(name, "FAIL", {"url": url, "error": type(exc).__name__ + ":" + str(exc)})
     payload = json.dumps({"market_radar_qualification": True, "mode": "sandbox", "timestamp": now()}).encode()
     probe = http_probe(url, timeout=20, method="POST", payload=payload)
     status = "PASS" if probe.get("reachable") and int(probe.get("status_code") or 0) < 300 else "FAIL"
