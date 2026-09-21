@@ -48,9 +48,18 @@ adb shell am start -n com.sepp.marketradar/.MainActivity >/tmp/marketradar-andro
   cat /tmp/marketradar-android-start.txt
   exit 1
 }
-sleep 5
-if ! adb shell pidof com.sepp.marketradar >/dev/null 2>&1; then
+process_ready=""
+for _ in $(seq 1 60); do
+  if adb shell pidof com.sepp.marketradar >/dev/null 2>&1; then
+    process_ready="1"
+    break
+  fi
+  sleep 1
+done
+if [ "$process_ready" != "1" ]; then
+  adb shell dumpsys activity activities > android-qualification/activity-process-failure.txt || true
   adb logcat -d -t 500 > android-qualification/logcat-process-failure.txt || true
+  echo "ANDROID_E2E_PROCESS_NOT_READY" >&2
   exit 1
 fi
 adb shell dumpsys package com.sepp.marketradar | grep -E 'versionName=16\.1\.1|versionCode=16110'
