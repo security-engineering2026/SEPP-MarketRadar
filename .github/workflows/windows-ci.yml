@@ -3,7 +3,9 @@ name: Windows CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches:
+      - main
+      - 'qualification/**'
   workflow_dispatch:
 
 jobs:
@@ -25,8 +27,8 @@ jobs:
         shell: pwsh
         run: python -m compileall -q marketradar tools
 
-      - name: Fast PR regression
-        if: ${{ github.event_name == 'pull_request' }}
+      - name: Fast integration regression
+        if: ${{ github.event_name != 'push' || github.ref_name != 'main' }}
         shell: pwsh
         run: >-
           python -m pytest -q
@@ -38,7 +40,7 @@ jobs:
           tests/test_claim_intelligence.py
 
       - name: Full regression on protected integration
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
         shell: pwsh
         run: python -m pytest -q
 
