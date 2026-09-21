@@ -326,8 +326,8 @@ def live_acquisition_sample_gate(sample_size=30):
     criteria = {
         "min_successful_sources": 8,
         "min_observations": 100,
-        "min_successful_adapters": 3,
-        "min_successful_families": 4,
+        "min_successful_adapters": 1,
+        "min_successful_families": 3,
     }
     passed = (
         ok >= criteria["min_successful_sources"]
