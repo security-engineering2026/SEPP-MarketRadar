@@ -88,6 +88,23 @@ def parse_jobicy(body: bytes):
     return out[:5000]
 
 
+def parse_arbeitnow(body: bytes, base_url='https://www.arbeitnow.com'):
+    data=json.loads(body.decode('utf-8'))
+    rows=data.get('data', []) if isinstance(data,dict) else data
+    out=[]
+    for x in rows if isinstance(rows,list) else []:
+        if not isinstance(x,dict): continue
+        slug=x.get('slug')
+        url=x.get('url') or (urljoin(base_url, '/jobs/'+slug) if slug else '')
+        item=_item(x.get('title') or x.get('name'), url, x.get('description',''),
+                   location=x.get('location'), remote=x.get('remote'),
+                   company=x.get('company_name'), tags=x.get('tags'),
+                   job_types=x.get('job_types'))
+        if item:
+            item['evidence']=[{'kind':'listing','url':item['url'],'finding':'Arbeitnow public Job Board API response','confidence':.95}]
+            out.append(item)
+    return out[:5000]
+
 def parse_jobremotely(body: bytes, base_url='https://jobremotely.io'):
     data=json.loads(body.decode('utf-8'))
     rows=data.get('jobs', data.get('items', [])) if isinstance(data,dict) else data
