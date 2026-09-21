@@ -113,6 +113,123 @@
     "quora.com",
     "news.ycombinator.com"
   ],
+  "platform_priority_countries": [
+    "Iran",
+    "United States",
+    "United Kingdom",
+    "Germany",
+    "Canada"
+  ],
+  "platform_targets": [
+    {
+      "id": "instagram",
+      "family": "social",
+      "domains": [
+        "instagram.com"
+      ],
+      "terms": "Instagram profile OR Instagram post OR Instagram reel"
+    },
+    {
+      "id": "linkedin",
+      "family": "social",
+      "domains": [
+        "linkedin.com"
+      ],
+      "terms": "LinkedIn jobs OR LinkedIn post OR LinkedIn company"
+    },
+    {
+      "id": "x",
+      "family": "social",
+      "domains": [
+        "x.com",
+        "twitter.com"
+      ],
+      "terms": "X post OR Twitter post OR hiring"
+    },
+    {
+      "id": "telegram",
+      "family": "social",
+      "domains": [
+        "t.me",
+        "telegram.me"
+      ],
+      "terms": "Telegram channel OR Telegram group OR freelance"
+    },
+    {
+      "id": "reddit",
+      "family": "community",
+      "domains": [
+        "reddit.com"
+      ],
+      "terms": "Reddit freelance OR Reddit jobs OR Reddit bug bounty"
+    },
+    {
+      "id": "rubika",
+      "family": "social",
+      "domains": [
+        "rubika.ir"
+      ],
+      "terms": "روبیکا کانال OR روبیکا گروه OR پروژه OR استخدام"
+    },
+    {
+      "id": "eitaa",
+      "family": "social",
+      "domains": [
+        "eitaa.com",
+        "eitaa.ir"
+      ],
+      "terms": "ایتا کانال OR ایتا گروه OR پروژه OR استخدام"
+    },
+    {
+      "id": "soroush_plus",
+      "family": "social",
+      "domains": [
+        "splus.ir"
+      ],
+      "terms": "سروش پلاس کانال OR سروش پلاس گروه OR پروژه OR استخدام"
+    },
+    {
+      "id": "bale",
+      "family": "social",
+      "domains": [
+        "ble.ir",
+        "bale.ai"
+      ],
+      "terms": "بله کانال OR بله گروه OR پروژه OR استخدام"
+    },
+    {
+      "id": "youtube",
+      "family": "social",
+      "domains": [
+        "youtube.com"
+      ],
+      "terms": "YouTube community OR creator jobs OR freelance"
+    },
+    {
+      "id": "tiktok",
+      "family": "social",
+      "domains": [
+        "tiktok.com"
+      ],
+      "terms": "TikTok creator OR freelance OR jobs"
+    },
+    {
+      "id": "facebook",
+      "family": "social",
+      "domains": [
+        "facebook.com"
+      ],
+      "terms": "Facebook group OR Facebook jobs OR freelance"
+    },
+    {
+      "id": "threads",
+      "family": "social",
+      "domains": [
+        "threads.net"
+      ],
+      "terms": "Threads post OR freelance OR jobs"
+    }
+  ],
   "intelligence": {
     "operator_support": [
       "site:",
@@ -142,7 +259,7 @@
         "community",
         "social"
       ],
-      "priority_boost": 5.0,
+      "priority_boost": 5,
       "reason": "local execution and payment advantage; continuous coverage priority"
     }
   ],
@@ -179,5 +296,43 @@
       "family": "services",
       "q": "ایران تایپ ترجمه OCR PDF Word Excel PowerPoint ورود داده پروژه آنلاین"
     }
-  ]
+  ],
+  "discovery_lanes": {
+    "community": ["forum freelance projects payment Iran", "forum sites freelance USDT Iran", "community discussion remote work Iran"],
+    "policy": ["freelance platform Iran payment KYC policy", "remote work Iran terms payment restrictions"],
+    "social": ["#freelance Iran projects Telegram", "#bugbounty Iran Telegram LinkedIn X"]
+  },
+  "deep_web": {
+    "enabled": true,
+    "search_fabric": [
+      "brave",
+      "bing",
+      "serper",
+      "searxng"
+    ],
+    "forum_signal": true,
+    "recursive_entity_discovery": true,
+    "companion_website_bridge": true,
+    "authenticated_connector_required": true
+  },
+  "tor_research": {
+    "enabled": true,
+    "mode": "KNOWN_ONION_ONLY",
+    "proxy_env": "SEPP_TOR_PROXY",
+    "default_proxy": "socks5h://127.0.0.1:9050",
+    "automatic_directory_crawling": false,
+    "automatic_onion_link_following": false,
+    "allowed_use": [
+      "public_research",
+      "source_discovery",
+      "market_intelligence"
+    ],
+    "blocked_use": [
+      "transactions",
+      "credential_collection",
+      "credential_testing",
+      "illegal_market_procurement",
+      "bypass_access_controls"
+    ]
+  }
 }

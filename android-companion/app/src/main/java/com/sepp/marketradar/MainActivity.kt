@@ -6,6 +6,9 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.*
+import android.graphics.Color
+import android.graphics.Typeface
+import android.text.InputType
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.concurrent.thread
@@ -18,14 +21,14 @@ class MainActivity : android.app.Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(28, 28, 28, 28) }
-        val title = TextView(this).apply { text = "MarketRadar Android Companion"; textSize = 22f }
-        urlBox = EditText(this).apply { hint = "Gateway URL e.g. http://192.168.1.10:8765"; setText(prefs.getString("url", "")) }
-        tokenBox = EditText(this).apply { hint = "Android API token"; setText(prefs.getString("token", "")); inputType = 0x81 }
-        val save = Button(this).apply { text = "Save & Refresh"; setOnClickListener { saveAndRefresh() } }
-        val approve = Button(this).apply { text = "Approve first pending application"; setOnClickListener { approveFirst() } }
-        status = TextView(this).apply { text = "Not connected"; textSize = 16f }
-        root.addView(title); root.addView(urlBox); root.addView(tokenBox); root.addView(save); root.addView(approve); root.addView(status)
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(28, 24, 28, 32); setBackgroundColor(Color.rgb(246,248,251)) }
+        val title = TextView(this).apply { text = "SEPP-MarketRadar"; textSize = 24f; setTextColor(Color.rgb(23,32,51)); typeface = Typeface.DEFAULT_BOLD }
+        urlBox = EditText(this).apply { hint = "Windows Core gateway URL"; setSingleLine(true); setText(prefs.getString("url", "")) }
+        tokenBox = EditText(this).apply { hint = "Android API token"; setSingleLine(true); setText(prefs.getString("token", "")); inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD }
+        val save = Button(this).apply { text = "Save & refresh"; setOnClickListener { saveAndRefresh() } }
+        val approve = Button(this).apply { text = "Review & approve first pending application"; setOnClickListener { approveFirst() } }
+        status = TextView(this).apply { text = "Connect to the Windows Core to load evidence and pending actions."; textSize = 14f; setTextColor(Color.rgb(103,115,136)); setPadding(0,12,0,0) }
+        root.addView(title); root.addView(TextView(this).apply { text = "Secure companion • review, evidence and approval"; textSize = 13f; setTextColor(Color.rgb(103,115,136)); setPadding(0,5,0,0) }); root.addView(TextView(this).apply { text = "CONNECTION"; textSize = 11f; typeface = Typeface.DEFAULT_BOLD; setPadding(0,28,0,6) }); root.addView(urlBox); root.addView(tokenBox); root.addView(save); root.addView(TextView(this).apply { text = "ACTION CENTER"; textSize = 11f; typeface = Typeface.DEFAULT_BOLD; setPadding(0,24,0,6) }); root.addView(approve); root.addView(TextView(this).apply { text = "CORE STATUS"; textSize = 11f; typeface = Typeface.DEFAULT_BOLD; setPadding(0,24,0,0) }); root.addView(status)
         setContentView(root)
         schedulePoll()
         if (!urlBox.text.isNullOrBlank() && !tokenBox.text.isNullOrBlank()) refresh()

@@ -43,13 +43,18 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
 
 class Federation:
     def __init__(self, sources, timeout=5, max_workers=8, retries=2, max_bytes=2_000_000, max_redirects=5):
-        self.sources={s.name:s for s in sources}; self.timeout=max(.1,float(timeout)); self.max_workers=max(1,min(int(max_workers),32)); self.retries=max(0,int(retries)); self.max_bytes=max(1024,int(max_bytes)); self.max_redirects=max(0,min(int(max_redirects),10))
+        self.sources={s.name:s for s in sources}; self.timeout=max(.1,float(timeout)); self.max_workers=max(1,min(int(max_workers),64)); self.retries=max(0,int(retries)); self.max_bytes=max(1024,int(max_bytes)); self.max_redirects=max(0,min(int(max_redirects),10))
 
     def _validate_target(self, source, target, require_public=None):
         if source.access_scope not in {'public','local','authorized','private'}: raise ValueError('ACCESS_SCOPE_INVALID')
         if not isinstance(target,str) or len(target)>4096: raise ValueError('URL_TOO_LONG')
         p=urlparse(target); allowed={h.lower().rstrip('.') for h in (source.allow_hosts or (urlparse(source.base_url).hostname,)) if h}; host=(p.hostname or '').lower().rstrip('.')
-        if p.scheme not in ('http','https') or host not in allowed or not host or p.username or p.password: raise ValueError('HOST_BOUNDARY_BLOCK')
+        def host_allowed(candidate):
+            if candidate in allowed:
+                return True
+            bare = candidate[4:] if candidate.startswith('www.') else candidate
+            return any((a[4:] if a.startswith('www.') else a) == bare and (candidate.startswith('www.') or a.startswith('www.')) for a in allowed)
+        if p.scheme not in ('http','https') or not host or not host_allowed(host) or p.username or p.password: raise ValueError('HOST_BOUNDARY_BLOCK')
         if require_public is None: require_public=source.access_scope in {'public','authorized'}
         try: literal=ipaddress.ip_address(host)
         except ValueError: literal=None

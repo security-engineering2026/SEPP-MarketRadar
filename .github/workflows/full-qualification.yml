@@ -4,15 +4,16 @@ on:
   push:
     branches:
       - main
-      - 'qualification/**'
-  pull_request:
-    types: [opened, synchronize, reopened]
   workflow_dispatch:
   schedule:
     - cron: '17 2 * * *'
 
 permissions:
   contents: read
+
+concurrency:
+  group: full-qualification-v2-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   windows-qualification:
@@ -28,6 +29,8 @@ jobs:
       QUALIFY_PAYMENT_URL: ${{ secrets.QUALIFY_PAYMENT_URL }}
       QUALIFY_PUSH_URL: ${{ secrets.QUALIFY_PUSH_URL }}
       PYTHONUNBUFFERED: '1'
+      MR_SOURCE_VERIFY_WORKERS: '48'
+      MR_SOURCE_VERIFY_TIMEOUT: '10'
       QUALIFICATION_ARTIFACT_DIR: qualification-artifacts
     steps:
       - uses: actions/checkout@v7
@@ -37,14 +40,28 @@ jobs:
       - name: Install dependencies
         shell: pwsh
         run: python -m pip install -r requirements-dev.txt pillow
+      - name: Start qualification sandbox
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path $env:QUALIFICATION_ARTIFACT_DIR | Out-Null
+          $log = Join-Path $env:RUNNER_TEMP "marketradar-qualification-sandbox.log"
+          $err = Join-Path $env:RUNNER_TEMP "marketradar-qualification-sandbox.err.log"
+          $p = Start-Process python -ArgumentList @("-B","tools/qualification_sandbox.py","--host","127.0.0.1","--port","18080") -WorkingDirectory $env:GITHUB_WORKSPACE -RedirectStandardOutput $log -RedirectStandardError $err -PassThru
+          Set-Content -Path (Join-Path $env:QUALIFICATION_ARTIFACT_DIR "sandbox.pid") -Value $p.Id
+          Start-Sleep -Seconds 2
+          Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:18080/health" | Out-Null
+          if (-not $env:QUALIFY_DYNAMIC_URL) { "QUALIFY_DYNAMIC_URL=http://127.0.0.1:18080/dynamic" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8 }
+          if (-not $env:QUALIFY_ENGINE_URL) { "QUALIFY_ENGINE_URL=http://127.0.0.1:18080/engine" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8 }
+          if (-not $env:QUALIFY_APPLICATION_URL) { "QUALIFY_APPLICATION_URL=http://127.0.0.1:18080/application" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8 }
+          if (-not $env:QUALIFY_PAYMENT_URL) { "QUALIFY_PAYMENT_URL=http://127.0.0.1:18080/payment" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8 }
+          if (-not $env:QUALIFY_PUSH_URL) { "QUALIFY_PUSH_URL=http://127.0.0.1:18080/push" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8 }
       - name: Compile
         shell: pwsh
         run: python -m compileall -q marketradar tools
       - name: Core regression suite
         shell: pwsh
         run: python -m pytest -q
-      - name: Optional Playwright runtime
-        if: ${{ env.QUALIFY_DYNAMIC_URL != '' }}
+      - name: Playwright runtime
         shell: pwsh
         run: |
           python -m pip install playwright
@@ -101,10 +118,29 @@ jobs:
           if (Test-Path $target) { Remove-Item $target -Recurse -Force -ErrorAction SilentlyContinue }
           Start-Process -FilePath $installer.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$target" -Wait -PassThru | Out-Null
           if (-not (Test-Path "$target/MarketRadar.exe")) { throw "Installed EXE missing" }
-          & "$target/MarketRadar.exe" --smoke-test
-          if ($LASTEXITCODE -ne 0) { throw "Installed EXE smoke test failed: $LASTEXITCODE" }
-          & "$target/MarketRadar.exe" --ui-smoke-test
-          if ($LASTEXITCODE -ne 0) { throw "Installed EXE UI smoke test failed: $LASTEXITCODE" }
+          $installedData = Join-Path $env:RUNNER_TEMP "MarketRadarInstalledData"
+          if (Test-Path $installedData) { Remove-Item $installedData -Recurse -Force -ErrorAction SilentlyContinue }
+          New-Item -ItemType Directory -Force -Path $installedData | Out-Null
+          $env:MARKETRADAR_DATA_ROOT = $installedData
+          $stdout = Join-Path $env:RUNNER_TEMP "installed-smoke.stdout.log"
+          $stderr = Join-Path $env:RUNNER_TEMP "installed-smoke.stderr.log"
+          $smoke = Start-Process -FilePath "$target/MarketRadar.exe" -ArgumentList "--smoke-test" -WorkingDirectory $target -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          $smokeExit = $smoke.ExitCode
+          $installedLog = Join-Path $env:MARKETRADAR_DATA_ROOT "logs\marketradar.log"
+          if (Test-Path $installedLog) { Copy-Item $installedLog (Join-Path $env:QUALIFICATION_ARTIFACT_DIR "installed-smoke.log") -Force }
+          if (Test-Path $stdout) { Copy-Item $stdout (Join-Path $env:QUALIFICATION_ARTIFACT_DIR "installed-smoke.stdout.log") -Force }
+          if (Test-Path $stderr) { Copy-Item $stderr (Join-Path $env:QUALIFICATION_ARTIFACT_DIR "installed-smoke.stderr.log") -Force }
+          if ($smokeExit -ne 0) {
+            if (-not (Test-Path $installedLog) -and -not (Test-Path $stdout) -and -not (Test-Path $stderr)) { "Installed smoke produced no diagnostic output" | Set-Content (Join-Path $env:QUALIFICATION_ARTIFACT_DIR "installed-smoke.log") }
+            throw "Installed EXE smoke test failed: $smokeExit"
+          }
+          $uiStdout = Join-Path $env:RUNNER_TEMP "installed-ui-smoke.stdout.log"
+          $uiStderr = Join-Path $env:RUNNER_TEMP "installed-ui-smoke.stderr.log"
+          $uiSmoke = Start-Process -FilePath "$target/MarketRadar.exe" -ArgumentList "--ui-smoke-test" -WorkingDirectory $target -Wait -PassThru -RedirectStandardOutput $uiStdout -RedirectStandardError $uiStderr
+          $uiSmokeExit = $uiSmoke.ExitCode
+          if (Test-Path $uiStdout) { Copy-Item $uiStdout (Join-Path $env:QUALIFICATION_ARTIFACT_DIR "installed-ui-smoke.stdout.log") -Force }
+          if (Test-Path $uiStderr) { Copy-Item $uiStderr (Join-Path $env:QUALIFICATION_ARTIFACT_DIR "installed-ui-smoke.stderr.log") -Force }
+          if ($uiSmokeExit -ne 0) { throw "Installed EXE UI smoke test failed: $uiSmokeExit" }
           $uninstaller = Join-Path $target "unins000.exe"
           if (-not (Test-Path $uninstaller)) { throw "Uninstaller missing" }
           Start-Process -FilePath $uninstaller -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait | Out-Null
@@ -129,6 +165,16 @@ jobs:
           Write-Host ("PASS=" + $r.summary.pass + " OPEN=" + $r.summary.open + " FAIL=" + $r.summary.fail)
           if ([int]$r.summary.open -gt 0 -or [int]$r.summary.fail -gt 0) {
             throw "FULL_QUALIFICATION_NOT_FINAL"
+          }
+
+      - name: Stop qualification sandbox
+        if: always()
+        shell: pwsh
+        run: |
+          $pidFile = Join-Path $env:QUALIFICATION_ARTIFACT_DIR "sandbox.pid"
+          if (Test-Path $pidFile) {
+            $sandboxPid = [int](Get-Content $pidFile -Raw)
+            Stop-Process -Id $sandboxPid -Force -ErrorAction SilentlyContinue
           }
 
       - name: Upload qualification artifacts
@@ -167,8 +213,11 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_6
+          ram-size: 4096M
+          cores: 4
+          emulator-boot-timeout: 600
           disable-animations: true
-          emulator-options: -no-snapshot -no-window -no-boot-anim -gpu swiftshader_indirect
+          emulator-options: -no-snapshot-save -no-window -no-boot-anim -noaudio -gpu swiftshader_indirect
           script: bash tools/android_e2e.sh
       - name: Upload Android qualification artifact
         if: always()

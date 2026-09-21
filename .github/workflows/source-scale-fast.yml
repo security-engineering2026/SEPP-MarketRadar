@@ -1,0 +1,40 @@
+name: Source Scale Fast Lane
+
+on:
+  push:
+    branches:
+      - 'qualification/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: source-scale-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-scale:
+    name: LIVE_SOURCE_SCALE diagnostic
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      PYTHONUNBUFFERED: '1'
+      MR_SOURCE_VERIFY_WORKERS: '48'
+      MR_SOURCE_VERIFY_TIMEOUT: '10'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - name: Install dependencies
+        shell: pwsh
+        run: python -m pip install -r requirements-dev.txt
+      - name: Compile
+        shell: pwsh
+        run: python -m compileall -q marketradar tools
+      - name: Run source-scale gate
+        shell: pwsh
+        run: python -B tools/full_qualification.py --gate LIVE_SOURCE_SCALE_500

@@ -128,8 +128,8 @@ class MarketRadarDesktop:
     def __init__(self, master: Tk):
         self.master = master
         self.master.title(f"SEPP-MarketRadar  |  v{__version__}")
-        self.master.geometry("1280x800")
-        self.master.minsize(1040, 680)
+        self.master.geometry("1365x850")
+        self.master.minsize(1180, 740)
         self.master.configure(bg=BG)
         self.root, self.settings, self.sources, self.conn, self.runtime = open_runtime()
         self.profile = self._load_profile()
@@ -184,9 +184,9 @@ class MarketRadarDesktop:
         style.configure("Metric.TLabel", background=SURFACE, foreground=TEXT, font=("Segoe UI", 23, "bold"))
         style.configure("MetricName.TLabel", background=SURFACE, foreground=MUTED, font=("Segoe UI", 8, "bold"))
         style.configure("MetricHint.TLabel", background=SURFACE, foreground=MUTED, font=("Segoe UI", 8))
-        style.configure("Nav.TButton", background=SIDEBAR, foreground=SIDEBAR_TEXT, borderwidth=0, padding=(16, 10), anchor="w", font=("Segoe UI", 9, "bold"))
+        style.configure("Nav.TButton", background=SIDEBAR, foreground=SIDEBAR_TEXT, borderwidth=0, padding=(14, 6), anchor="w", font=("Segoe UI", 8, "bold"))
         style.map("Nav.TButton", background=[("active", SIDEBAR_2)], foreground=[("active", "white")])
-        style.configure("NavActive.TButton", background=SIDEBAR_2, foreground="white", borderwidth=0, padding=(16, 10), anchor="w", font=("Segoe UI", 9, "bold"))
+        style.configure("NavActive.TButton", background=SIDEBAR_2, foreground="white", borderwidth=0, padding=(14, 6), anchor="w", font=("Segoe UI", 8, "bold"))
         style.configure("Accent.TButton", font=("Segoe UI", 9, "bold"), padding=(12, 8), foreground="white", background=ACCENT, borderwidth=0)
         style.map("Accent.TButton", background=[("active", ACCENT_DARK), ("disabled", "#aeb8c5")])
         style.configure("Ghost.TButton", font=("Segoe UI", 9, "bold"), padding=(10, 7), foreground=TEXT, background=SURFACE, bordercolor=BORDER, borderwidth=1)
@@ -208,10 +208,10 @@ class MarketRadarDesktop:
         self._build_header(shell)
         body = ttk.Frame(shell, style="App.TFrame")
         body.pack(fill=BOTH, expand=True)
-        self.sidebar = ttk.Frame(body, style="Sidebar.TFrame", width=208)
+        self.sidebar = ttk.Frame(body, style="Sidebar.TFrame", width=196)
         self.sidebar.pack(side=LEFT, fill=Y)
         self.sidebar.pack_propagate(False)
-        self.content = ttk.Frame(body, style="App.TFrame", padding=(22, 18, 22, 12))
+        self.content = ttk.Frame(body, style="App.TFrame", padding=(18, 14, 18, 10))
         self.content.pack(side=LEFT, fill=BOTH, expand=True)
         self._build_sidebar()
         self._build_views()
@@ -281,14 +281,14 @@ class MarketRadarDesktop:
         self.refresh_all()
 
     def _build_sidebar(self):
-        brand = ttk.Frame(self.sidebar, style="Sidebar.TFrame", padding=(18, 22, 18, 18))
+        brand = ttk.Frame(self.sidebar, style="Sidebar.TFrame", padding=(16, 12, 16, 10))
         brand.pack(fill=X)
         badge = tk.Canvas(brand, width=34, height=34, bg=SIDEBAR, highlightthickness=0)
         badge.pack(anchor="w")
         badge.create_oval(2, 2, 32, 32, fill=ACCENT, outline="")
         badge.create_text(17, 17, text="MR", fill="white", font=("Segoe UI", 8, "bold"))
         tk.Label(brand, text="INTELLIGENCE", bg=SIDEBAR, fg="#7fa0ff", font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(13, 1))
-        tk.Label(brand, text="MarketRadar", bg=SIDEBAR, fg="white", font=("Segoe UI", 13, "bold")).pack(anchor="w")
+        tk.Label(brand, text="MarketRadar", bg=SIDEBAR, fg="white", font=("Segoe UI", 12, "bold")).pack(anchor="w")
 
         tk.Label(self.sidebar, text="WORKSPACE", bg=SIDEBAR, fg=SIDEBAR_MUTED, font=("Segoe UI", 8, "bold")).pack(anchor="w", padx=18, pady=(8, 5))
         nav = ttk.Frame(self.sidebar, style="Sidebar.TFrame")
@@ -1239,15 +1239,32 @@ class MarketRadarDesktop:
 
 
 def smoke_test():
-    root, settings, sources, conn, runtime = open_runtime()
+    root = None
+    conn = None
     try:
-        assert __version__
-        target = json.loads((root / "config" / "source_targets.json").read_text(encoding="utf-8"))["target_registered_sources"]
-        assert target >= 500 and len(sources) >= 5 and runtime is not None
-        assert conn.execute("SELECT COUNT(*) FROM source_contracts").fetchone()[0] == len(sources)
+        root, settings, sources, conn, runtime = open_runtime()
+        target_path = root / "config" / "source_targets.json"
+        target = json.loads(target_path.read_text(encoding="utf-8"))["target_registered_sources"]
+        contracts = conn.execute("SELECT COUNT(*) FROM source_contracts").fetchone()[0]
+        if not __version__:
+            raise RuntimeError("SMOKE_VERSION_MISSING")
+        if target < 500:
+            raise RuntimeError(f"SMOKE_TARGET_BELOW_MINIMUM target={target}")
+        if len(sources) < 5:
+            raise RuntimeError(f"SMOKE_SOURCE_REGISTRY_TOO_SMALL count={len(sources)}")
+        if runtime is None:
+            raise RuntimeError("SMOKE_RUNTIME_MISSING")
+        if contracts != len(sources):
+            raise RuntimeError(f"SMOKE_SOURCE_CONTRACT_MISMATCH sources={len(sources)} contracts={contracts}")
+        logger.info("Installed/portable smoke PASS version=%s root=%s sources=%s contracts=%s target=%s",
+                    __version__, root, len(sources), contracts, target)
         return 0
+    except Exception:
+        logger.exception("Desktop smoke test FAILED root=%s", root)
+        return 1
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 def ui_smoke_test():

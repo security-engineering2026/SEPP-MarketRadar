@@ -12,6 +12,7 @@ from urllib.request import Request, urlopen
 from .federation import Federation, Source
 from .source_search import WebSearchProvider, SearchProviderError
 from .discovery_intelligence import QueryPlanner, classify_search_result
+from .access_broker import plan_for_url
 
 URL_RE = re.compile(r'https?://[^\s\)\]\|<>"\']+')
 MD_LINK_RE = re.compile(r'\[[^\]]+\]\((https?://[^\)]+)\)')
@@ -133,6 +134,7 @@ class SourceDiscoveryEngine:
             'discovery_basis':basis, 'discovery_evidence_url':evidence_url, 'discovery_method':discovery_method,
             'discovery_title':title[:240], 'discovery_snippet':snippet[:700], 'source_origin':'dynamic_discovery',
             'verification_basis':'automatic_search_discovery', 'upstream_sources':[evidence_url] if evidence_url else [],
+            'access_plan': ({'platform': plan_for_url(normalized).platform, 'mode': plan_for_url(normalized).mode.value, 'required_action': plan_for_url(normalized).required_action, 'scope': plan_for_url(normalized).scope} if plan_for_url(normalized) else None),
             'notes':f'Autodiscovered via {discovery_method}; candidate only until automatic source-policy verification.'
         }
 
@@ -193,6 +195,12 @@ class SourceDiscoveryEngine:
             history={}
         planner=QueryPlanner(self.query_config,history)
         plans=planner.plan(entities,max_queries=int(self.query_config.get('max_queries_per_cycle',200)))
+        dedicated = self.query_config.get('discovery_lanes', {})
+        for lane, templates in dedicated.items():
+            for template in templates or []:
+                q = template if isinstance(template, str) else template.get('q')
+                if not q: continue
+                plans.append({'id': f'global_{lane}', 'country': 'Global', 'region': 'Global', 'language': 'multi', 'family': lane, 'q': q})
         batch=int(self.query_config.get('country_batch_size',50))
         if entities:
             state=self._load_state(); cursor=int(state.get('cursor',0)) % len(entities)
@@ -206,13 +214,27 @@ class SourceDiscoveryEngine:
             self._planned_batch_state={'cursor':(cursor+batch)%len(entities),'queried':len(batch_entities),'total':len(entities)}
         else:
             self._planned_batch_state={'cursor':0,'queried':0,'total':0}
-        return plans[:int(self.query_config.get('max_queries_per_cycle',200))]
+        limit = int(self.query_config.get('max_queries_per_cycle',200))
+        required = [p for p in plans if p.get('id','').startswith('global_')]
+        ordinary = [p for p in plans if p not in required]
+        return (ordinary[:max(0, limit-len(required))] + required)[:limit]
 
     def _crawl_result_page(self, result, plan, discovered, evidence, errors):
         if not self.query_config.get('crawl_result_pages',True): return
         url=result.get('url','')
         p=urlparse(url)
         if p.scheme not in {'http','https'} or not p.hostname: return
+        protected_hosts = {
+            'instagram.com','www.instagram.com','linkedin.com','www.linkedin.com',
+            'x.com','www.x.com','twitter.com','www.twitter.com',
+            'facebook.com','www.facebook.com','t.me','telegram.me',
+            'telegram.org','rubika.ir','www.rubika.ir','eitaa.com','www.eitaa.com',
+            'eitaa.ir','www.eitaa.ir','splus.ir','www.splus.ir','ble.ir','www.ble.ir'
+        }
+        if (p.hostname and p.hostname.lower() in protected_hosts):
+            # Search/index evidence is valid discovery evidence. Direct crawling of
+            # protected platforms is delegated to authorized connectors.
+            return
         try:
             req=Request(url,headers={'User-Agent':'SEPP-MarketRadar/16.1.1 DiscoveryCrawler'})
             with urlopen(req,timeout=self.timeout) as resp:
@@ -240,6 +262,34 @@ class SourceDiscoveryEngine:
         source=discovered[host]
         evidence.append({'source':source['name'], **ev, 'result_url':candidate['base_url'], 'title':candidate.get('discovery_title',''), 'snippet':candidate.get('discovery_snippet','')})
 
+    def _bridge_linked_web_endpoints(self, item, plan, discovered, evidence):
+        """Use indexed social/channel mentions to discover their companion websites.
+
+        A Telegram/LinkedIn/etc. result may advertise a separate website. We can
+        discover that website from the indexed evidence without crawling the
+        protected platform itself.
+        """
+        text = f"{item.get('title','')} {item.get('snippet','')}"
+        links = []
+        for raw in URL_RE.findall(text):
+            link = raw.rstrip('.,;')
+            host = (urlparse(link).hostname or '').lower()
+            if host and host not in {'google.com','bing.com','yahoo.com'}:
+                links.append(link)
+        protected = {'instagram.com','www.instagram.com','linkedin.com','www.linkedin.com','x.com','www.x.com','twitter.com','www.twitter.com','facebook.com','www.facebook.com','t.me','telegram.me','telegram.org','rubika.ir','www.rubika.ir','eitaa.com','www.eitaa.com','eitaa.ir','www.eitaa.ir','splus.ir','www.splus.ir','ble.ir','www.ble.ir','bale.ai','www.bale.ai'}
+        source_host = (urlparse(item.get('url','')).hostname or '').lower()
+        if source_host not in protected and not plan.get('platform'):
+            return
+        for link in links:
+            host = (urlparse(link).hostname or '').lower()
+            if not host or host in protected: continue
+            family = _family_for(f"{item.get('title','')} {item.get('snippet','')} {link}", plan.get('family','community'))
+            candidate = self._candidate(host, link, family, plan, f"linked-endpoint:{plan.get('id','query')}", item.get('url',''), item.get('title',''), item.get('snippet',''), 0.68, 'platform_linked_website')
+            if candidate:
+                candidate['linked_from_platform'] = plan.get('platform') or source_host
+                candidate['linked_from_url'] = item.get('url','')
+                self._merge(discovered, candidate, evidence, {'query':plan.get('q',''),'provider':item.get('_provider','search'),'url':item.get('url',''),'title':item.get('title',''),'snippet':item.get('snippet',''),'country':plan.get('country','Global'),'region':plan.get('region','Global'),'language':plan.get('language','multi'),'method':'platform_linked_website'})
+
     def _search_discovery(self, discovered, evidence, errors):
         plans=self._planned_queries()
         if not self.search.available():
@@ -260,6 +310,7 @@ class SourceDiscoveryEngine:
                     candidate=self._candidate(title or urlparse(url).hostname,url,family,plan,f"search:{plan.get('id',query)}",url,title,snippet,score,'search_result')
                     if candidate:
                         self._merge(discovered,candidate,evidence,{'query':query,'provider':getattr(self.search,'provider','unknown'),'url':url,'title':title,'snippet':snippet,'country':plan.get('country','Global'),'region':plan.get('region','Global'),'language':plan.get('language','multi'),'method':'search_result'})
+                    self._bridge_linked_web_endpoints(item, plan, discovered, evidence)
                     if crawled < crawl_budget and self._looks_like_community(title,snippet,url,plan):
                         self._crawl_result_page(item,plan,discovered,evidence,errors); crawled += 1
             except SearchProviderError as exc:
