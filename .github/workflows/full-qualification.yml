@@ -29,6 +29,8 @@ jobs:
       QUALIFY_PAYMENT_URL: ${{ secrets.QUALIFY_PAYMENT_URL }}
       QUALIFY_PUSH_URL: ${{ secrets.QUALIFY_PUSH_URL }}
       PYTHONUNBUFFERED: '1'
+      MR_SOURCE_VERIFY_WORKERS: '48'
+      MR_SOURCE_VERIFY_TIMEOUT: '10'
       QUALIFICATION_ARTIFACT_DIR: qualification-artifacts
     steps:
       - uses: actions/checkout@v7
