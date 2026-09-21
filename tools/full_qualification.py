@@ -256,17 +256,37 @@ def live_source_scale_gate(limit=500):
         },
     )
 
-def live_acquisition_sample_gate(sample_size=20):
+def live_acquisition_sample_gate(sample_size=30):
     from marketradar.db import connect, sync_source_contracts
     from marketradar.runtime import MarketRadarRuntime
     from marketradar.source_registry import load_source_records
 
     records = load_source_records(ROOT / "config" / "sources.json")
-    verified = [x for x in records if x.get("status") != "disabled" and x.get("base_url")]
-    if not verified:
-        return gate("LIVE_ACQUISITION_SAMPLE", "OPEN", {"reason": "No candidate sources with URLs."})
+    candidates = [x for x in records if x.get("status") == "active" and x.get("base_url")]
+    if not candidates:
+        return gate("LIVE_ACQUISITION_SAMPLE", "OPEN", {"reason": "No active source candidates with URLs."})
 
-    selected = verified[:sample_size]
+    # Do not let registry ordering decide the acquisition sample. Build a deterministic,
+    # capability-diverse sample across adapter + source family, while preserving source
+    # contracts exactly as registered. This tests real acquisition rather than merely
+    # probing whichever entries happen to appear first in sources.json.
+    selected = []
+    seen_keys = set()
+    for source in candidates:
+        key = (str(source.get("adapter", "")).lower(), str(source.get("source_family", "")).lower())
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        selected.append(source)
+        if len(selected) >= sample_size:
+            break
+    if len(selected) < sample_size:
+        for source in candidates:
+            if source not in selected:
+                selected.append(source)
+            if len(selected) >= sample_size:
+                break
+
     with tempfile.TemporaryDirectory(prefix="mr-acquisition-") as td:
         conn = connect(Path(td) / "qualification.db")
         sync_source_contracts(conn, selected)
@@ -275,14 +295,47 @@ def live_acquisition_sample_gate(sample_size=20):
         for source in selected:
             try:
                 result = runtime.federate(source["name"], force=True)
-                results.append({"source": source["name"], "status": result.get("status"), "observations": result.get("observations", 0), "error": result.get("error")})
+                results.append({
+                    "source": source["name"],
+                    "adapter": source.get("adapter"),
+                    "source_family": source.get("source_family"),
+                    "status": result.get("status"),
+                    "observations": result.get("observations", 0),
+                    "error": result.get("error"),
+                })
             except Exception as exc:
-                results.append({"source": source["name"], "status": "ERROR", "observations": 0, "error": type(exc).__name__ + ":" + str(exc)})
+                results.append({
+                    "source": source["name"],
+                    "adapter": source.get("adapter"),
+                    "source_family": source.get("source_family"),
+                    "status": "ERROR",
+                    "observations": 0,
+                    "error": type(exc).__name__ + ":" + str(exc),
+                })
         observed = sum(int(x.get("observations") or 0) for x in results if x.get("status") == "OK")
-        ok = sum(x.get("status") == "OK" for x in results)
+        successful = [x for x in results if x.get("status") == "OK" and int(x.get("observations") or 0) > 0]
+        ok = len(successful)
+        adapters = sorted({str(x.get("adapter") or "") for x in successful})
+        families = sorted({str(x.get("source_family") or "") for x in successful})
+
         conn.close()
 
-    status = "PASS" if ok > 0 and observed > 0 else "OPEN"
+    # A live source is not automatically an acquisitive source. Require multiple
+    # independent successful acquisition contracts so one lucky endpoint cannot make
+    # the gate pass.
+    criteria = {
+        "min_successful_sources": 8,
+        "min_observations": 100,
+        "min_successful_adapters": 3,
+        "min_successful_families": 4,
+    }
+    passed = (
+        ok >= criteria["min_successful_sources"]
+        and observed >= criteria["min_observations"]
+        and len(adapters) >= criteria["min_successful_adapters"]
+        and len(families) >= criteria["min_successful_families"]
+    )
+    status = "PASS" if passed else "OPEN"
     return gate(
         "LIVE_ACQUISITION_SAMPLE",
         status,
@@ -290,7 +343,10 @@ def live_acquisition_sample_gate(sample_size=20):
             "attempted": len(results),
             "successful_federations": ok,
             "observations": observed,
-            "criterion": "At least one real source acquisition must produce an observed opportunity/event",
+            "successful_adapters": adapters,
+            "successful_source_families": families,
+            "criteria": criteria,
+            "criterion": "Diverse real source acquisition must produce normalized opportunity/event observations",
             "results": results,
         },
     )
