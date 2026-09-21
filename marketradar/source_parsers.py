@@ -16,7 +16,12 @@ def _item(title, url, description='', **extra):
     title, url = _text(title), _text(url)
     if not url.startswith(('http://', 'https://')) or not title:
         return None
-    item = {'title': title, 'url': url, 'description': _text(description)}
+    # Keep every adapter inside the Pipeline ingestion contract: titles are capped at
+    # 240 chars and descriptions at 10,000 chars. Preserve the leading content rather
+    # than emitting an item that will be rejected after acquisition has already succeeded.
+    title = title[:240]
+    description = _text(description)[:10_000]
+    item = {'title': title, 'url': url, 'description': description}
     item.update({k: v for k, v in extra.items() if v not in (None, '')})
     return item
 
