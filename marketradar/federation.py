@@ -93,7 +93,7 @@ class Federation:
         conn=conn_cls(parsed.hostname,port,pinned,self.timeout)
         path=(parsed.path or '/') + (('?' + parsed.query) if parsed.query else '')
         try:
-            headers={'User-Agent':'SEPP-MarketRadar/16.1.1','Host':self._host_header(parsed),'Accept':'application/json, application/rss+xml, application/atom+xml, application/xml, application/xhtml+xml, text/html, text/xml, text/plain'}
+            headers={'User-Agent':'SEPP-MarketRadar/16.1.2','Host':self._host_header(parsed),'Accept':'application/json, application/rss+xml, application/atom+xml, application/xml, application/xhtml+xml, text/html, text/xml, text/plain'}
             for k,v in source.headers:
                 if isinstance(k,str) and isinstance(v,str) and k.lower() not in {'host','content-length'}: headers[k]=v
             conn.request('GET',path,headers=headers)
