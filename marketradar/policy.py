@@ -1,3 +1,5 @@
+POLICY_VERSION = 'policy.v1'
+
 from __future__ import annotations
 from .country_policy import apply_blacklist, evaluate_iran_access, jurisdiction_hits
 
