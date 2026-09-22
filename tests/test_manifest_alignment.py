@@ -109,3 +109,13 @@ def test_manifest_decision_trace_is_claim_evidence_bound_and_immutable():
         except Exception as exc:
             assert "immutable" in str(exc).lower()
         c.close()
+
+
+
+def test_manifest_source_capability_maturity_is_monotonic():
+    from marketradar.capability import CAPABILITY_STAGES, CapabilityEvidence, advance_capability, capability_evidence_for_verification
+    assert CAPABILITY_STAGES == ("REGISTERED", "DISCOVERED", "DOCUMENTED", "REACHABLE", "PARSEABLE", "VALIDATED", "POLICY_VERIFIED", "EXECUTION_READY")
+    assert advance_capability("POLICY_VERIFIED", CapabilityEvidence("REACHABLE")) == "POLICY_VERIFIED"
+    assert advance_capability("REGISTERED", CapabilityEvidence("PARSEABLE")) == "PARSEABLE"
+    assert capability_evidence_for_verification(reachable=True, parseable=True, validated=True, policy_verified=True, execution_ready=False).stage == "POLICY_VERIFIED"
+    assert capability_evidence_for_verification(reachable=True, parseable=True, validated=True, policy_verified=True, execution_ready=True).stage == "EXECUTION_READY"
