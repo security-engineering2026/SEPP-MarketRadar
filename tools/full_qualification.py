@@ -27,7 +27,7 @@ def http_probe(url, timeout=10, method="GET", payload=None):
         data=payload,
         method=method,
         headers={
-            "User-Agent": "SEPP-MarketRadar-FullQualification/16.1.1",
+            "User-Agent": "SEPP-MarketRadar-FullQualification/16.1.2",
             "Accept": "application/json,text/plain,text/html,*/*",
             "X-MarketRadar-Qualification": "sandbox",
         },
@@ -159,6 +159,31 @@ def live_discovery_gate():
         {"returncode": p.returncode, "stdout_tail": p.stdout[-4000:], "stderr_tail": p.stderr[-2000:]},
     )
 
+def _select_acquisition_sample(records, sample_size=20):
+    """Pick a deterministic, family-balanced sample instead of records[:N]."""
+    candidates=[x for x in records if x.get("status") != "disabled" and x.get("base_url")]
+    families={}
+    for record in candidates:
+        family=str(record.get("source_family") or "unknown").lower()
+        families.setdefault(family,[]).append(record)
+    for rows in families.values():
+        rows.sort(key=lambda x:x.get("name",""))
+    ordered=[]
+    while families and len(ordered)<sample_size:
+        progressed=False
+        for family in sorted(list(families)):
+            rows=families[family]
+            if not rows:
+                del families[family]
+                continue
+            ordered.append(rows.pop(0))
+            progressed=True
+            if len(ordered)>=sample_size:
+                break
+        if not progressed:
+            break
+    return ordered
+
 def live_source_scale_gate(limit=500):
     from marketradar.db import connect, sync_source_contracts
     from marketradar.source_registry import load_source_records
@@ -168,7 +193,7 @@ def live_source_scale_gate(limit=500):
     records = load_source_records(ROOT / "config" / "sources.json")
     if len(records) < limit:
         return gate(
-            "LIVE_SOURCE_SCALE_500",
+            "LIVE_SOURCE_REACHABILITY_500",
             "OPEN",
             {"registered_records": len(records), "requested": limit, "reason": "Fewer than 500 registry candidates."},
         )
@@ -196,11 +221,11 @@ def live_source_scale_gate(limit=500):
         {
             "candidate_registry": len(records),
             "checked": len(results),
-            "live_confirmed": confirmed,
+            "live_reachable": confirmed,
             "dead": dead,
             "other": len(results) - confirmed - dead,
-            "criterion": f"{limit} LIVE_CONFIRMED sources",
-            "method": "all current registry candidates verified; no first-N shortcut",
+            "criterion": f"{limit} live-reachable source endpoints",
+            "method": "all current registry candidates verified; endpoint reachability only; not a connector-capability claim",
         },
     )
 
@@ -210,11 +235,11 @@ def live_acquisition_sample_gate(sample_size=20):
     from marketradar.source_registry import load_source_records
 
     records = load_source_records(ROOT / "config" / "sources.json")
-    verified = [x for x in records if x.get("status") != "disabled" and x.get("base_url")]
+    verified = _select_acquisition_sample(records, sample_size)
     if not verified:
         return gate("LIVE_ACQUISITION_SAMPLE", "OPEN", {"reason": "No candidate sources with URLs."})
 
-    selected = verified[:sample_size]
+    selected = verified
     with tempfile.TemporaryDirectory(prefix="mr-acquisition-") as td:
         conn = connect(Path(td) / "qualification.db")
         sync_source_contracts(conn, selected)
