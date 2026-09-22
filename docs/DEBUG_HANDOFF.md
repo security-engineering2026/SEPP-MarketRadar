@@ -44,5 +44,13 @@
 - These defects were patched on main in subsequent commits. Version metadata is synchronized to 16.1.2; federation/discovery crawler user agents are synchronized; Android JVM targets are aligned to 17.
 - The current main after the fixes must be re-run by GitHub Actions. No final PASS is claimed until fresh CI output exists.
 
+## Latest CI result after 16.1.2 patches
+- Full Qualification #111 on commit cdc4119 failed; core pytest was successful.
+- Remaining Windows defects identified from real logs: full_qualification.py was executed as a script without the repository root on sys.path, causing six qualification gates to fail with ModuleNotFoundError; installer.iss resolved its Source path relative to packaging/ instead of repository root.
+- Windows CI #132 on the same commit succeeded, so the base Windows regression/build path is healthy.
+- Android compilation succeeded, but emulator E2E failed because the hosted emulator could not establish the adb daemon (exit code 1); this is an environment/runtime E2E issue, not an Android compile failure.
+- Patches committed: 1d82586a6dbcd173a0efb57817c4719e3a08b4db and 5e6d2785875925eaccecf573805ab18a00ade265.
+- Fresh Full Qualification #112/#113 and Windows CI #133/#134 are now queued. No final PASS is claimed.
+
 ## Next continuation
 Use the newest main commit as the source of truth. Inspect the next push-triggered Windows CI and Full Qualification runs, extract every remaining FAIL/OPEN, patch only concrete defects, and commit each logical fix to main. Repeat automatically. After the debug cycle is exhausted, perform and record the final test pass with real output.
