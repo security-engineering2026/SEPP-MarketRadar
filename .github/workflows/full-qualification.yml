@@ -23,7 +23,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 45
     env:
-      SEARXNG_URL: ${{ secrets.SEARXNG_URL }}
+      SEARXNG_URL: ${{ secrets.SEARXNG_URL || 'https://searxng.site' }}
       QUALIFY_DYNAMIC_URL: ${{ secrets.QUALIFY_DYNAMIC_URL }}
       QUALIFY_ENGINE_URL: ${{ secrets.QUALIFY_ENGINE_URL }}
       QUALIFY_APPLICATION_URL: ${{ secrets.QUALIFY_APPLICATION_URL }}
