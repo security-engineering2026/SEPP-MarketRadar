@@ -56,3 +56,28 @@ def test_manifest_identity_resolution_records_non_merge_states():
         assert first is not None
         assert any(row["decision"] in {"POSSIBLE_MATCH", "NO_MATCH"} for row in rows)
         cdb.close()
+
+
+def test_manifest_temporal_claim_conflict_is_immutable_and_explicit():
+    from marketradar.pipeline import Pipeline
+    from marketradar.db import connect
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "test.db")
+        c.execute("INSERT INTO opportunities(source,title,url,state) VALUES(?,?,?,?)", ("test", "Temporal", "https://example.test/op/temporal", "DISCOVERED"))
+        oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/op/temporal",)).fetchone()["id"]
+        c.execute("INSERT INTO evidence(opportunity_id,kind,source,url,finding,confidence,provenance_root,observed_at,evidence_hash) VALUES(?,?,?,?,?,?,?,?,?)", (oid, "policy", "test", "https://example.test/policy", "eligibility observed", 0.9, "test", "2026-09-22T00:00:00+00:00", "b" * 64))
+        evidence_id = c.execute("SELECT id FROM evidence WHERE evidence_hash=?", ("b" * 64,)).fetchone()["id"]
+        c.execute("INSERT INTO claims(entity_type,entity_id,opportunity_id,claim_type,claim_value,confidence,observed_at) VALUES(?,?,?,?,?,?,?)", ("Opportunity", oid, oid, "eligibility", "EXECUTE", 0.9, "2026-09-22T00:00:00+00:00"))
+        old_id = c.execute("SELECT id FROM claims WHERE opportunity_id=? AND claim_type=?", (oid, "eligibility")).fetchone()["id"]
+        c.execute("INSERT INTO claims(entity_type,entity_id,opportunity_id,claim_type,claim_value,confidence,observed_at) VALUES(?,?,?,?,?,?,?)", ("Opportunity", oid, oid, "eligibility", "BLOCK", 0.95, "2026-09-22T01:00:00+00:00"))
+        new_id = c.execute("SELECT id FROM claims WHERE opportunity_id=? AND claim_value='BLOCK'", (oid,)).fetchone()["id"]
+        c.execute("INSERT INTO claim_evidence(claim_id,evidence_id) VALUES(?,?)", (new_id, evidence_id))
+        c.execute("INSERT INTO claim_conflicts(opportunity_id,claim_type,previous_claim_id,new_claim_id,relation,detected_at,details_json) VALUES(?,?,?,?,?,?,?)", (oid, "eligibility", old_id, new_id, "CONTRADICTS", "2026-09-22T01:00:00+00:00", "{}"))
+        row = c.execute("SELECT relation FROM claim_conflicts WHERE previous_claim_id=? AND new_claim_id=?", (old_id, new_id)).fetchone()
+        assert row["relation"] == "CONTRADICTS"
+        try:
+            c.execute("DELETE FROM claim_conflicts WHERE previous_claim_id=? AND new_claim_id=?", (old_id, new_id))
+            assert False, "immutable conflict ledger allowed deletion"
+        except Exception as exc:
+            assert "immutable" in str(exc).lower()
+        c.close()
