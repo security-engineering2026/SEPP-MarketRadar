@@ -23,6 +23,12 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install project dependencies
+        run: python -m pip install -r requirements.txt
       - name: Run bounded coding engine when configured
         id: agent
         continue-on-error: true
@@ -36,10 +42,12 @@ jobs:
         run: python tools/autonomous_coding_agent.py
       - name: Run supervisor fallback
         if: steps.agent.outcome == 'failure'
+        continue-on-error: true
         env:
           AUTONOMOUS_CYCLE: ${{ github.run_number }}
           AUTONOMOUS_TEST_COMMAND: "python -m pytest -q"
           AUTONOMOUS_TEST_TIMEOUT: "600"
         run: python tools/autonomous_supervisor.py
       - name: Push checkpoint or tested repair
+        if: always()
         run: git push origin HEAD:main
