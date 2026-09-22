@@ -108,14 +108,20 @@ Required next implementation:
 - policy evidence promotes to POLICY_VERIFIED;
 - execution authority requires explicit EXECUTION_READY evidence.
 
-### PARTIAL — Acquisition fallback
-Federation has retries and recovery, but a formal multi-provider acquisition fallback contract is not yet universal.
+### IMPLEMENTED BY CODE — Acquisition fallback contract
+Federation now exposes an ordered `AcquisitionFallback` contract with:
+- explicit provider chain;
+- per-provider provenance and fallback-used metadata;
+- configurable confidence multiplier on fallback;
+- distinct `SOURCE_UNAVAILABLE` vs `ALL_ACQUISITION_PROVIDERS_FAILED` outcomes;
+- immutable raw/evidence layers remain responsible for preserving the actual acquired payload and provenance.
 
-Required next implementation:
-- provider fallback chain;
-- per-provider provenance;
-- confidence degradation on fallback;
-- distinguish SOURCE_UNAVAILABLE from PROVIDER_FAILURE.
+Commits:
+- `c8c766044b9f69da50b946ffc5b71e99ef804220`
+- `07b356fa52d482bfed487b6d506c7347535d9c0b`
+- regression coverage: `83020a56acb068a6362cd26093b4c61c6fe6de4c`
+
+Runtime/CI execution evidence is still required before reporting the contract as PASS.
 
 ### PARTIAL — Consequential decision explainability
 Decision snapshots and ranking rationale exist. A universal decision trace linking every final decision to the exact policy inputs, evidence claims and ranking context is not yet enforced for every action path.
