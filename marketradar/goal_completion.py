@@ -321,10 +321,29 @@ def execute_authorized(c, approval_id, action, target, parameters, evidence_ids,
         result=executor(); digest=_sha(result)
         c.execute("UPDATE action_attempts SET finished_at=?,status='SUCCESS',result_digest=? WHERE approval_id=? AND attempt_no=?",(now(),digest,approval_id,attempt))
         c.execute("UPDATE action_authorizations SET status='USED',used_at=? WHERE approval_id=? AND status='EXECUTING'",(int(time.time()),approval_id))
+        record_decision_trace(
+            c, decision_type='ACTION_EXECUTION', policy_version=row['policy_version'],
+            target_type='ACTION_TARGET', target_id=target, action=action,
+            parameters=parameters, evidence_ids=evidence_ids, claims={},
+            state_snapshot={'authorization_status':'USED','attempt':attempt,'result_digest':digest},
+            ranking_context={}, actor=executor.__class__.__name__ if not callable(executor) else 'authorized_executor',
+            reason='Authorized action execution completed', approval_ref=approval_id,
+            approval_expires_at=row['expires_at'], approval_nonce=row['nonce'], outcome='EXECUTED'
+        )
         c.commit(); return result
     except Exception as exc:
-        c.execute("UPDATE action_attempts SET finished_at=?,status='FAILED',error=? WHERE approval_id=? AND attempt_no=?",(now(),type(exc).__name__+': '+str(exc),approval_id,attempt))
+        error=type(exc).__name__+': '+str(exc)
+        c.execute("UPDATE action_attempts SET finished_at=?,status='FAILED',error=? WHERE approval_id=? AND attempt_no=?",(now(),error,approval_id,attempt))
         c.execute("UPDATE action_authorizations SET status='FAILED',used_at=? WHERE approval_id=? AND status='EXECUTING'",(int(time.time()),approval_id))
+        record_decision_trace(
+            c, decision_type='ACTION_EXECUTION', policy_version=row['policy_version'],
+            target_type='ACTION_TARGET', target_id=target, action=action,
+            parameters=parameters, evidence_ids=evidence_ids, claims={},
+            state_snapshot={'authorization_status':'FAILED','attempt':attempt,'error':error},
+            ranking_context={}, actor='authorized_executor',
+            reason='Authorized action execution failed', approval_ref=approval_id,
+            approval_expires_at=row['expires_at'], approval_nonce=row['nonce'], outcome='FAILED'
+        )
         c.commit(); raise
 
 
