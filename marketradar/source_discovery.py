@@ -214,7 +214,7 @@ class SourceDiscoveryEngine:
         p=urlparse(url)
         if p.scheme not in {'http','https'} or not p.hostname: return
         try:
-            req=Request(url,headers={'User-Agent':'SEPP-MarketRadar/16.1.1 DiscoveryCrawler'})
+            req=Request(url,headers={'User-Agent':'SEPP-MarketRadar/16.1.2 DiscoveryCrawler'})
             with urlopen(req,timeout=self.timeout) as resp:
                 body=resp.read(300_000)
                 final=resp.geturl()
@@ -260,6 +260,27 @@ class SourceDiscoveryEngine:
                     candidate=self._candidate(title or urlparse(url).hostname,url,family,plan,f"search:{plan.get('id',query)}",url,title,snippet,score,'search_result')
                     if candidate:
                         self._merge(discovered,candidate,evidence,{'query':query,'provider':getattr(self.search,'provider','unknown'),'url':url,'title':title,'snippet':snippet,'country':plan.get('country','Global'),'region':plan.get('region','Global'),'language':plan.get('language','multi'),'method':'search_result'})
+                    # Search snippets can contain explicit companion/project URLs.
+                    # Treat those links as discovery evidence without crawling the
+                    # originating social/community page.
+                    for linked_url in URL_RE.findall(f'{title} {snippet}'):
+                        linked_host=urlparse(linked_url).hostname or ''
+                        result_host=urlparse(url).hostname or ''
+                        if not linked_host or linked_host.lower() == result_host.lower():
+                            continue
+                        linked_family=_family_for(f'{title} {snippet} {linked_url}',plan.get('family','jobs'))
+                        linked_candidate=self._candidate(
+                            linked_host, linked_url, linked_family, plan,
+                            f"search_snippet:{plan.get('id',query)}", url, title, snippet,
+                            max(score,0.6), 'search_snippet_link'
+                        )
+                        if linked_candidate:
+                            self._merge(discovered,linked_candidate,evidence,{
+                                'query':query,'provider':getattr(self.search,'provider','unknown'),
+                                'url':url,'title':title,'snippet':snippet,
+                                'country':plan.get('country','Global'),'region':plan.get('region','Global'),
+                                'language':plan.get('language','multi'),'method':'search_snippet_link'
+                            })
                     if crawled < crawl_budget and self._looks_like_community(title,snippet,url,plan):
                         self._crawl_result_page(item,plan,discovered,evidence,errors); crawled += 1
             except SearchProviderError as exc:
