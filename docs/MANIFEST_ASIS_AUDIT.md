@@ -53,7 +53,7 @@ Fix:
 - source verification now records REACHABLE / POLICY_VERIFIED maturity according to evidence and execution-lane state;
 - revalidation deadline is persisted.
 
-Commit: `51f5324f36545be631d86a4438c0d8f3aab98c` (implementation SHA recorded in Git history; current main contains the patch).
+Commit: `51f5324f36545be631d86a4438c0d7c8f3aab98c` (implementation SHA recorded in Git history; current main contains the patch).
 
 ### 3.3 Entity resolution state semantics
 Finding: the previous resolver effectively recorded MATCH or created a new entity; the Manifest requires explicit MATCH / POSSIBLE_MATCH / NO_MATCH semantics.
