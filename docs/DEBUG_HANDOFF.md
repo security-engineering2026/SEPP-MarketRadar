@@ -96,3 +96,11 @@ Use the newest main commit as the source of truth. Inspect the next push-trigger
 - Decision execution commits: `d4759ef61f0e2ce7f2d91a10668385a8bf3ecd57`, test `695387104ca3466153508d134d619dfcc37dc6c2`, audit `d6a07577acbd848356dfd7bbca60fafc2c0dad49`.
 - No PASS claim: these are repository changes; fresh GitHub Actions execution evidence is still required.
 - Next target remains Windows/Android/full post-audit qualification and any concrete CI failures.
+
+
+## 2026-09-22 — Latest execution checkpoint
+- Hardened Daily Intelligence Center with immutable `DAILY_SNAPSHOT` trace covering Top-7, Do-Now, approval, monitor, BLOCK and UNKNOWN buckets.
+- Added regression test for snapshot trace coverage and immutability.
+- Commits: `bca0f78c4e4c02c3b4b71d0ae92545d627c566ca`, `b0c6befb1ce478ac5a811078b25a3b701ed65671`, audit `7e6a8031fbefbb50326e7f697c9213c7b01c7c61`.
+- Current qualification truth unchanged: no post-audit full Windows/Android qualification PASS has been observed; GitHub workflow evidence remains the gate.
+- Next execution target: obtain fresh CI run evidence, then fix concrete Windows/Android/full-qualification failures rather than expanding features without evidence.
