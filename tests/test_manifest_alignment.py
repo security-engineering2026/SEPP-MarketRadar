@@ -81,3 +81,26 @@ def test_manifest_temporal_claim_conflict_is_immutable_and_explicit():
         except Exception as exc:
             assert "immutable" in str(exc).lower()
         c.close()
+
+
+
+def test_manifest_decision_trace_is_claim_evidence_bound_and_immutable():
+    from marketradar.goal_completion import decision_center, record_decision_trace
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "test.db")
+        c.execute("INSERT INTO opportunities(source,title,url,state,eligibility,application_ready,rank_score,score) VALUES(?,?,?,?,?,?,?,?)", ("test","Trace","https://example.test/op/trace","DISCOVERED","REVIEW",0,0.88,0.88))
+        oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/op/trace",)).fetchone()["id"]
+        c.execute("INSERT INTO evidence(opportunity_id,kind,source,url,finding,confidence,provenance_root,observed_at,evidence_hash) VALUES(?,?,?,?,?,?,?,?,?)", (oid,"policy","test","https://example.test/e","verified fact",0.9,"test","2026-09-22T00:00:00+00:00","c"*64))
+        eid = c.execute("SELECT id FROM evidence WHERE evidence_hash=?", ("c"*64,)).fetchone()["id"]
+        did = record_decision_trace(c, decision_type="TEST_DECISION", policy_version=POLICY_VERSION, target_type="OPPORTUNITY", target_id=oid, action="RECOMMEND", parameters={"opportunity_id":oid}, evidence_ids=[eid], claims={"eligibility":{"value":"REVIEW"}}, state_snapshot={"state":"DISCOVERED"}, ranking_context={"rank_score":0.88}, actor="test", reason="evidence-backed test")
+        row = c.execute("SELECT * FROM decision_traces WHERE decision_id=?", (did,)).fetchone()
+        assert row["evidence_digest"]
+        assert row["parameters_digest"]
+        assert row["policy_version"] == POLICY_VERSION
+        assert str(eid) in row["evidence_ids_json"]
+        try:
+            c.execute("DELETE FROM decision_traces WHERE decision_id=?", (did,))
+            assert False, "decision trace allowed deletion"
+        except Exception as exc:
+            assert "immutable" in str(exc).lower()
+        c.close()
