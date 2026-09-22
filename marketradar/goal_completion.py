@@ -58,6 +58,7 @@ def ensure_schema(c):
     c.execute("CREATE INDEX IF NOT EXISTS idx_ttm_opp ON ttm_observations(opportunity_id)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_fin_opp ON financial_observations(opportunity_id)")
     immutable = ('workflow_events','financial_observations','action_attempts','reviews','identity_matches','decision_traces')
+    c.execute("CREATE TRIGGER IF NOT EXISTS trg_decision_traces_no_update BEFORE UPDATE ON decision_traces BEGIN SELECT RAISE(ABORT,'IMMUTABLE_LEDGER'); END")
     for table in immutable:
         c.execute(f"CREATE TRIGGER IF NOT EXISTS trg_{table}_no_delete BEFORE DELETE ON {table} BEGIN SELECT RAISE(ABORT,'IMMUTABLE_LEDGER'); END")
     c.commit()
