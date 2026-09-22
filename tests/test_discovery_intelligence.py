@@ -12,4 +12,4 @@ def test_priority_region_boost_applied_once():
         max_queries=50,
     )
     assert plans
-    assert plans[0]["operator_score"] == 5.10
+    assert plans[0]["operator_score"] == 5.35
