@@ -119,3 +119,21 @@ def test_manifest_source_capability_maturity_is_monotonic():
     assert advance_capability("REGISTERED", CapabilityEvidence("PARSEABLE")) == "PARSEABLE"
     assert capability_evidence_for_verification(reachable=True, parseable=True, validated=True, policy_verified=True, execution_ready=False).stage == "POLICY_VERIFIED"
     assert capability_evidence_for_verification(reachable=True, parseable=True, validated=True, policy_verified=True, execution_ready=True).stage == "EXECUTION_READY"
+
+
+
+def test_manifest_authorized_execution_has_immutable_outcome_trace():
+    from marketradar.goal_completion import authorize_action, execute_authorized
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        cdb.execute("INSERT INTO opportunities(source,title,url,state,eligibility) VALUES(?,?,?,?,?)", ("test","Exec","https://example.test/op/exec","DISCOVERED","EXECUTE"))
+        oid = cdb.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/op/exec",)).fetchone()["id"]
+        cdb.execute("INSERT INTO evidence(opportunity_id,kind,source,url,finding,confidence,provenance_root,observed_at,evidence_hash) VALUES(?,?,?,?,?,?,?,?,?)", (oid,"policy","test","https://example.test/e","authorized test",0.95,"test","2026-09-22T00:00:00+00:00","d"*64))
+        eid = cdb.execute("SELECT id FROM evidence WHERE evidence_hash=?", ("d"*64,)).fetchone()["id"]
+        aid = authorize_action(cdb, "TEST_ACTION", str(oid), {"opportunity_id":oid,"x":1}, [eid], POLICY_VERSION, "test", ttl_seconds=60)
+        execute_authorized(cdb, aid, "TEST_ACTION", str(oid), {"opportunity_id":oid,"x":1}, [eid], lambda: {"ok":True})
+        row = cdb.execute("SELECT outcome,approval_ref,evidence_digest FROM decision_traces WHERE decision_type='ACTION_EXECUTION'").fetchone()
+        assert row["outcome"] == "EXECUTED"
+        assert row["approval_ref"] == aid
+        assert row["evidence_digest"]
+        cdb.close()
