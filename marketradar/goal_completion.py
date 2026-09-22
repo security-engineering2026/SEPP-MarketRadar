@@ -84,10 +84,16 @@ def resolve_entity(c, entity_type, name, *, domain=None, country=None, external_
         decision='MATCH'; conf=best_score
         c.execute("INSERT OR IGNORE INTO identity_matches(entity_type,left_key,right_key,decision,confidence,evidence_json,observed_at) VALUES(?,?,?,?,?,?,?)",(entity_type,_entity_key(entity_type,name,d),str(best['id']),decision,conf,json.dumps(evidence or {},ensure_ascii=False),now()))
         return best['id']
-    ts=now(); c.execute("INSERT INTO entities(entity_type,canonical_name,normalized_name,country,domain,external_key,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)",(entity_type,name,n,country,d,external_key,ts,ts))
+    ts=now()
+    # Ambiguous similarity is explicitly recorded as POSSIBLE_MATCH; it never
+    # silently merges identities. A new canonical entity remains separate until
+    # stronger evidence resolves the relationship.
+    decision='POSSIBLE_MATCH' if best and best_score>=0.65 else 'NO_MATCH'
+    candidate_id=str(best['id']) if best and best_score>=0.65 else ''
+    c.execute("INSERT INTO identity_matches(entity_type,left_key,right_key,decision,confidence,evidence_json,observed_at) VALUES(?,?,?,?,?,?,?)",
+              (entity_type,_entity_key(entity_type,name,d),candidate_id,decision,round(best_score,4),json.dumps({'candidate_entity_id':candidate_id,'evidence':evidence or {}},ensure_ascii=False),ts))
+    c.execute("INSERT INTO entities(entity_type,canonical_name,normalized_name,country,domain,external_key,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)",(entity_type,name,n,country,d,external_key,ts,ts))
     eid=c.execute('SELECT last_insert_rowid()').fetchone()[0]
-    if evidence:
-        c.execute("INSERT INTO identity_matches(entity_type,left_key,right_key,decision,confidence,evidence_json,observed_at) VALUES(?,?,?,?,?,?,?)",(entity_type,_entity_key(entity_type,name,d),str(eid),'MATCH',0.7,json.dumps(evidence,ensure_ascii=False),ts))
     return eid
 
 
