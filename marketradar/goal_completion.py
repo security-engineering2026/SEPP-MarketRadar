@@ -222,7 +222,28 @@ def decision_center(c):
     blocked=[x for x in rows if x.get('eligibility')=='BLOCK'][:20]; unknown=[x for x in rows if x.get('eligibility')=='UNKNOWN'][:20]
     payload={'top7':top7,'do_now':do_now,'approval_required':approval,'monitor':monitor,'blocked':blocked,'unknown':unknown}
     rationale={str(x['id']):{'why_now':('high rank + execution ready' if x in do_now else 'ranked for review'),'evidence_confidence':x.get('evidence_confidence'),'eligibility':x.get('eligibility'),'ttm':x.get('time_to_money')} for x in top7}
-    c.execute("INSERT INTO decision_snapshots(created_at,top7_json,do_now_json,approval_json,monitor_json,blocked_json,unknown_json,rationale_json) VALUES(?,?,?,?,?,?,?,?)",(now(),json.dumps(top7,default=str),json.dumps(do_now,default=str),json.dumps(approval,default=str),json.dumps(monitor,default=str),json.dumps(blocked,default=str),json.dumps(unknown,default=str),json.dumps(rationale)))
+    snapshot_id = c.execute("INSERT INTO decision_snapshots(created_at,top7_json,do_now_json,approval_json,monitor_json,blocked_json,unknown_json,rationale_json) VALUES(?,?,?,?,?,?,?,?)",(now(),json.dumps(top7,default=str),json.dumps(do_now,default=str),json.dumps(approval,default=str),json.dumps(monitor,default=str),json.dumps(blocked,default=str),json.dumps(unknown,default=str),json.dumps(rationale))).lastrowid
+    # The snapshot itself is the reproducibility anchor for the Daily Intelligence Center.
+    # Record one immutable trace over every surfaced decision bucket, including BLOCK/UNKNOWN,
+    # rather than treating only the Top-7 recommendations as consequential state.
+    snapshot_targets = {
+        'top7': [int(x['id']) for x in top7],
+        'do_now': [int(x['id']) for x in do_now],
+        'approval_required': [int(x['id']) for x in approval],
+        'monitor': [int(x['id']) for x in monitor],
+        'blocked': [int(x['id']) for x in blocked],
+        'unknown': [int(x['id']) for x in unknown],
+    }
+    record_decision_trace(
+        c, decision_type='DAILY_SNAPSHOT', policy_version='policy.v1',
+        target_type='DECISION_SNAPSHOT', target_id=snapshot_id, action='CLASSIFY',
+        parameters={'snapshot_id': snapshot_id},
+        evidence_ids=sorted({int(r['id']) for oid in snapshot_targets['top7'] for r in c.execute('SELECT id FROM evidence WHERE opportunity_id=? ORDER BY id',(oid,)).fetchall()}),
+        claims={'buckets': snapshot_targets},
+        state_snapshot={'counts': {k: len(v) for k, v in snapshot_targets.items()}},
+        ranking_context={'top7_ids': snapshot_targets['top7']},
+        actor='system:decision_center', reason='Immutable snapshot of all surfaced decision buckets'
+    )
     for item in top7:
         oid=int(item['id'])
         ev=[r['id'] for r in c.execute('SELECT id FROM evidence WHERE opportunity_id=? ORDER BY id',(oid,)).fetchall()]
