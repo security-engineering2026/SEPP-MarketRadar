@@ -74,10 +74,9 @@ Use the newest main commit as the source of truth. Inspect the next push-trigger
 - CI execution evidence is still pending; no PASS claim made.
 
 
-## 2026-09-22 — Decision Trace patch
-- Implemented universal immutable `decision_traces` ledger in `marketradar/goal_completion.py`.
-- Daily recommendation decisions now capture policy version, target/action, parameter and evidence digests, evidence IDs, claims/state/ranking context, actor, reason and outcome.
-- Authorization issuance also records approval reference, expiry and nonce in the same trace model.
-- Regression coverage added in `tests/test_manifest_alignment.py`; audit updated to IMPLEMENTED BY CODE.
-- Latest implementation commits: `475c83a999fd3ebef72509ca22822c8b8b481f40`, `5e3851c62a9223be48cd25d1299366feba4ff295`, `064f71ca368f3c3715db65551ccfe7bbc32f7713`.
+## 2026-09-22 — Decision Trace hardening
+- Decision trace immutability was hardened: both UPDATE and DELETE are blocked by SQLite triggers.
+- Regression coverage now verifies UPDATE attempts fail with the immutable-ledger error.
+- Latest hardening commits: `5a1c09227665159a5bc80d44834b8a3cc7e21b78`, `af4cfb77c67ad3f77b5862e4ac629ed4b75fe7a8`.
 - CI evidence is still required; no PASS claim made.
+- Next audit target: Windows Product Qualification and remaining Manifest gaps.
