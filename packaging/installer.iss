@@ -18,7 +18,7 @@ SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
 [Files]
-Source: "release\portable\MarketRadar\*"; DestDir: "{app}"; Excludes: ".portable"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\release\portable\MarketRadar\*"; DestDir: "{app}"; Excludes: ".portable"; Flags: ignoreversion recursesubdirs createallsubdirs
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
