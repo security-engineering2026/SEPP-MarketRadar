@@ -89,14 +89,8 @@ This follows GitHub's current security guidance that third-party Actions should 
 
 ## 4. Remaining Manifest gaps
 
-### PARTIAL — Temporal contradiction model
-The code retains first/last seen, rank history, raw observations and source verification history, and now has source stale-at data. However, there is not yet a first-class contradiction/change ledger for conflicting claims about the same opportunity.
-
-Required next implementation:
-- claim supersession/contradiction records;
-- freshness policy per claim type;
-- revalidation state visible to ranking/decision;
-- no silent replacement of conflicting historical claims.
+### IMPLEMENTED BY CODE — Temporal contradiction model
+The claim layer now preserves successive claim records and records explicit CONTRADICTS relations in an immutable `claim_conflicts` ledger. Claim evidence remains linked to each claim, preventing silent replacement. Source verification also persists stale-at/revalidation metadata. Runtime/CI evidence is still required before PASS.
 
 ### IMPLEMENTED BY CODE — Source capability ladder
 A central monotonic capability transition contract now defines all Manifest stages:
@@ -119,7 +113,7 @@ Commits:
 Runtime/CI execution evidence is still required before reporting the contract as PASS.
 
 ### IMPLEMENTED BY CODE — Consequential decision trace
-The codebase now has an immutable `decision_traces` ledger and a shared `record_decision_trace()` contract. Daily recommendations capture policy version, target, action, parameters/digest, evidence IDs/digest, claim snapshot, state snapshot, ranking context, actor, reason and outcome. Authorization issuance also records the approval reference, expiry and nonce. Runtime/CI evidence is still required before PASS.
+The codebase now has an immutable `decision_traces` ledger and a shared `record_decision_trace()` contract. Daily recommendations capture policy version, target, action, parameters/digest, evidence IDs/digest, claim snapshot, state snapshot, ranking context, actor, reason and outcome. Authorization issuance and authorized execution outcomes both record approval reference, expiry/nonce, evidence binding and execution result/failure state. Runtime/CI evidence is still required before PASS.
 
 ### OPEN — Windows product qualification
 Repository code and packaging paths exist, but the latest full-qualification cycle previously showed Windows EXE/installer failures. The later path/import fixes were committed, but no new complete post-audit Windows qualification result has been observed yet.
@@ -162,3 +156,9 @@ The remaining gaps above are now the implementation queue. No item will be repor
 - Source verification now distinguishes PARSEABLE, VALIDATED, POLICY_VERIFIED and EXECUTION_READY evidence instead of collapsing all live sources to REACHABLE/POLICY_VERIFIED.
 - Added regression coverage for all ordered stages and anti-downgrade behavior.
 - Commits: `ab47e9c6b503158d63165f4625e2f1705fdc5740`, `4f9320186b7bae0a7f0dcde0c969422e1f95b80c`, `6be136733ad4b9006516cca78ac80f47dcf46798`.
+
+
+## 2026-09-22 — Decision trace execution hardening
+- Authorized action execution now emits immutable ACTION_EXECUTION traces for both success and failure, bound to the authorization, target, parameters, evidence and policy version.
+- Regression coverage verifies a successful authorized execution produces an outcome trace.
+- Commits: `d4759ef61f0e2ce7f2d91a10668385a8bf3ecd57`, `695387104ca3466153508d134d619dfcc37dc6c2`.
