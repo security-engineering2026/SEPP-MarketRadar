@@ -1,58 +1,105 @@
-"""Provider-neutral bounded coding engine for the autonomous supervisor."""
+"""Local provider-free bounded coding engine for Windows/Ollama."""
 from __future__ import annotations
-import json, os, subprocess, urllib.request
-from urllib.error import HTTPError, URLError
+import json, os, re, subprocess, urllib.error, urllib.request
 from pathlib import Path
-ROOT=Path(__file__).resolve().parents[1]
-PROMPT="""You are the bounded coding engineer for SEPP-MarketRadar.
-Read docs/MANIFEST.md, docs/MANIFEST_ASIS_AUDIT.md, docs/DEBUG_HANDOFF.md, docs/AUTONOMOUS_PROGRESS.md.
-Select ONE concrete reproducible defect. Prefer failing CI/test evidence.
-Return ONLY a unified git diff. Fix the defect and add focused regression coverage.
-Do not weaken security, policy, evidence gates, or tests. Do not touch secrets.
-If no safe concrete fix is justified, return NO_SAFE_FIX."""
-def sh(*args,timeout=120):
-    p=subprocess.run(args,cwd=ROOT,text=True,capture_output=True,timeout=timeout)
-    return p.returncode,(p.stdout+"\n"+p.stderr).strip()
-def call_openai(key):
-    body=json.dumps({"model":os.getenv("OPENAI_MODEL","gpt-5"),"input":PROMPT,"max_output_tokens":12000}).encode()
-    req=urllib.request.Request("https://api.openai.com/v1/responses",data=body,headers={"Authorization":"Bearer "+key,"Content-Type":"application/json"})
-    with urllib.request.urlopen(req,timeout=120) as r: return json.load(r).get("output_text","")
-def call_anthropic(key):
-    body=json.dumps({"model":os.getenv("ANTHROPIC_MODEL","claude-sonnet-4-5"),"max_tokens":12000,"messages":[{"role":"user","content":PROMPT}]}).encode()
-    req=urllib.request.Request("https://api.anthropic.com/v1/messages",data=body,headers={"x-api-key":key,"anthropic-version":"2023-06-01","content-type":"application/json"})
-    with urllib.request.urlopen(req,timeout=120) as r: return "".join(x.get("text","") for x in json.load(r).get("content",[]) if x.get("type")=="text")
-def call_gemini(key):
-    model=os.getenv("GEMINI_MODEL","gemini-2.5-pro")
-    body=json.dumps({"contents":[{"parts":[{"text":PROMPT}]}]}).encode()
-    req=urllib.request.Request("https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+key,data=body,headers={"content-type":"application/json"})
-    with urllib.request.urlopen(req,timeout=120) as r: return json.load(r)["candidates"][0]["content"]["parts"][0]["text"]
-def main():
-    engine=os.getenv("AUTONOMOUS_ENGINE","").lower()
-    key={"openai":os.getenv("OPENAI_API_KEY"),"anthropic":os.getenv("ANTHROPIC_API_KEY"),"gemini":os.getenv("GEMINI_API_KEY")}.get(engine)
-    if not engine or not key: print("NOT_CONFIGURED"); return 20
+ROOT = Path(__file__).resolve().parents[1]
+MAX_MODEL_CONTEXT = int(os.getenv("AUTONOMOUS_MODEL_CONTEXT", "90000"))
+TEST_TIMEOUT = int(os.getenv("AUTONOMOUS_TEST_TIMEOUT", "600"))
+MODEL = os.getenv("AUTONOMOUS_MODEL", "qwen2.5-coder:7b")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434/api/generate")
+
+def sh(*args: str, timeout: int = 120) -> tuple[int, str]:
+    p = subprocess.run(args, cwd=ROOT, text=True, capture_output=True, timeout=timeout)
+    return p.returncode, (p.stdout + "\n" + p.stderr).strip()
+
+def read(path: Path, limit: int = 30000) -> str:
     try:
-        text={"openai":call_openai,"anthropic":call_anthropic,"gemini":call_gemini}[engine](key)
-    except HTTPError as exc:
-        print(f"ENGINE_HTTP_ERROR: HTTP {exc.code}. The configured provider credential was rejected or the endpoint is unavailable.")
-        return 20
-    except URLError as exc:
-        print(f"ENGINE_NETWORK_ERROR: {exc}")
-        return 20
-    if text.strip()=="NO_SAFE_FIX": print("NO_SAFE_FIX"); return 0
-    diff=text
-    if "```diff" in diff: diff=diff.split("```diff",1)[1].split("```",1)[0].strip()
-    elif "```" in diff: diff=diff.split("```",1)[1].split("```",1)[0].strip()
-    if not diff.startswith("diff --git "): print("INVALID_AGENT_OUTPUT"); return 21
-    rc,clean=sh("git","status","--porcelain")
-    if rc or clean: print("DIRTY_WORKTREE"); return 22
-    patch=ROOT/".agent"/"proposed.patch"; patch.parent.mkdir(exist_ok=True); patch.write_text(diff+"\n",encoding="utf-8")
-    rc,out=sh("git","apply","--check",str(patch))
+        return path.read_text(encoding="utf-8")[:limit]
+    except (OSError, UnicodeDecodeError):
+        return ""
+
+def test_snapshot() -> str:
+    rc, out = sh("python", "-m", "pytest", "-q", timeout=TEST_TIMEOUT)
+    return f"exit_code={rc}\n{out[-16000:]}"
+
+def candidate_context(test_output: str) -> str:
+    paths = [ROOT/"docs/MANIFEST.md", ROOT/"docs/MANIFEST_ASIS_AUDIT.md",
+             ROOT/"docs/DEBUG_HANDOFF.md", ROOT/"docs/AUTONOMOUS_PROGRESS.md",
+             ROOT/"tools/full_qualification.py", ROOT/"installer.iss",
+             ROOT/"tools/windows_ci.py"]
+    for match in re.findall(r"(?:[A-Za-z0-9_.-]+/)+[A-Za-z0-9_.-]+\.py", test_output):
+        paths.append(ROOT / match)
+    seen, chunks, total = set(), [], 0
+    for path in paths:
+        path = path.resolve()
+        if path in seen or not path.is_file():
+            continue
+        seen.add(path)
+        body = read(path)
+        chunk = f"\n===== {path.relative_to(ROOT)} =====\n{body}\n"
+        if total + len(chunk) > MAX_MODEL_CONTEXT:
+            break
+        chunks.append(chunk)
+        total += len(chunk)
+    return "".join(chunks)
+
+def call_ollama(prompt: str) -> str:
+    payload = json.dumps({"model": MODEL, "prompt": prompt, "stream": False,
+                          "options": {"temperature": 0}}).encode()
+    req = urllib.request.Request(OLLAMA_URL, data=payload,
+                                 headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=300) as response:
+        return json.load(response).get("response", "")
+
+def main() -> int:
+    rc, status = sh("git", "status", "--porcelain")
+    if rc != 0 or status:
+        print("DIRTY_WORKTREE"); print(status); return 3
+    rc, head = sh("git", "rev-parse", "HEAD")
+    if rc: print(head); return 4
+    evidence = test_snapshot()
+    context = candidate_context(evidence)
+    prompt = f"""You are a local bounded coding engineer for SEPP-MarketRadar.
+Starting commit: {head}
+Select ONE concrete reproducible defect from the evidence/context.
+Make the smallest coherent fix and focused regression coverage when appropriate.
+Never weaken security, evidence, policy, eligibility, payment, validation, or tests.
+Never touch secrets or rewrite history.
+Return ONLY a unified git diff beginning with 'diff --git'.
+If no safe justified fix exists, return exactly NO_SAFE_FIX.
+
+LATEST TEST EVIDENCE:
+{evidence}
+
+TARGETED REPOSITORY CONTEXT:
+{context}
+"""
+    try:
+        result = call_ollama(prompt)
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as exc:
+        print(f"OLLAMA_ERROR: {exc}"); return 20
+    if result.strip() == "NO_SAFE_FIX":
+        print("NO_SAFE_FIX"); return 0
+    marker = result.find("diff --git ")
+    if marker < 0:
+        print("INVALID_AGENT_OUTPUT"); return 21
+    diff = result[marker:].strip()
+    patch = ROOT / ".agent" / "proposed.patch"
+    patch.parent.mkdir(exist_ok=True)
+    patch.write_text(diff + "\n", encoding="utf-8")
+    rc, out = sh("git", "apply", "--check", str(patch))
     if rc: print("PATCH_REJECTED"); print(out); return 23
-    rc,out=sh("git","apply","--index",str(patch))
+    rc, out = sh("git", "apply", "--index", str(patch))
     if rc: print("PATCH_APPLY_FAILED"); print(out); return 24
-    test_cmd=os.getenv("AUTONOMOUS_TEST_COMMAND","python -m pytest -q").split()
-    rc,out=sh(*test_cmd,timeout=int(os.getenv("AUTONOMOUS_TEST_TIMEOUT","600"))); print(out[-12000:])
-    if rc: sh("git","reset","--hard","HEAD"); print("TEST_FAILED_PATCH_DISCARDED"); return 25
-    sh("git","config","user.name","autonomous-engineer"); sh("git","config","user.email","autonomous-engineer@users.noreply.github.com")
-    rc,out=sh("git","commit","-am","fix(autonomy): apply bounded tested repair"); print(out); return rc
-if __name__=="__main__": raise SystemExit(main())
+    test_cmd = os.getenv("AUTONOMOUS_TEST_COMMAND", "python -m pytest -q").split()
+    rc, out = sh(*test_cmd, timeout=TEST_TIMEOUT); print(out[-16000:])
+    if rc:
+        sh("git", "reset", "--hard", "HEAD")
+        print("TEST_FAILED_PATCH_DISCARDED"); return 25
+    sh("git", "config", "user.name", "autonomous-local-engineer")
+    sh("git", "config", "user.email", "autonomous-local-engineer@users.noreply.github.com")
+    rc, out = sh("git", "commit", "-am", "fix(autonomy): apply bounded tested local repair")
+    print(out); return rc
+
+if __name__ == "__main__":
+    raise SystemExit(main())
