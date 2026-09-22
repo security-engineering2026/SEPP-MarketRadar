@@ -29,5 +29,20 @@
 - Verification is predominantly UNVERIFIED; the catalog is not proof of 679 verified integrations.
 - PR #3 qualification/full-cycle-2 is not the source of truth; main remains authoritative until changes are deliberately integrated.
 
+## CI evidence: 16.1.2 baseline run
+- Full Qualification run 99 on commit 716fd33f1107257b3bfeaf5450b77e50bd5bd332: FAILURE.
+- Windows core regression: 4 failures were exposed:
+  - priority-boost regression expected 5.10 while the single-boost exact-mode score is 5.35; test expectation corrected.
+  - release snapshot remained at 16.1.1.
+  - search-snippet companion URL was not promoted to a candidate.
+  - discovery_queries.json lacked the required known-onion-only policy block.
+- Windows packaging/UI failures were also exposed:
+  - portable build checked the wrong path after PyInstaller successfully produced dist\\MarketRadar.exe.
+  - UI visual smoke could not import the package when invoked as a script.
+  - installer version was stale at 16.1.1.
+- Android build failed because Java target 1.8 and Kotlin target 17 were inconsistent.
+- These defects were patched on main in subsequent commits. Version metadata is synchronized to 16.1.2; federation/discovery crawler user agents are synchronized; Android JVM targets are aligned to 17.
+- The current main after the fixes must be re-run by GitHub Actions. No final PASS is claimed until fresh CI output exists.
+
 ## Next continuation
-Run the regression and qualification workflow on updated main, inspect every FAIL and OPEN result, patch the next concrete defect, and repeat. Only after the debug cycle is exhausted, perform and record the final test pass with real output.
+Use the newest main commit as the source of truth. Inspect the next push-triggered Windows CI and Full Qualification runs, extract every remaining FAIL/OPEN, patch only concrete defects, and commit each logical fix to main. Repeat automatically. After the debug cycle is exhausted, perform and record the final test pass with real output.
