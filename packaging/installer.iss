@@ -1,5 +1,5 @@
 #ifndef MyAppVersion
-#define MyAppVersion "16.1.1"
+#define MyAppVersion "16.1.2"
 #endif
 #define MyAppName "SEPP-MarketRadar"
 #define MyAppPublisher "SEPP"
