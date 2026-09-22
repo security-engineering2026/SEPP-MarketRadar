@@ -3,7 +3,7 @@ import hashlib, json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from .analysis import classify, payment_hint, ttm, score, opportunity_type
-from .policy import eligibility
+from .policy import eligibility, POLICY_VERSION
 from .quality import canonical_url, item_quality
 from .country_policy import infer_country
 from .payment import detect_payment, detect_kyc
@@ -169,9 +169,31 @@ class Pipeline:
             self.c.execute('UPDATE opportunities SET ttm_confidence=? WHERE id=?',(pred.get('confidence',0),oid))
         except Exception:
             pass
+        evidence_ids=[]
         for e in clean_ev:
             eh=hashlib.sha256(json.dumps([oid,e['kind'],source['name'],e['url'],e['finding'],e['confidence'],e['provenance_root']],sort_keys=True).encode()).hexdigest()
             self.c.execute('INSERT OR IGNORE INTO evidence(opportunity_id,kind,source,url,finding,confidence,provenance_root,observed_at,evidence_hash) VALUES(?,?,?,?,?,?,?,?,?)',(oid,e['kind'],source['name'],e['url'],e['finding'],e['confidence'],e['provenance_root'],now,eh))
+            evidence_row=self.c.execute('SELECT id FROM evidence WHERE evidence_hash=?',(eh,)).fetchone()
+            if evidence_row:
+                evidence_ids.append(int(evidence_row['id']))
+        # Consequential normalized facts become explicit claims with claim-level provenance.
+        claim_specs=[
+            ('eligibility',elig,max(0.0,min(1.0,conf))),
+            ('payment',pay,max(0.0,min(1.0,conf))),
+            ('kyc_requirement',normalized.get('kyc_requirement','UNKNOWN'),max(0.0,min(1.0,conf))),
+            ('iran_access',normalized.get('iran_access','UNKNOWN'),max(0.0,min(1.0,conf))),
+        ]
+        if row.get('budget') is not None:
+            claim_specs.append(('budget',f"{row.get('budget')} {row.get('currency') or ''}".strip(),max(0.0,min(1.0,conf))))
+        for claim_type, claim_value, claim_confidence in claim_specs:
+            self.c.execute(
+                'INSERT OR IGNORE INTO claims(entity_type,entity_id,opportunity_id,claim_type,claim_value,confidence,observed_at,expires_at,policy_version) VALUES(?,?,?,?,?,?,?,?,?)',
+                ('Opportunity',oid,oid,claim_type,str(claim_value),claim_confidence,now,None,POLICY_VERSION if claim_type=='eligibility' else None)
+            )
+            claim_row=self.c.execute('SELECT id FROM claims WHERE opportunity_id=? AND claim_type=? AND claim_value=?',(oid,claim_type,str(claim_value))).fetchone()
+            if claim_row:
+                for evidence_id in evidence_ids:
+                    self.c.execute('INSERT OR IGNORE INTO claim_evidence(claim_id,evidence_id) VALUES(?,?)',(int(claim_row['id']),evidence_id))
         return row
 
     def actions(self):
