@@ -162,3 +162,11 @@ The remaining gaps above are now the implementation queue. No item will be repor
 - Authorized action execution now emits immutable ACTION_EXECUTION traces for both success and failure, bound to the authorization, target, parameters, evidence and policy version.
 - Regression coverage verifies a successful authorized execution produces an outcome trace.
 - Commits: `d4759ef61f0e2ce7f2d91a10668385a8bf3ecd57`, `695387104ca3466153508d134d619dfcc37dc6c2`.
+
+
+## 2026-09-22 — Daily decision snapshot trace hardening
+- Daily Intelligence Center now records an immutable `DAILY_SNAPSHOT` decision trace covering Top-7, Do-Now, approval, monitor, BLOCK and UNKNOWN buckets.
+- The trace binds the snapshot identity, surfaced bucket IDs, ranking context, and evidence digest, so the decision snapshot itself is a reproducibility anchor rather than only tracing Top-7 recommendations.
+- Regression coverage added in `tests/test_manifest_alignment.py`.
+- Commits: `bca0f78c4e4c02c3b4b71d0ae92545d627c566ca`, `b0c6befb1ce478ac5a811078b25a3b701ed65671`.
+- Runtime/CI evidence is still required before PASS.
