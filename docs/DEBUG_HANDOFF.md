@@ -54,3 +54,12 @@
 
 ## Next continuation
 Use the newest main commit as the source of truth. Inspect the next push-triggered Windows CI and Full Qualification runs, extract every remaining FAIL/OPEN, patch only concrete defects, and commit each logical fix to main. Repeat automatically. After the debug cycle is exhausted, perform and record the final test pass with real output.
+
+
+## 2026-09-22 — Temporal/Contradiction Patch
+
+- Added immutable `claim_conflicts` ledger to preserve claim changes instead of silently replacing prior values.
+- Pipeline now records `CONTRADICTS` relations between successive differing claims, retaining both claim records and linking their evidence.
+- Added Manifest alignment regression coverage for conflict-ledger immutability.
+- Commits: `cdb3acd5b11b9f896536e548df9f4726be3188b2`, `9e6e6f67cbc19a8996ec2dd33e8db6b41b8347bd`, `53f5103b91373880ef0b056a17cefdb88cdc8a42`.
+- CI was triggered by the `main` pushes; combined status currently reports no completed checks yet. No PASS claim is made until GitHub Actions provides execution evidence.
