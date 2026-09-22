@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS opportunity_cluster(opportunity_id INTEGER NOT NULL, 
 CREATE TABLE IF NOT EXISTS ttm_observations(id INTEGER PRIMARY KEY, opportunity_id INTEGER NOT NULL, stage TEXT NOT NULL, started_at TEXT, ended_at TEXT, duration_hours REAL, probability REAL DEFAULT 0.5, evidence_id INTEGER, UNIQUE(opportunity_id,stage));
 CREATE TABLE IF NOT EXISTS ttm_predictions(opportunity_id INTEGER PRIMARY KEY, expected_hours REAL NOT NULL, p_paid REAL NOT NULL, expected_value REAL NOT NULL, bottleneck_stage TEXT, confidence REAL NOT NULL, calculated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS decision_snapshots(id INTEGER PRIMARY KEY, created_at TEXT NOT NULL, top7_json TEXT NOT NULL, do_now_json TEXT NOT NULL, approval_json TEXT NOT NULL, monitor_json TEXT NOT NULL, blocked_json TEXT NOT NULL, unknown_json TEXT NOT NULL, rationale_json TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS decision_traces(id INTEGER PRIMARY KEY, decision_id TEXT UNIQUE NOT NULL, decision_type TEXT NOT NULL, policy_version TEXT, target_type TEXT, target_id TEXT, action TEXT, parameters_json TEXT, parameters_digest TEXT, evidence_ids_json TEXT NOT NULL, evidence_digest TEXT NOT NULL, claims_json TEXT NOT NULL, state_snapshot_json TEXT NOT NULL, ranking_context_json TEXT NOT NULL, actor TEXT NOT NULL, model TEXT, reason TEXT NOT NULL, approval_ref TEXT, approval_expires_at INTEGER, approval_nonce TEXT, outcome TEXT, created_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_decision_traces_target ON decision_traces(target_type,target_id,created_at DESC);
 CREATE TABLE IF NOT EXISTS workflow_events(id INTEGER PRIMARY KEY, workflow_id TEXT NOT NULL, opportunity_id INTEGER, event_type TEXT NOT NULL, state TEXT NOT NULL, attempt INTEGER DEFAULT 0, idempotency_key TEXT UNIQUE NOT NULL, payload_json TEXT NOT NULL, created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS workflow_state(workflow_id TEXT PRIMARY KEY, opportunity_id INTEGER, state TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 0, next_retry_at TEXT, locked_until TEXT, updated_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS action_authorizations(id INTEGER PRIMARY KEY, approval_id TEXT UNIQUE NOT NULL, action TEXT NOT NULL, target TEXT NOT NULL, parameters_digest TEXT NOT NULL, evidence_digest TEXT NOT NULL, policy_version TEXT NOT NULL, actor TEXT NOT NULL, issued_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, nonce TEXT UNIQUE NOT NULL, status TEXT NOT NULL DEFAULT 'ISSUED', used_at INTEGER);
@@ -55,7 +57,7 @@ def ensure_schema(c):
     c.execute("CREATE INDEX IF NOT EXISTS idx_reviews_party ON reviews(party_entity_id)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_ttm_opp ON ttm_observations(opportunity_id)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_fin_opp ON financial_observations(opportunity_id)")
-    immutable = ('workflow_events','financial_observations','action_attempts','reviews','identity_matches')
+    immutable = ('workflow_events','financial_observations','action_attempts','reviews','identity_matches','decision_traces')
     for table in immutable:
         c.execute(f"CREATE TRIGGER IF NOT EXISTS trg_{table}_no_delete BEFORE DELETE ON {table} BEGIN SELECT RAISE(ABORT,'IMMUTABLE_LEDGER'); END")
     c.commit()
@@ -202,6 +204,15 @@ def calculate_ttm(c, opportunity_id):
     return {'expected_hours':round(expected,2),'p_paid':round(p,4),'expected_value':round(ev,2),'bottleneck_stage':bottleneck,'confidence':round(conf,3)}
 
 
+def record_decision_trace(c, *, decision_type, policy_version, target_type, target_id, action, parameters, evidence_ids, claims, state_snapshot, ranking_context, actor, reason, approval_ref=None, approval_expires_at=None, approval_nonce=None, model=None, outcome='PENDING'):
+    """Persist an immutable, claim/evidence-bound trace for every consequential decision."""
+    ids=sorted({int(x) for x in (evidence_ids or [])})
+    did='DEC-'+_sha([decision_type,target_type,target_id,action,parameters,ids,policy_version,actor,now()])[:32]
+    c.execute("INSERT INTO decision_traces(decision_id,decision_type,policy_version,target_type,target_id,action,parameters_json,parameters_digest,evidence_ids_json,evidence_digest,claims_json,state_snapshot_json,ranking_context_json,actor,model,reason,approval_ref,approval_expires_at,approval_nonce,outcome,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+              (did,decision_type,policy_version,target_type,str(target_id) if target_id is not None else None,action,json.dumps(parameters or {},sort_keys=True,ensure_ascii=False,default=str),_sha(parameters or {}),json.dumps(ids),_sha(ids),json.dumps(claims or {},sort_keys=True,ensure_ascii=False,default=str),json.dumps(state_snapshot or {},sort_keys=True,ensure_ascii=False,default=str),json.dumps(ranking_context or {},sort_keys=True,ensure_ascii=False,default=str),actor,model,reason,approval_ref,approval_expires_at,approval_nonce,outcome,now()))
+    return did
+
+
 def decision_center(c):
     rows=[dict(r) for r in c.execute("SELECT * FROM opportunities WHERE state='DISCOVERED' ORDER BY COALESCE(rank_score,score) DESC LIMIT 100").fetchall()]
     top7=rows[:7]; do_now=[x for x in top7 if x.get('eligibility')=='EXECUTE' and x.get('application_ready')][:3]
@@ -211,6 +222,11 @@ def decision_center(c):
     payload={'top7':top7,'do_now':do_now,'approval_required':approval,'monitor':monitor,'blocked':blocked,'unknown':unknown}
     rationale={str(x['id']):{'why_now':('high rank + execution ready' if x in do_now else 'ranked for review'),'evidence_confidence':x.get('evidence_confidence'),'eligibility':x.get('eligibility'),'ttm':x.get('time_to_money')} for x in top7}
     c.execute("INSERT INTO decision_snapshots(created_at,top7_json,do_now_json,approval_json,monitor_json,blocked_json,unknown_json,rationale_json) VALUES(?,?,?,?,?,?,?,?)",(now(),json.dumps(top7,default=str),json.dumps(do_now,default=str),json.dumps(approval,default=str),json.dumps(monitor,default=str),json.dumps(blocked,default=str),json.dumps(unknown,default=str),json.dumps(rationale)))
+    for item in top7:
+        oid=int(item['id'])
+        ev=[r['id'] for r in c.execute('SELECT id FROM evidence WHERE opportunity_id=? ORDER BY id',(oid,)).fetchall()]
+        claims={r['claim_type']:{'value':r['claim_value'],'confidence':r['confidence'],'observed_at':r['observed_at'],'policy_version':r['policy_version']} for r in c.execute('SELECT claim_type,claim_value,confidence,observed_at,policy_version FROM claims WHERE opportunity_id=? ORDER BY id',(oid,)).fetchall()}
+        record_decision_trace(c, decision_type='DAILY_RECOMMENDATION', policy_version='policy.v1', target_type='OPPORTUNITY', target_id=oid, action='RECOMMEND', parameters={'opportunity_id':oid}, evidence_ids=ev, claims=claims, state_snapshot={'state':item.get('state'),'eligibility':item.get('eligibility'),'application_ready':item.get('application_ready'),'rank_score':item.get('rank_score',item.get('score'))}, ranking_context={'rank_score':item.get('rank_score',item.get('score')),'skill_fit':item.get('skill_fit'),'difficulty_fit':item.get('difficulty_fit'),'learning_value':item.get('learning_value'),'competition_score':item.get('competition_score'),'application_speed_score':item.get('application_speed_score'),'freshness_score':item.get('freshness_score'),'time_to_money':item.get('time_to_money')}, actor='system:decision_center', reason=rationale[str(oid)]['why_now'])
     c.commit(); return payload
 
 
@@ -278,7 +294,9 @@ def authorize_action(c, action, target, parameters, evidence_ids, policy_version
     if opp_id is not None and any(r['opportunity_id']!=int(opp_id) for r in rows): raise ValueError('AUTH_EVIDENCE_TARGET_MISMATCH')
     if any(float(r['confidence'] or 0) <= 0 or not r['source'] or not r['url'] or not r['finding'] for r in rows): raise ValueError('AUTH_EVIDENCE_INCOMPLETE')
     pd=_sha(parameters); ed=_sha(ids); issued=int(time.time()); exp=issued+max(1,int(ttl_seconds)); nonce=hashlib.sha256(f'{action}|{target}|{pd}|{issued}|{time.time_ns()}'.encode()).hexdigest()[:32]; aid=f'AR-{nonce}'
-    c.execute("INSERT INTO action_authorizations(approval_id,action,target,parameters_digest,evidence_digest,policy_version,actor,issued_at,expires_at,nonce) VALUES(?,?,?,?,?,?,?,?,?,?)",(aid,action,target,pd,ed,policy_version,actor,issued,exp,nonce)); c.commit(); return aid
+    c.execute("INSERT INTO action_authorizations(approval_id,action,target,parameters_digest,evidence_digest,policy_version,actor,issued_at,expires_at,nonce) VALUES(?,?,?,?,?,?,?,?,?,?)",(aid,action,target,pd,ed,policy_version,actor,issued,exp,nonce))
+    record_decision_trace(c, decision_type='ACTION_AUTHORIZATION', policy_version=policy_version, target_type='ACTION_TARGET', target_id=target, action=action, parameters=parameters, evidence_ids=ids, claims={}, state_snapshot={'authorization_status':'ISSUED'}, ranking_context={}, actor=actor, reason='Explicit authorization bound to target, parameters, evidence and policy', approval_ref=aid, approval_expires_at=exp, approval_nonce=nonce, outcome='AUTHORIZED')
+    c.commit(); return aid
 
 def execute_authorized(c, approval_id, action, target, parameters, evidence_ids, executor):
     # Claim the one-time authorization atomically before touching any external system.
