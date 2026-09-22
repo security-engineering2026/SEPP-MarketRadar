@@ -8,15 +8,15 @@ if (Test-Path release) { Remove-Item release -Recurse -Force }
 python -m PyInstaller packaging/marketradar.spec --clean --noconfirm
 if (-not (Test-Path dist\MarketRadar.exe)) { throw "PyInstaller did not create MarketRadar.exe" }
 New-Item -ItemType Directory -Force -Path release\portable\MarketRadar | Out-Null
-Copy-Item distMarketRadar.exe releaseportableMarketRadarMarketRadar.exe -Force
-Copy-Item config releaseportableMarketRadarconfig -Recurse -Force
-New-Item -ItemType Directory -Force -Path releaseportableMarketRadarpackaging | Out-Null
-Copy-Item packaging\install_scheduled_scan.ps1 releaseportableMarketRadarpackaginginstall_scheduled_scan.ps1 -Force
+Copy-Item dist\MarketRadar.exe release\portable\MarketRadarMarketRadar.exe -Force
+Copy-Item config release\portable\MarketRadarconfig -Recurse -Force
+New-Item -ItemType Directory -Force -Path release\portable\MarketRadarpackaging | Out-Null
+Copy-Item packaging\install_scheduled_scan.ps1 release\portable\MarketRadarpackaginginstall_scheduled_scan.ps1 -Force
 
 $smokeRoot = Join-Path $env:RUNNER_TEMP "SEPP-MarketRadar-Smoke-$version"
 if (Test-Path $smokeRoot) { Remove-Item $smokeRoot -Recurse -Force -ErrorAction SilentlyContinue }
 New-Item -ItemType Directory -Force -Path $smokeRoot | Out-Null
-Copy-Item releaseportableMarketRadar* $smokeRoot -Recurse -Force
+Copy-Item release\portable\MarketRadar* $smokeRoot -Recurse -Force
 New-Item -ItemType File -Force -Path (Join-Path $smokeRoot '.portable') | Out-Null
 
 function Remove-SmokeRootWithRetry([string]$Path) {
@@ -45,7 +45,7 @@ try {
   }
 }
 
-if (Test-Path releaseportableMarketRadardata) { throw "Portable artifact contains runtime data" }
-if (Test-Path releaseportableMarketRadarlogs) { throw "Portable artifact contains runtime logs" }
-New-Item -ItemType File -Force -Path releaseportableMarketRadar.portable | Out-Null
-Write-Host "Portable build v$version created at releaseportableMarketRadar"
+if (Test-Path release\portable\MarketRadardata) { throw "Portable artifact contains runtime data" }
+if (Test-Path release\portable\MarketRadarlogs) { throw "Portable artifact contains runtime logs" }
+New-Item -ItemType File -Force -Path release\portable\MarketRadar.portable | Out-Null
+Write-Host "Portable build v$version created at release\portable\MarketRadar"
