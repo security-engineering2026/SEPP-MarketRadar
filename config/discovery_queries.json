@@ -113,6 +113,10 @@
     "quora.com",
     "news.ycombinator.com"
   ],
+  "tor_research": {
+    "mode": "KNOWN_ONION_ONLY",
+    "automatic_directory_crawling": false
+  },
   "intelligence": {
     "operator_support": [
       "site:",
