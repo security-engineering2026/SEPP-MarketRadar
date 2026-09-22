@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 POLICY_VERSION = 'policy.v1'
 
-from __future__ import annotations
 from .country_policy import apply_blacklist, evaluate_iran_access, jurisdiction_hits
 
 def eligibility(source, evidence_ok=True, opportunity=None, settings=None):
