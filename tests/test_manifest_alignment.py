@@ -103,4 +103,9 @@ def test_manifest_decision_trace_is_claim_evidence_bound_and_immutable():
             assert False, "decision trace allowed deletion"
         except Exception as exc:
             assert "immutable" in str(exc).lower()
+        try:
+            c.execute("UPDATE decision_traces SET reason='tampered' WHERE decision_id=?", (did,))
+            assert False, "decision trace allowed update"
+        except Exception as exc:
+            assert "immutable" in str(exc).lower()
         c.close()
