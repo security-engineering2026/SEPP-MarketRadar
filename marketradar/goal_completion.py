@@ -90,8 +90,9 @@ def resolve_entity(c, entity_type, name, *, domain=None, country=None, external_
     # stronger evidence resolves the relationship.
     decision='POSSIBLE_MATCH' if best and best_score>=0.65 else 'NO_MATCH'
     candidate_id=str(best['id']) if best and best_score>=0.65 else ''
-    c.execute("INSERT INTO identity_matches(entity_type,left_key,right_key,decision,confidence,evidence_json,observed_at) VALUES(?,?,?,?,?,?,?)",
-              (entity_type,_entity_key(entity_type,name,d),candidate_id,decision,round(best_score,4),json.dumps({'candidate_entity_id':candidate_id,'evidence':evidence or {}},ensure_ascii=False),ts))
+    right_key=candidate_id or 'NO_MATCH'
+    c.execute("INSERT OR IGNORE INTO identity_matches(entity_type,left_key,right_key,decision,confidence,evidence_json,observed_at) VALUES(?,?,?,?,?,?,?)",
+              (entity_type,_entity_key(entity_type,name,d),right_key,decision,round(best_score,4),json.dumps({'candidate_entity_id':candidate_id,'evidence':evidence or {}},ensure_ascii=False),ts))
     c.execute("INSERT INTO entities(entity_type,canonical_name,normalized_name,country,domain,external_key,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)",(entity_type,name,n,country,d,external_key,ts,ts))
     eid=c.execute('SELECT last_insert_rowid()').fetchone()[0]
     return eid
