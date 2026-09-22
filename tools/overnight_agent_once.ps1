@@ -26,6 +26,7 @@ try {
     git fetch origin main 2>&1 | Tee-Object -FilePath $log -Append
     if ((git status --porcelain).Trim()) { Log "ABORT: dirty worktree"; exit 3 }
     git merge --ff-only origin/main 2>&1 | Tee-Object -FilePath $log -Append
+    $remoteHead = (git rev-parse origin/main).Trim()
     $headBefore = (git rev-parse HEAD).Trim()
     $prompt = @"
 You are the autonomous SEPP-MarketRadar execution engineer.
@@ -73,13 +74,13 @@ Execute one highest-value engineering cycle within the time budget.
     Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
     $headAfter = (git rev-parse HEAD).Trim()
     if ((git status --porcelain).Trim()) { Log "ABORT: agent left uncommitted changes"; exit 5 }
-    if ($headAfter -ne $headBefore) {
-        Log "COMMIT: $headBefore -> $headAfter"
+    if ($headAfter -ne $remoteHead) {
+        Log "PUSH: local main differs from origin/main: $remoteHead -> $headAfter"
         git push origin main 2>&1 | Tee-Object -FilePath $log -Append
         if ($LASTEXITCODE -ne 0) { Log "FAIL: push failed"; exit 6 }
         Log "PUSH: main updated successfully."
     } else {
-        Log "NO-CHANGE: no committed repository change."
+        Log "NO-CHANGE: no local commits to push."
     }
 }
 catch { Log "ERROR: $($_.Exception.Message)"; exit 10 }
