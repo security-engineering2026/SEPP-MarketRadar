@@ -98,15 +98,10 @@ Required next implementation:
 - revalidation state visible to ranking/decision;
 - no silent replacement of conflicting historical claims.
 
-### PARTIAL — Source capability ladder
-The explicit maturity field now exists, but current promotion logic does not yet expose every Manifest stage independently (notably PARSEABLE vs VALIDATED vs POLICY_VERIFIED in all paths).
-
-Required next implementation:
-- central monotonic maturity transition function;
-- parser success promotes to PARSEABLE;
-- validated canonical output promotes to VALIDATED;
-- policy evidence promotes to POLICY_VERIFIED;
-- execution authority requires explicit EXECUTION_READY evidence.
+### IMPLEMENTED BY CODE — Source capability ladder
+A central monotonic capability transition contract now defines all Manifest stages:
+REGISTERED → DISCOVERED → DOCUMENTED → REACHABLE → PARSEABLE → VALIDATED → POLICY_VERIFIED → EXECUTION_READY.
+Verification derives the highest stage directly supported by the current evidence and cannot downgrade an existing maturity. Execution-ready promotion additionally requires explicit authorized execution capability, reviewed terms, live verification and evidence URLs. Runtime/CI evidence is still required before PASS.
 
 ### IMPLEMENTED BY CODE — Acquisition fallback contract
 Federation now exposes an ordered `AcquisitionFallback` contract with:
@@ -160,3 +155,10 @@ It is:
 `MANIFEST -> GAP -> PATCH -> TEST -> CI -> RE-AUDIT -> NEXT GAP`
 
 The remaining gaps above are now the implementation queue. No item will be reported as complete until repository code and corresponding evidence agree.
+
+
+## 2026-09-22 — Capability ladder hardening
+- Added centralized monotonic capability maturity transitions in `marketradar/capability.py`.
+- Source verification now distinguishes PARSEABLE, VALIDATED, POLICY_VERIFIED and EXECUTION_READY evidence instead of collapsing all live sources to REACHABLE/POLICY_VERIFIED.
+- Added regression coverage for all ordered stages and anti-downgrade behavior.
+- Commits: `ab47e9c6b503158d63165f4625e2f1705fdc5740`, `4f9320186b7bae0a7f0dcde0c969422e1f95b80c`, `6be136733ad4b9006516cca78ac80f47dcf46798`.
