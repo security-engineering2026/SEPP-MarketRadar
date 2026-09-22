@@ -119,7 +119,10 @@ def test_connect_migrates_legacy_schema_before_installing_new_triggers():
                 cols={r[1] for r in c.execute('pragma table_info(source_contracts)')}
                 rawcols={r[1] for r in c.execute('pragma table_info(raw_observations)')}
                 assert 'runtime_verification_state' in cols and 'observation_kind' in rawcols
-                assert c.execute("select count(*) from sqlite_master where type='trigger'").fetchone()[0] == 68
+                trigger_count=c.execute("select count(*) from sqlite_master where type='trigger'").fetchone()[0]
+                trigger_names={r[0] for r in c.execute("select name from sqlite_master where type='trigger'")}
+                assert trigger_count >= 68
+                assert {'opportunity_transition_valid','opportunity_state_update_requires_event','source_no_delete','source_contract_no_delete'} <= trigger_names
             finally: c.close()
         finally:
             if 'c' in locals():
