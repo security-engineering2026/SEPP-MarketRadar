@@ -67,9 +67,6 @@ class QueryPlanner:
         priority_cfg={str(x.get('country')):float(x.get('priority_boost',0)) for x in self.config.get('priority_regions',[]) if x.get('country')}
         for p in plans:
             p['operator_score']=float(p.get('operator_score',0))+priority_cfg.get(str(p.get('country','')),0.0)
-        priority_cfg={str(x.get('country')):float(x.get('priority_boost',0)) for x in self.config.get('priority_regions',[]) if x.get('country')}
-        for p in plans:
-            p['operator_score']=float(p.get('operator_score',0))+priority_cfg.get(str(p.get('country','')),0.0)
         plans.sort(key=lambda p:p.get('operator_score',0), reverse=True)
         return plans[:max_queries]
 
