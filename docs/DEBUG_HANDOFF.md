@@ -87,3 +87,12 @@ Use the newest main commit as the source of truth. Inspect the next push-trigger
 - Patched the portable layout and runtime-data checks so the expected structure is `release\\portable\\MarketRadar\\...`.
 - Commit: `6eba40cca6eb8960216d61286ee61e1ff8e6d1ad`.
 - This is a code fix only; Windows CI must execute the build and installer smoke before PASS can be recorded.
+
+
+## 2026-09-22 — Manifest hardening cycle
+- Re-audit found the source capability ladder was still collapsing multiple Manifest stages. Added centralized monotonic maturity transitions and explicit evidence gates through EXECUTION_READY.
+- Hardened consequential decision tracing so authorized execution success/failure creates immutable ACTION_EXECUTION traces; temporal contradiction status was also reconciled in the AS-IS audit.
+- Capability commits: `ab47e9c6b503158d63165f4625e2f1705fdc5740`, `4f9320186b7bae0a7f0dcde0c969422e1f95b80c`, `6be136733ad4b9006516cca78ac80f47dcf46798`, audit `e290ff83e6aa4f05372231002caa6288a1de11d3`.
+- Decision execution commits: `d4759ef61f0e2ce7f2d91a10668385a8bf3ecd57`, test `695387104ca3466153508d134d619dfcc37dc6c2`, audit `d6a07577acbd848356dfd7bbca60fafc2c0dad49`.
+- No PASS claim: these are repository changes; fresh GitHub Actions execution evidence is still required.
+- Next target remains Windows/Android/full post-audit qualification and any concrete CI failures.
