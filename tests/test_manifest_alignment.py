@@ -137,3 +137,35 @@ def test_manifest_authorized_execution_has_immutable_outcome_trace():
         assert row["approval_ref"] == aid
         assert row["evidence_digest"]
         cdb.close()
+
+
+def test_manifest_daily_snapshot_has_immutable_trace_for_all_decision_buckets():
+    from marketradar.goal_completion import decision_center
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        rows = [
+            ("top", "https://example.test/top", "DISCOVERED", "REVIEW", 0.95),
+            ("blocked", "https://example.test/blocked", "DISCOVERED", "BLOCK", 0.80),
+            ("unknown", "https://example.test/unknown", "DISCOVERED", "UNKNOWN", 0.70),
+        ]
+        for title, url, state, eligibility, score in rows:
+            cdb.execute(
+                "INSERT INTO opportunities(source,title,url,state,eligibility,application_ready,rank_score,score) VALUES(?,?,?,?,?,?,?,?)",
+                ("test", title, url, state, eligibility, 0, score, score),
+            )
+        cdb.commit()
+        decision_center(cdb)
+        trace = cdb.execute(
+            "SELECT * FROM decision_traces WHERE decision_type='DAILY_SNAPSHOT' ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        assert trace is not None
+        assert trace["target_type"] == "DECISION_SNAPSHOT"
+        assert '"blocked"' in trace["claims_json"]
+        assert '"unknown"' in trace["claims_json"]
+        assert trace["evidence_digest"]
+        try:
+            cdb.execute("UPDATE decision_traces SET reason='tampered' WHERE id=?", (trace["id"],))
+            assert False, "snapshot decision trace allowed update"
+        except Exception as exc:
+            assert "immutable" in str(exc).lower()
+        cdb.close()
