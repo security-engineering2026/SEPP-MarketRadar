@@ -63,3 +63,12 @@ Use the newest main commit as the source of truth. Inspect the next push-trigger
 - Added Manifest alignment regression coverage for conflict-ledger immutability.
 - Commits: `cdb3acd5b11b9f896536e548df9f4726be3188b2`, `9e6e6f67cbc19a8996ec2dd33e8db6b41b8347bd`, `53f5103b91373880ef0b056a17cefdb88cdc8a42`.
 - CI was triggered by the `main` pushes; combined status currently reports no completed checks yet. No PASS claim is made until GitHub Actions provides execution evidence.
+
+
+## 2026-09-22 — Acquisition Fallback Patch
+
+- Added ordered `AcquisitionFallback` provider contract with explicit provider provenance.
+- Fallback carries a confidence multiplier and distinguishes source unavailability from provider failure.
+- Added regression tests and fixed fallback metadata serialization before treating the patch as ready for CI.
+- Commits: `c8c766044b9f69da50b946ffc5b71e99ef804220`, `07b356fa52d482bfed487b6d506c7347535d9c0b`, test `83020a56acb068a6362cd26093b4c61c6fe6de4c`.
+- CI execution evidence is still pending; no PASS claim made.
