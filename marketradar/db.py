@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS opportunity_sources(opportunity_id INTEGER NOT NULL,s
 CREATE INDEX IF NOT EXISTS idx_opportunity_sources_source ON opportunity_sources(source);
 CREATE TABLE IF NOT EXISTS evidence(id INTEGER PRIMARY KEY,opportunity_id INTEGER,kind TEXT,source TEXT,url TEXT,finding TEXT,confidence REAL,provenance_root TEXT,observed_at TEXT,evidence_hash TEXT UNIQUE);
 CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,at TEXT,event TEXT,entity_type TEXT,entity_id TEXT,details TEXT);
+CREATE TABLE IF NOT EXISTS claim_conflicts(id INTEGER PRIMARY KEY,opportunity_id INTEGER NOT NULL,claim_type TEXT NOT NULL,previous_claim_id INTEGER NOT NULL,new_claim_id INTEGER NOT NULL,relation TEXT NOT NULL,detected_at TEXT NOT NULL,details_json TEXT NOT NULL,UNIQUE(previous_claim_id,new_claim_id,relation));
 CREATE TABLE IF NOT EXISTS application_events(id INTEGER PRIMARY KEY,opportunity_id INTEGER,from_state TEXT,to_state TEXT,actor TEXT,at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS revenue(id INTEGER PRIMARY KEY,opportunity_id INTEGER,amount REAL,currency TEXT,received_at TEXT,payment_ref TEXT UNIQUE,digest TEXT UNIQUE,payment_network TEXT,verification_state TEXT DEFAULT 'RECORDED');
 CREATE TABLE IF NOT EXISTS approvals(approval_id TEXT PRIMARY KEY,action TEXT NOT NULL,target TEXT NOT NULL,parameters_digest TEXT NOT NULL,evidence_digest TEXT NOT NULL,policy_version TEXT NOT NULL,issued_at INTEGER NOT NULL,expires_at INTEGER NOT NULL,used_at INTEGER);
@@ -206,6 +207,9 @@ def connect(path):
         _ensure_column(c,'revenue','verification_state',"TEXT DEFAULT 'RECORDED'")
         c.execute('CREATE INDEX IF NOT EXISTS idx_sources_country ON sources(country,region)')
         c.execute('CREATE INDEX IF NOT EXISTS idx_opportunities_iran ON opportunities(iran_access,eligibility)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_claim_conflicts_opp ON claim_conflicts(opportunity_id,claim_type,detected_at DESC)')
+        c.execute("CREATE TRIGGER IF NOT EXISTS claim_conflicts_no_update BEFORE UPDATE ON claim_conflicts BEGIN SELECT RAISE(ABORT,'claim conflict ledger is immutable'); END")
+        c.execute("CREATE TRIGGER IF NOT EXISTS claim_conflicts_no_delete BEFORE DELETE ON claim_conflicts BEGIN SELECT RAISE(ABORT,'claim conflict ledger is immutable'); END")
         for statement in statements:
             if statement.startswith('CREATE TRIGGER '):
                 c.execute(statement)
