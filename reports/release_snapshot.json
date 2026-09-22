@@ -1,5 +1,5 @@
 {
-  "version": "16.1.1",
+  "version": "16.1.2",
   "generated_from": "config/sources.json",
   "sources": 679,
   "active": 48,
@@ -12,5 +12,5 @@
     "UNVERIFIED": 664,
     "VERIFIED_BLOCKED_IRAN": 15
   },
-  "updated_for": "final jury round 16.1.0"
+  "updated_for": "debug baseline 16.1.2"
 }
