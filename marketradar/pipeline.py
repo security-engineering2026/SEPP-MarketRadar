@@ -186,14 +186,29 @@ class Pipeline:
         if row.get('budget') is not None:
             claim_specs.append(('budget',f"{row.get('budget')} {row.get('currency') or ''}".strip(),max(0.0,min(1.0,conf))))
         for claim_type, claim_value, claim_confidence in claim_specs:
+            claim_value = str(claim_value)
+            prior = self.c.execute(
+                'SELECT id,claim_value,confidence,observed_at FROM claims WHERE opportunity_id=? AND claim_type=? ORDER BY observed_at DESC,id DESC LIMIT 1',
+                (oid, claim_type),
+            ).fetchone()
             self.c.execute(
                 'INSERT OR IGNORE INTO claims(entity_type,entity_id,opportunity_id,claim_type,claim_value,confidence,observed_at,expires_at,policy_version) VALUES(?,?,?,?,?,?,?,?,?)',
-                ('Opportunity',oid,oid,claim_type,str(claim_value),claim_confidence,now,None,POLICY_VERSION if claim_type=='eligibility' else None)
+                ('Opportunity',oid,oid,claim_type,claim_value,claim_confidence,now,None,POLICY_VERSION if claim_type=='eligibility' else None)
             )
-            claim_row=self.c.execute('SELECT id FROM claims WHERE opportunity_id=? AND claim_type=? AND claim_value=?',(oid,claim_type,str(claim_value))).fetchone()
+            claim_row=self.c.execute('SELECT id FROM claims WHERE opportunity_id=? AND claim_type=? AND claim_value=?',(oid,claim_type,claim_value)).fetchone()
             if claim_row:
+                new_claim_id=int(claim_row['id'])
                 for evidence_id in evidence_ids:
-                    self.c.execute('INSERT OR IGNORE INTO claim_evidence(claim_id,evidence_id) VALUES(?,?)',(int(claim_row['id']),evidence_id))
+                    self.c.execute('INSERT OR IGNORE INTO claim_evidence(claim_id,evidence_id) VALUES(?,?)',(new_claim_id,evidence_id))
+                # A changed claim is a first-class temporal event. We never silently
+                # overwrite the previous value: both claims remain immutable and the
+                # relation is recorded for contradiction/supersession analysis.
+                if prior and str(prior['claim_value']) != claim_value and int(prior['id']) != new_claim_id:
+                    details=json.dumps({'previous_value':str(prior['claim_value']),'new_value':claim_value,'previous_confidence':float(prior['confidence'] or 0),'new_confidence':claim_confidence},ensure_ascii=False,sort_keys=True)
+                    self.c.execute(
+                        'INSERT OR IGNORE INTO claim_conflicts(opportunity_id,claim_type,previous_claim_id,new_claim_id,relation,detected_at,details_json) VALUES(?,?,?,?,?,?,?)',
+                        (oid,claim_type,int(prior['id']),new_claim_id,'CONTRADICTS',now,details),
+                    )
         return row
 
     def actions(self):
