@@ -1,6 +1,4 @@
-# SEPP-MarketRadar v16.1.1
-
-# SEPP-MarketRadar 15.0.0
+# SEPP-MarketRadar v16.1.2
 
 **Final Product Baseline — Windows-first Market Intelligence & Economic Operations Platform**
 
