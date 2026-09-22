@@ -41,6 +41,57 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
         self.sock = socket.create_connection((self._pinned_ip, self.port), self.timeout)
         self.sock = self._context.wrap_socket(self.sock, server_hostname=self._server_hostname)
 
+@dataclass(frozen=True)
+class AcquisitionAttempt:
+    provider: str
+    status: str
+    source_status: str
+    confidence_multiplier: float
+    error: str | None = None
+
+
+class AcquisitionFallback:
+    """Ordered acquisition fallback with explicit provider provenance.
+
+    A provider failure is distinct from a source-unavailable result. Fallback
+    may reduce evidence confidence, but it never upgrades source capability or
+    policy truth on its own.
+    """
+    def __init__(self, providers):
+        self.providers=tuple(providers)
+        if not self.providers:
+            raise ValueError('ACQUISITION_PROVIDER_CHAIN_EMPTY')
+
+    def fetch(self, source, url):
+        attempts=[]
+        for index,provider in enumerate(self.providers):
+            name=str(provider.get('name') or f'provider-{index+1}')
+            fetcher=provider.get('fetch')
+            if not callable(fetcher):
+                attempts.append(AcquisitionAttempt(name,'PROVIDER_FAILURE','UNKNOWN',0.0,'INVALID_PROVIDER'))
+                continue
+            multiplier=float(provider.get('confidence_multiplier', 1.0))
+            multiplier=max(0.0,min(1.0,multiplier))
+            try:
+                result=fetcher(source,url)
+                if not isinstance(result,dict):
+                    raise ValueError('INVALID_PROVIDER_RESULT')
+                status=int(result.get('status') or 0)
+                if 200 <= status < 300 and result.get('body') is not None:
+                    result=dict(result)
+                    result['acquisition_provider']=name
+                    result['fallback_used']=index > 0
+                    result['confidence_multiplier']=multiplier
+                    result['provider_chain_index']=index
+                    result['attempts_meta']=[a.__dict__ for a in attempts]
+                    return result
+                source_status='SOURCE_UNAVAILABLE' if status in {404,410} else 'PROVIDER_FAILURE'
+                attempts.append(AcquisitionAttempt(name,'NO_SUCCESS',source_status,multiplier,f'HTTP_{status or "UNKNOWN"}'))
+            except Exception as exc:
+                attempts.append(AcquisitionAttempt(name,'PROVIDER_FAILURE','UNKNOWN',multiplier,type(exc).__name__+': '+str(exc)))
+        source_unavailable=bool(attempts) and all(a.source_status=='SOURCE_UNAVAILABLE' for a in attempts)
+        raise RuntimeError('SOURCE_UNAVAILABLE' if source_unavailable else 'ALL_ACQUISITION_PROVIDERS_FAILED')
+
 class Federation:
     def __init__(self, sources, timeout=5, max_workers=8, retries=2, max_bytes=2_000_000, max_redirects=5):
         self.sources={s.name:s for s in sources}; self.timeout=max(.1,float(timeout)); self.max_workers=max(1,min(int(max_workers),32)); self.retries=max(0,int(retries)); self.max_bytes=max(1024,int(max_bytes)); self.max_redirects=max(0,min(int(max_redirects),10))
@@ -143,6 +194,12 @@ class Federation:
                     time.sleep(delay)
                 else: break
         raise last_error
+
+    def fetch_with_fallback(self,name,url=None,providers=None):
+        if name not in self.sources: raise KeyError('SOURCE_NOT_REGISTERED')
+        source=self.sources[name]; target=url or source.base_url
+        chain=AcquisitionFallback(providers or ({'name':'native-http','fetch':lambda _source,_url:self.fetch(name,_url),'confidence_multiplier':1.0},))
+        return chain.fetch(source,target)
 
     def verify_many(self,names=None,progress_callback=None,stop_event=None,validation_callback=None):
         selected=list(names) if names is not None else list(self.sources); results=[]
