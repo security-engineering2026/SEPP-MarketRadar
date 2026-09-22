@@ -80,3 +80,10 @@ Use the newest main commit as the source of truth. Inspect the next push-trigger
 - Latest hardening commits: `5a1c09227665159a5bc80d44834b8a3cc7e21b78`, `af4cfb77c67ad3f77b5862e4ac629ed4b75fe7a8`.
 - CI evidence is still required; no PASS claim made.
 - Next audit target: Windows Product Qualification and remaining Manifest gaps.
+
+
+## 2026-09-22 — Windows Product Qualification hardening
+- Re-audit of `packaging/build_windows.ps1` found malformed portable artifact paths: executable/config/packaging destinations were concatenated instead of using directory separators.
+- Patched the portable layout and runtime-data checks so the expected structure is `release\\portable\\MarketRadar\\...`.
+- Commit: `6eba40cca6eb8960216d61286ee61e1ff8e6d1ad`.
+- This is a code fix only; Windows CI must execute the build and installer smoke before PASS can be recorded.
