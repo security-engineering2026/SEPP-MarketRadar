@@ -123,8 +123,8 @@ Commits:
 
 Runtime/CI execution evidence is still required before reporting the contract as PASS.
 
-### PARTIAL — Consequential decision explainability
-Decision snapshots and ranking rationale exist. A universal decision trace linking every final decision to the exact policy inputs, evidence claims and ranking context is not yet enforced for every action path.
+### IMPLEMENTED BY CODE — Consequential decision trace
+The codebase now has an immutable `decision_traces` ledger and a shared `record_decision_trace()` contract. Daily recommendations capture policy version, target, action, parameters/digest, evidence IDs/digest, claim snapshot, state snapshot, ranking context, actor, reason and outcome. Authorization issuance also records the approval reference, expiry and nonce. Runtime/CI evidence is still required before PASS.
 
 ### OPEN — Windows product qualification
 Repository code and packaging paths exist, but the latest full-qualification cycle previously showed Windows EXE/installer failures. The later path/import fixes were committed, but no new complete post-audit Windows qualification result has been observed yet.
