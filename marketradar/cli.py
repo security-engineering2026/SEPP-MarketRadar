@@ -32,7 +32,6 @@ def main():
             return
         elif a.command=='finance-report':
             from .finance import period_report, export_report
-            from .paths import data_root
             r=period_report(c,a.period); out=export_report(c,r,data_root()/'reports'/'finance'); print(json.dumps({'report':r,'exports':out},ensure_ascii=False,indent=2,default=str))
         elif a.command=='android-server':
             from .engine import MarketRadar
