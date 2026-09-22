@@ -10,6 +10,7 @@ from .source_search import WebSearchProvider, SearchProviderError
 from .source_constraints import extract_source_constraints, support_question_for_source
 from .source_policy import classify_source_lane, BLACKLIST_LANE, EXECUTION_LANE, INTELLIGENCE_LANE, REVIEW_LANE
 from .policy_evidence import aggregate_kyc, iran_policy_claims
+from .capability import advance_capability, capability_evidence_for_verification
 
 # Strong, source-level signals only. Absence of a match never proves eligibility.
 IRAN_BLOCK_PATTERNS = [
@@ -222,13 +223,23 @@ class SourceVerificationEngine:
             result['project_scan_interval_minutes'] = classification.interval_minutes if classification.lane == EXECUTION_LANE else 0
             result['intelligence_scan_interval_minutes'] = classification.interval_minutes if classification.lane == INTELLIGENCE_LANE else 0
             result['verification_state'] = 'blocked' if classification.blacklisted else ('verified' if result.get('source_verification_state')=='LIVE_CONFIRMED' else 'documented')
-            if result.get('source_verification_state') == 'LIVE_CONFIRMED' and classification.lane == EXECUTION_LANE and classification.execution_ready:
-                result['capability_maturity'] = 'POLICY_VERIFIED'
-            elif result.get('source_verification_state') == 'LIVE_CONFIRMED':
-                result['capability_maturity'] = 'REACHABLE'
-            else:
-                result['capability_maturity'] = 'DOCUMENTED'
-            result['capability_evidence'] = result.get('evidence_urls', [])[:12]
+            current_maturity = str(r.get('capability_maturity') or 'REGISTERED')
+            execution_evidence = bool(
+                result.get('source_verification_state') == 'LIVE_CONFIRMED'
+                and classification.execution_ready
+                and result.get('terms_status') == 'reviewed'
+                and bool(result.get('evidence_urls'))
+                and bool(r.get('execution_capability') in {'authorized_api', 'authorized_integration'})
+            )
+            capability_evidence = capability_evidence_for_verification(
+                reachable=result.get('source_verification_state') == 'LIVE_CONFIRMED',
+                parseable=bool(text.strip()),
+                validated=bool(text.strip()) and bool(constraints is not None),
+                policy_verified=bool(result.get('source_verification_state') == 'LIVE_CONFIRMED' and classification.lane in {EXECUTION_LANE, INTELLIGENCE_LANE, REVIEW_LANE}),
+                execution_ready=execution_evidence,
+            )
+            result['capability_maturity'] = advance_capability(current_maturity, capability_evidence)
+            result['capability_evidence'] = list(dict.fromkeys(result.get('evidence_urls', [])[:12] + list(capability_evidence.reasons)))
             try:
                 result['stale_at'] = (datetime.now(timezone.utc) + __import__('datetime').timedelta(days=self.policy_search_interval_days)).isoformat()
             except Exception:
