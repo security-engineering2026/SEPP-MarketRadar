@@ -43,3 +43,16 @@ def test_manifest_source_capability_contract_columns_exist():
             assert required in source_cols
             assert required in contract_cols
         c.close()
+
+
+def test_manifest_identity_resolution_records_non_merge_states():
+    from marketradar.goal_completion import resolve_entity
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        first = resolve_entity(cdb, "Client", "Acme Consulting", domain="acme.example")
+        second = resolve_entity(cdb, "Client", "Acme Consult", domain="other.example")
+        rows = cdb.execute("SELECT decision FROM identity_matches ORDER BY id").fetchall()
+        assert first is not None
+        assert any(row["decision"] in {"POSSIBLE_MATCH", "NO_MATCH"} for row in rows)
+        cdb.close()
