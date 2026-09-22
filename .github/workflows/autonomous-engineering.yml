@@ -1,0 +1,84 @@
+name: Autonomous Engineering Cycle
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/10 * * * *"
+
+concurrency:
+  group: marketradar-autonomous-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: read
+  issues: write
+  pull-requests: write
+  copilot-requests: write
+
+jobs:
+  cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot
+
+      - name: Run one bounded engineering cycle
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          copilot -p '
+          You are the autonomous SEPP-MarketRadar execution engineer.
+          Execute exactly ONE bounded cycle: AUDIT -> IMPLEMENT -> TEST -> FIX -> COMMIT -> CONTINUE.
+          Repository: security-engineering2026/SEPP-MarketRadar
+          Branch: main.
+
+          Read first:
+          docs/MANIFEST.md
+          docs/MANIFEST_ASIS_AUDIT.md
+          docs/DEBUG_HANDOFF.md
+          docs/AUTONOMOUS_PROGRESS.md
+          latest GitHub Actions evidence available in the repository/context.
+
+          Select the highest-value concrete unresolved defect or qualification failure.
+          Prefer a reproducible CI/runtime defect over speculative feature work.
+          Make the smallest coherent fix and regression coverage.
+          Run relevant tests and record exact results.
+          Never claim PASS, 100%, production, or readiness without execution evidence.
+          UNKNOWN and OPEN remain explicit.
+          Never weaken security controls, tests, Manifest semantics, evidence gates, or policy.
+          Never touch secrets.
+          Never rewrite history.
+          Keep unrelated files untouched.
+          Update docs/DEBUG_HANDOFF.md and docs/AUTONOMOUS_PROGRESS.md with:
+          cycle number, starting commit, selected problem, changes, exact test results,
+          commit hash if available, remaining blocker, and next concrete action.
+          If no safe concrete change is available, update the checkpoint only.
+          Commit all logical repository changes to main. Do not force-push.
+          Finish within the workflow time budget.
+          ' -s --no-ask-user --allow-tool='shell(git:*)' --allow-tool='shell(python:*)' --allow-tool='shell(pytest:*)' --allow-tool='shell(pip:*)' --allow-tool='write'
+
+      - name: Push committed work
+        run: |
+          git status --short
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "ERROR: agent left uncommitted changes"
+            exit 1
+          fi
+          if [ "$(git rev-list --count origin/main..HEAD)" -gt 0 ]; then
+            git push origin HEAD:main
+          else
+            echo "No new commit to push."
+          fi
