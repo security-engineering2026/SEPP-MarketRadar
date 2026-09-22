@@ -1,6 +1,7 @@
 """Provider-neutral bounded coding engine for the autonomous supervisor."""
 from __future__ import annotations
 import json, os, subprocess, urllib.request
+from urllib.error import HTTPError, URLError
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 PROMPT="""You are the bounded coding engineer for SEPP-MarketRadar.
@@ -29,7 +30,14 @@ def main():
     engine=os.getenv("AUTONOMOUS_ENGINE","").lower()
     key={"openai":os.getenv("OPENAI_API_KEY"),"anthropic":os.getenv("ANTHROPIC_API_KEY"),"gemini":os.getenv("GEMINI_API_KEY")}.get(engine)
     if not engine or not key: print("NOT_CONFIGURED"); return 20
-    text={"openai":call_openai,"anthropic":call_anthropic,"gemini":call_gemini}[engine](key)
+    try:
+        text={"openai":call_openai,"anthropic":call_anthropic,"gemini":call_gemini}[engine](key)
+    except HTTPError as exc:
+        print(f"ENGINE_HTTP_ERROR: HTTP {exc.code}. The configured provider credential was rejected or the endpoint is unavailable.")
+        return 20
+    except URLError as exc:
+        print(f"ENGINE_NETWORK_ERROR: {exc}")
+        return 20
     if text.strip()=="NO_SAFE_FIX": print("NO_SAFE_FIX"); return 0
     diff=text
     if "```diff" in diff: diff=diff.split("```diff",1)[1].split("```",1)[0].strip()
