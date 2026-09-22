@@ -83,7 +83,7 @@ class AcquisitionFallback:
                     result['fallback_used']=index > 0
                     result['confidence_multiplier']=multiplier
                     result['provider_chain_index']=index
-                    result['attempts_meta']=[a.__dict__ for a in attempts]
+                    result['attempts_meta']=[{'provider':a.provider,'status':a.status,'source_status':a.source_status,'confidence_multiplier':a.confidence_multiplier,'error':a.error} for a in attempts]
                     return result
                 source_status='SOURCE_UNAVAILABLE' if status in {404,410} else 'PROVIDER_FAILURE'
                 attempts.append(AcquisitionAttempt(name,'NO_SUCCESS',source_status,multiplier,f'HTTP_{status or "UNKNOWN"}'))
