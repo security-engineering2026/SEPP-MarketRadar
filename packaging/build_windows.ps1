@@ -6,12 +6,12 @@ if (Test-Path dist) { Remove-Item dist -Recurse -Force }
 if (Test-Path build) { Remove-Item build -Recurse -Force }
 if (Test-Path release) { Remove-Item release -Recurse -Force }
 python -m PyInstaller packaging/marketradar.spec --clean --noconfirm
-if (-not (Test-Path distMarketRadar.exe)) { throw "PyInstaller did not create MarketRadar.exe" }
-New-Item -ItemType Directory -Force -Path releaseportableMarketRadar | Out-Null
+if (-not (Test-Path dist\MarketRadar.exe)) { throw "PyInstaller did not create MarketRadar.exe" }
+New-Item -ItemType Directory -Force -Path release\portable\MarketRadar | Out-Null
 Copy-Item distMarketRadar.exe releaseportableMarketRadarMarketRadar.exe -Force
 Copy-Item config releaseportableMarketRadarconfig -Recurse -Force
 New-Item -ItemType Directory -Force -Path releaseportableMarketRadarpackaging | Out-Null
-Copy-Item packaginginstall_scheduled_scan.ps1 releaseportableMarketRadarpackaginginstall_scheduled_scan.ps1 -Force
+Copy-Item packaging\install_scheduled_scan.ps1 releaseportableMarketRadarpackaginginstall_scheduled_scan.ps1 -Force
 
 $smokeRoot = Join-Path $env:RUNNER_TEMP "SEPP-MarketRadar-Smoke-$version"
 if (Test-Path $smokeRoot) { Remove-Item $smokeRoot -Recurse -Force -ErrorAction SilentlyContinue }
