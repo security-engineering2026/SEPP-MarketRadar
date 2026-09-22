@@ -1,18 +1,14 @@
-name: Autonomous Supervisor Cycle
-
+name: Autonomous Engineering Cycle
 on:
   workflow_dispatch:
   schedule:
     - cron: "*/10 * * * *"
-
 concurrency:
   group: marketradar-autonomous-main
   cancel-in-progress: false
-
 permissions:
   contents: write
   actions: read
-
 jobs:
   cycle:
     runs-on: ubuntu-latest
@@ -23,18 +19,27 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
-
       - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Run supervisor
+      - name: Run bounded coding engine when configured
+        id: agent
+        continue-on-error: true
         env:
-          AUTONOMOUS_CYCLE: "${{ github.run_number }}"
+          AUTONOMOUS_ENGINE: ${{ vars.AUTONOMOUS_ENGINE }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          AUTONOMOUS_TEST_COMMAND: "python -m pytest -q"
+          AUTONOMOUS_TEST_TIMEOUT: "600"
+        run: python tools/autonomous_coding_agent.py
+      - name: Run supervisor fallback
+        if: steps.agent.outcome == 'failure'
+        env:
+          AUTONOMOUS_CYCLE: ${{ github.run_number }}
           AUTONOMOUS_TEST_COMMAND: "python -m pytest -q"
           AUTONOMOUS_TEST_TIMEOUT: "600"
         run: python tools/autonomous_supervisor.py
-
-      - name: Push checkpoint
+      - name: Push checkpoint or tested repair
         run: git push origin HEAD:main
