@@ -25,13 +25,15 @@ Prerequisites:
 
 1. A clone of security-engineering2026/SEPP-MarketRadar.
 2. Git authentication that can push to main.
-3. A local coding-agent wrapper. It receives exactly one argument: the generated prompt-file path.
+3. Codex CLI installed and authenticated, or another local coding-agent runner.
 4. PowerShell with the ScheduledTasks module.
 
-Install:
+For the included Codex runner:
 
     Set-Location C:\path\to\SEPP-MarketRadar
-    .\tools\install_overnight_agent.ps1 -RepoPath "C:\path\to\SEPP-MarketRadar" -AgentRunner "C:\path\to\run-agent.ps1"
+    .\tools\install_overnight_agent.ps1 -RepoPath "C:\path\to\SEPP-MarketRadar" -AgentRunner "C:\path\to\SEPP-MarketRadar\tools\run_codex_agent.ps1"
+
+The included runner uses non-interactive codex exec with a workspace-write sandbox and does not push. The controller owns the push step. OpenAI documents codex exec as the non-interactive mode for scripts and CI, including prompt input through stdin.
 
 Windows Task Scheduler supports minute schedules/repetition intervals, and IgnoreNew prevents overlapping task instances.
 
