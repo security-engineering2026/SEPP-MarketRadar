@@ -47,3 +47,17 @@ def test_terms_not_reviewed_cannot_yield_execute():
     assert eligibility(source)[0] == 'REVIEW'
     source['terms_status']='allowed'
     assert eligibility(source)[0] == 'EXECUTE'
+
+
+def test_unknown_is_never_authorized_and_hard_block_dominates_uncertainty():
+    source = {
+        'iran_status': 'ALLOW',
+        'kyc_status': 'ALLOW',
+        'payment_status': 'USDT',
+        'terms_status': 'allowed',
+    }
+    assert eligibility(source, evidence_ok=False)[0] == 'UNKNOWN'
+    blocked = dict(source, iran_status='BLOCK')
+    assert eligibility(blocked, evidence_ok=False)[0] == 'BLOCK'
+    blocked_terms = dict(source, terms_status='blocked')
+    assert eligibility(blocked_terms, evidence_ok=False)[0] == 'BLOCK'
