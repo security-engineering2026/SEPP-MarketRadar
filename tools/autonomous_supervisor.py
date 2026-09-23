@@ -7,6 +7,8 @@ can later be attached through AUTONOMOUS_AGENT_COMMAND without changing the loop
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import subprocess
 from datetime import datetime, timezone
@@ -15,6 +17,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PROGRESS = ROOT / "docs" / "AUTONOMOUS_PROGRESS.md"
 HANDOFF = ROOT / "docs" / "DEBUG_HANDOFF.md"
+CHECKPOINT = ROOT / "docs" / "AUTONOMOUS_CHECKPOINT.json"
 MAX_OUTPUT = 12000
 
 
@@ -49,6 +52,20 @@ def main() -> int:
     print(f"[TEST] {' '.join(test_cmd)}")
     test_rc, test_out = run(test_cmd, timeout=int(os.getenv("AUTONOMOUS_TEST_TIMEOUT", "600")))
     result = "PASS" if test_rc == 0 else "OPEN"
+    evidence_digest = hashlib.sha256(test_out.encode("utf-8")).hexdigest()
+    checkpoint = {
+        "schema": 1,
+        "cycle": cycle,
+        "timestamp_utc": stamp,
+        "starting_commit": head,
+        "test_command": " ".join(test_cmd),
+        "test_exit_code": test_rc,
+        "status": result,
+        "evidence_digest": evidence_digest,
+    }
+    tmp = CHECKPOINT.with_suffix(".tmp")
+    tmp.write_text(json.dumps(checkpoint, indent=2, sort_keys=True), encoding="utf-8")
+    tmp.replace(CHECKPOINT)
 
     checkpoint = f"""
 ## {stamp} — Autonomous Supervisor Cycle {cycle}
@@ -69,7 +86,7 @@ def main() -> int:
 """
     PROGRESS.write_text(PROGRESS.read_text(encoding="utf-8") + checkpoint, encoding="utf-8")
 
-    rc, _ = run(["git", "add", "docs/AUTONOMOUS_PROGRESS.md"])
+    rc, _ = run(["git", "add", "docs/AUTONOMOUS_PROGRESS.md", "docs/AUTONOMOUS_CHECKPOINT.json"])
     if rc != 0:
         return 5
     msg = f"chore(autonomy): record supervisor cycle {cycle}"
