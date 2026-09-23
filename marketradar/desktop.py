@@ -156,6 +156,10 @@ class MarketRadarDesktop:
         self._configure_style()
         self._build()
         self.refresh_all()
+        # A freshly installed product must not open into an apparently empty workspace.
+        # No synthetic opportunities are created: first launch starts real acquisition
+        # in the background when the local workspace has no observations yet.
+        self.master.after(300, self._maybe_bootstrap_live_data)
         install_exception_logging(self.master)
         self.master.protocol("WM_DELETE_WINDOW", self.close)
         self.master.bind("<Control-k>", self._focus_search)
@@ -893,6 +897,27 @@ class MarketRadarDesktop:
         ttk.Label(status, text=f"SEPP-MarketRadar  •  v{__version__}", style="Status.TLabel").pack(side=RIGHT)
 
     # -------------------- data --------------------
+    def _maybe_bootstrap_live_data(self):
+        """Start first-run live acquisition without blocking the desktop UI."""
+        try:
+            if not needs_initial_acquisition(self.conn):
+                return
+            active = [s["name"] for s in self.sources if s.get("status") == "active"]
+            if not active:
+                self.status_var.set("No active acquisition sources configured")
+                return
+            self.status_var.set("First-run live acquisition started…")
+            self.source_status.set("Initializing workspace")
+            self.progress_var.set(f"0 / {len(active)}")
+            self._cancel_event.clear()
+            self._set_verification_ui(True)
+            self._worker = threading.Thread(target=self._federate_worker, args=(active,), daemon=True)
+            self._worker.start()
+            self.master.after(100, self._poll_federation)
+        except Exception as exc:
+            logger.exception("Initial live acquisition bootstrap failed")
+            self.status_var.set(f"Initial acquisition unavailable: {exc}")
+
     def refresh_all(self):
         try: self.runtime.operation_tick()
         except Exception: pass
@@ -1236,6 +1261,13 @@ class MarketRadarDesktop:
                 close_logging()
             finally:
                 self.master.destroy()
+
+
+def needs_initial_acquisition(conn) -> bool:
+    """Return True only for a genuinely fresh runtime workspace."""
+    opportunities = conn.execute("SELECT COUNT(*) FROM opportunities").fetchone()[0]
+    runs = conn.execute("SELECT COUNT(*) FROM federation_runs").fetchone()[0]
+    return int(opportunities or 0) == 0 and int(runs or 0) == 0
 
 
 def smoke_test():

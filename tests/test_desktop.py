@@ -77,4 +77,15 @@ def test_verification_worker_uses_thread_local_sqlite_connection(monkeypatch):
             assert not errors
         finally:
             if 'ui_conn' in locals():
-                ui_conn.close()
+                ui_conn.close()\n\n\ndef test_initial_acquisition_only_targets_fresh_workspace(tmp_path):
+    from marketradar.desktop import needs_initial_acquisition
+    from marketradar.db import connect
+
+    conn = connect(tmp_path / "fresh.db")
+    try:
+        assert needs_initial_acquisition(conn) is True
+        conn.execute("INSERT INTO federation_runs (source, status) VALUES (?, ?)", ("test-source", "ERROR"))
+        conn.commit()
+        assert needs_initial_acquisition(conn) is False
+    finally:
+        conn.close()
