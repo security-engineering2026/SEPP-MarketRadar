@@ -202,3 +202,142 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+def test_manifest_recommendation_is_not_authorization():
+    from marketradar.recommendation_engine import recommend
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        cdb.execute(
+            "INSERT INTO sources(name,source_lane,iran_eligibility) VALUES(?,?,?)",
+            ("test", "DAILY_PROJECT_SCAN", "ALLOW"),
+        )
+        cdb.execute(
+            "INSERT INTO opportunities(source,title,url,state,eligibility,rank_score,score,task_type,difficulty_score,evidence_confidence) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?)",
+            ("test", "Recommended", "https://example.test/recommend", "DISCOVERED", "EXECUTE", 0.95, 0.95, "python_automation", 2, 0.9),
+        )
+        cdb.commit()
+
+        result = recommend(cdb, {"selected_domains": ["python"]})
+        assert result["top7"]
+        assert result["top7"][0]["opportunity_id"] == cdb.execute("SELECT id FROM opportunities WHERE title=?", ("Recommended",)).fetchone()["id"]
+        assert cdb.execute("SELECT COUNT(*) AS n FROM action_authorizations").fetchone()["n"] == 0
+        assert cdb.execute("SELECT state FROM opportunities WHERE title=?", ("Recommended",)).fetchone()["state"] == "DISCOVERED"
+        cdb.close()
+
+
+def test_manifest_payment_claim_is_not_payment_verification():
+    from marketradar.application import record_revenue, verify_payment
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        cdb.execute(
+            "INSERT INTO opportunities(source,title,url,state) VALUES(?,?,?,?)",
+            ("test", "Payment", "https://example.test/payment", "DELIVERED"),
+        )
+        oid = cdb.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/payment",)).fetchone()["id"]
+
+        record_revenue(
+            cdb, oid, 100, "USD", "2026-09-23T12:00:00+00:00", "PAY-001", commit=True
+        )
+        assert cdb.execute("SELECT state FROM opportunities WHERE id=?", (oid,)).fetchone()["state"] == "DELIVERED"
+        assert cdb.execute("SELECT verification_state FROM revenue WHERE payment_ref=?", ("PAY-001",)).fetchone()["verification_state"] == "RECORDED_UNVERIFIED"
+
+        result = verify_payment(cdb, oid, "PAY-001", status="NOT_VERIFIED", actor="test")
+        assert result["status"] == "NOT_VERIFIED"
+        assert cdb.execute("SELECT state FROM opportunities WHERE id=?", (oid,)).fetchone()["state"] == "DELIVERED"
+
+        try:
+            record_revenue(cdb, oid, 100, "USD", "2026-09-23T12:01:00+00:00", "PAY-001", commit=True)
+            assert False, "duplicate payment reference was accepted"
+        except Exception as exc:
+            assert "unique" in str(exc).lower() or "constraint" in str(exc).lower()
+
+        verify_payment(cdb, oid, "PAY-001", status="VERIFIED", actor="test")
+        assert cdb.execute("SELECT state FROM opportunities WHERE id=?", (oid,)).fetchone()["state"] == "PAID"
+        verification = cdb.execute(
+            "SELECT status FROM payment_verification WHERE opportunity_id=? AND payment_ref=? ORDER BY id DESC LIMIT 1",
+            (oid, "PAY-001"),
+        ).fetchone()
+        assert verification["status"] == "VERIFIED"
+        cdb.close()
+
+def test_manifest_outcomes_are_immutable_learning_inputs():
+    from marketradar.outcome_learning import learning_summary
+    from marketradar.runtime import MarketRadarRuntime
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        cdb.execute(
+            "INSERT INTO opportunities(source,title,url,state,category,budget) VALUES(?,?,?,?,?,?)",
+            ("test", "Outcome", "https://example.test/outcome", "DISCOVERED", "python_debugging", 500),
+        )
+        oid = cdb.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/outcome",)).fetchone()["id"]
+        runtime = object.__new__(MarketRadarRuntime)
+        runtime.c = cdb
+
+        result = runtime.record_outcome(oid, "REJECTED", reason="budget", notes="immutable test")
+        assert result["acceptance_probability"] >= 0
+        row = cdb.execute(
+            "SELECT outcome,reason,notes FROM opportunity_outcomes WHERE opportunity_id=? ORDER BY id DESC LIMIT 1",
+            (oid,),
+        ).fetchone()
+        assert row["outcome"] == "REJECTED"
+        assert row["reason"] == "budget"
+        assert row["notes"] == "immutable test"
+        assert cdb.execute("SELECT state FROM opportunities WHERE id=?", (oid,)).fetchone()["state"] == "REJECTED"
+        assert any(item["reason"] == "budget" and item["outcome"] == "REJECTED" for item in learning_summary(cdb)["reasons"])
+
+        try:
+            cdb.execute("UPDATE opportunity_outcomes SET notes='tampered' WHERE opportunity_id=?", (oid,))
+            assert False, "opportunity outcome ledger allowed update"
+        except Exception as exc:
+            assert "immutable" in str(exc).lower()
+
+        try:
+            cdb.execute("DELETE FROM opportunity_outcomes WHERE opportunity_id=?", (oid,))
+            assert False, "opportunity outcome ledger allowed deletion"
+        except Exception as exc:
+            assert "immutable" in str(exc).lower()
+
+        cdb.close()
+
+def test_manifest_learning_does_not_rewrite_historical_observations():
+    from marketradar.outcome_learning import record_outcome
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        cdb.execute(
+            "INSERT INTO opportunities(source,title,url,description,category,budget,state,first_seen,last_seen) VALUES(?,?,?,?,?,?,?,?,?)",
+            ("source-a", "Historical", "https://example.test/historical", "original description", "python_debugging", 1000, "DISCOVERED", "2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z"),
+        )
+        oid = cdb.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/historical",)).fetchone()["id"]
+        payload = b'{"title":"Historical","budget":1000,"version":1}'
+        cdb.execute(
+            "INSERT INTO raw_observations(source,url,observed_at,payload,payload_sha256,http_status,content_type) VALUES(?,?,?,?,?,?,?)",
+            ("source-a", "https://example.test/historical", "2026-01-01T00:00:00Z", payload, "digest-v1", 200, "application/json"),
+        )
+        before_obs = dict(cdb.execute(
+            "SELECT source,url,observed_at,payload,payload_sha256,http_status,content_type FROM raw_observations WHERE url=?",
+            ("https://example.test/historical",),
+        ).fetchone())
+        before_opp = dict(cdb.execute(
+            "SELECT source,title,url,description,category,budget,state,first_seen,last_seen FROM opportunities WHERE id=?",
+            (oid,),
+        ).fetchone())
+
+        record_outcome(cdb, oid, "REJECTED", reason="budget")
+
+        after_obs = dict(cdb.execute(
+            "SELECT source,url,observed_at,payload,payload_sha256,http_status,content_type FROM raw_observations WHERE url=?",
+            ("https://example.test/historical",),
+        ).fetchone())
+        after_opp = dict(cdb.execute(
+            "SELECT source,title,url,description,category,budget,state,first_seen,last_seen FROM opportunities WHERE id=?",
+            (oid,),
+        ).fetchone())
+        assert after_obs == before_obs
+        assert after_opp == before_opp
+        assert cdb.execute("SELECT COUNT(*) FROM raw_observations WHERE url=?", ("https://example.test/historical",)).fetchone()[0] == 1
+        cdb.close()
+
