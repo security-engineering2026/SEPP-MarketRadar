@@ -34,51 +34,94 @@ jobs:
       - name: Prepare self-hosted Python
         shell: pwsh
         run: |
-          $registry = @()
-          foreach ($base in @(
-            'HKLM:\SOFTWARE\Python\PythonCore',
-            'HKLM:\SOFTWARE\WOW6432Node\Python\PythonCore'
-          )) {
-            if (Test-Path $base) {
-              $registry += Get-ChildItem $base -ErrorAction SilentlyContinue | ForEach-Object {
-                $install = (Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue).InstallPath
-                if ($install) { Join-Path $install 'python.exe' }
-              }
-            }
-          }
-          $wherePython = @(where.exe python.exe 2>$null)
-          $wherePy = @(where.exe py.exe 2>$null)
-          $candidates = @(
-            (Get-Command python.exe -ErrorAction SilentlyContinue).Source,
-            (Get-Command py.exe -ErrorAction SilentlyContinue).Source
-          ) + $wherePython + $wherePy + $registry + @(Get-ChildItem 'C:\Program Files\Python*\python.exe','C:\Program Files\Python*\*\python.exe','C:\Users\*\AppData\Local\Programs\Python\Python*\python.exe' -ErrorAction SilentlyContinue | ForEach-Object FullName)
-          $python = $null
-          $tooOld = $false
-          foreach ($candidate in ($candidates | Where-Object { $_ } | Select-Object -Unique)) {
+          $ErrorActionPreference = "Stop"
+          function Test-PythonCandidate([string]$candidate) {
+            if (-not $candidate -or -not (Test-Path -LiteralPath $candidate)) { return $null }
             try {
               $v = (& $candidate -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')").Trim()
-              if ([version]$v -ge [version]'3.12') { $python = $candidate; break }
-              $tooOld = $true
+              if ($v -match '^(\d+)\.(\d+)$' -and ([version]$v -ge [version]'3.12')) { return $candidate }
+            } catch {}
+            return $null
+          }
+          $python = $null
+          $launcher = (Get-Command py.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1)
+          if ($launcher) {
+            try {
+              $resolved = (& $launcher -3 -c "import sys; print(sys.executable)" 2>$null).Trim()
+              $python = Test-PythonCandidate $resolved
             } catch {}
           }
-          if (-not $python) {
-            if ($tooOld) { throw 'PYTHON_VERSION_TOO_OLD' }
-            throw 'PYTHON_3_12_PLUS_NOT_FOUND'
+          $candidates = @(
+            (Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1),
+            (Get-Command py.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1),
+            (where.exe python.exe 2>$null),
+            "$env:ProgramFiles\Python*\python.exe",
+            "$env:ProgramFiles\Python*\*\python.exe",
+            "$env:LOCALAPPDATA\Programs\Python\Python*\python.exe",
+            "$env:USERPROFILE\AppData\Local\Programs\Python\Python*\python.exe",
+            "C:\Python*\python.exe"
+          )
+          $profiles = Get-ChildItem -Path (Join-Path $env:SystemDrive "Users") -Directory -ErrorAction SilentlyContinue
+          foreach ($profile in $profiles) {
+            $candidates += Join-Path $profile.FullName "AppData\Local\Programs\Python\Python*\python.exe"
           }
-          $shim = Join-Path $env:RUNNER_TEMP 'python-shim'
+          foreach ($pattern in ($candidates | Where-Object { $_ } | Select-Object -Unique)) {
+            foreach ($candidate in @(Get-ChildItem -Path $pattern -File -ErrorAction SilentlyContinue | Sort-Object FullName -Descending)) {
+              $valid = Test-PythonCandidate $candidate.FullName
+              if ($valid) { $python = $valid; break }
+            }
+            if ($python) { break }
+            $valid = Test-PythonCandidate $pattern
+            if ($valid) { $python = $valid; break }
+          }
+          if (-not $python) {
+            foreach ($root in @(
+              "HKLM:\SOFTWARE\Python\PythonCore",
+              "HKLM:\SOFTWARE\WOW6432Node\Python\PythonCore",
+              "HKCU:\SOFTWARE\Python\PythonCore"
+            )) {
+              foreach ($key in @(Get-ChildItem $root -ErrorAction SilentlyContinue | Sort-Object PSChildName -Descending)) {
+                $install = (Get-ItemProperty $key.PSPath -ErrorAction SilentlyContinue).InstallPath
+                $valid = Test-PythonCandidate (Join-Path $install "python.exe")
+                if ($valid) { $python = $valid; break }
+              }
+              if ($python) { break }
+            }
+          }
+          if (-not $python) {
+            $root = Join-Path $env:RUNNER_TEMP "marketradar-python"
+            $pkg = Join-Path $env:RUNNER_TEMP "python-3.13.15.nupkg"
+            $url = "https://api.nuget.org/v3-flatcontainer/python/3.13.15/python.3.13.15.nupkg"
+            New-Item -ItemType Directory -Force -Path $root | Out-Null
+            try {
+              Invoke-WebRequest -Uri $url -OutFile $pkg -UseBasicParsing -TimeoutSec 240
+            } catch {
+              & curl.exe --fail --location --retry 3 --retry-all-errors --connect-timeout 20 --max-time 240 -o $pkg $url
+              if ($LASTEXITCODE -ne 0) { throw "Python bootstrap download failed; curl exit=$LASTEXITCODE" }
+            }
+            if ((Get-Item $pkg).Length -lt 1000000) { throw "Python bootstrap package is unexpectedly small." }
+            Expand-Archive -LiteralPath $pkg -DestinationPath $root -Force
+            $python = Get-ChildItem -LiteralPath $root -Filter "python.exe" -Recurse -File |
+              Select-Object -First 1 -ExpandProperty FullName
+            $python = Test-PythonCandidate $python
+          }
+          if (-not $python) { throw "PYTHON_3_12_PLUS_NOT_FOUND" }
+          $shim = Join-Path $env:RUNNER_TEMP "python-shim"
           New-Item -ItemType Directory -Force -Path $shim | Out-Null
           ('@echo off' + [Environment]::NewLine + '"' + $python + '" %*') | Set-Content -Path (Join-Path $shim 'python.cmd') -Encoding ascii
           $shim | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          "MARKETRADAR_PYTHON_EXE=$python" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           & $python --version
+          Write-Host "PYTHON_RUNTIME=PASS"
       - name: Install dependencies
         shell: pwsh
-        run: python -m pip install -r requirements-dev.txt pillow
+        run: '& $env:MARKETRADAR_PYTHON_EXE -m pip install -r requirements-dev.txt pillow'
       - name: Compile
         shell: pwsh
-        run: python -m compileall -q marketradar tools
+        run: '& $env:MARKETRADAR_PYTHON_EXE -m compileall -q marketradar tools'
       - name: Core regression suite
         shell: pwsh
-        run: python -m pytest -q
+        run: '& $env:MARKETRADAR_PYTHON_EXE -m pytest -q'
       - name: Optional Playwright runtime
         if: ${{ env.QUALIFY_DYNAMIC_URL != '' }}
         shell: pwsh
@@ -87,7 +130,7 @@ jobs:
           python -m playwright install chromium
       - name: Full qualification gates
         shell: pwsh
-        run: python -B tools/full_qualification.py
+        run: '& $env:MARKETRADAR_PYTHON_EXE -B tools/full_qualification.py'
       - name: Clean generated test artifacts
         if: always()
         shell: pwsh
