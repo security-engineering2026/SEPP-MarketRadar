@@ -202,3 +202,50 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_manifest_human_approval_is_explicit_exact_action_bound_and_one_time():
+    from marketradar.security import ApprovalBroker
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "approval.db")
+        try:
+            broker = ApprovalBroker(c)
+            now = 1_700_000_000
+            approval = broker.issue(
+                "SUBMIT",
+                "opportunity:42",
+                {"opportunity_id": 42, "fields": {"title": "approved"}},
+                {"evidence_id": 7},
+                POLICY_VERSION,
+                now,
+                ttl=300,
+            )
+            ok, reason = broker.authorize(
+                approval,
+                "SUBMIT",
+                "opportunity:42",
+                {"opportunity_id": 42, "fields": {"title": "approved"}},
+                {"evidence_id": 7},
+                POLICY_VERSION,
+                now + 1,
+            )
+            assert (ok, reason) == (True, "OK")
+
+            replay = broker.authorize(
+                approval,
+                "SUBMIT",
+                "opportunity:42",
+                {"opportunity_id": 42, "fields": {"title": "approved"}},
+                {"evidence_id": 7},
+                POLICY_VERSION,
+                now + 2,
+            )
+            assert replay == (False, "REPLAY")
+
+            mismatch = broker.issue("SUBMIT", "opportunity:43", {"opportunity_id": 43}, {"evidence_id": 7}, POLICY_VERSION, now, ttl=300)
+            assert broker.authorize(mismatch, "SUBMIT", "opportunity:42", {"opportunity_id": 43}, {"evidence_id": 7}, POLICY_VERSION, now + 1) == (False, "BINDING_MISMATCH")
+            expired = broker.issue("SUBMIT", "opportunity:44", {"opportunity_id": 44}, {"evidence_id": 7}, POLICY_VERSION, now, ttl=1)
+            assert broker.authorize(expired, "SUBMIT", "opportunity:44", {"opportunity_id": 44}, {"evidence_id": 7}, POLICY_VERSION, now + 1) == (False, "EXPIRED")
+        finally:
+            c.close()
