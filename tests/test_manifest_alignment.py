@@ -197,17 +197,10 @@ def test_self_hosted_full_qualification_uses_local_python():
     root = Path(__file__).resolve().parents[1]
     workflow = (root / ".github" / "workflows" / "full-qualification.yml").read_text(encoding="utf-8")
     assert "runs-on: [self-hosted, Windows, X64, marketradar]" in workflow
-    assert "actions/setup-python@" not in workflow
-    assert "Prepare self-hosted Python" in workflow
-    assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
-    assert "PYTHON_VERSION_TOO_OLD" in workflow
-    assert "python-3.13.13-amd64.exe" in workflow
-    assert "https://www.python.org/ftp/python/3.13.13/python-3.13.13-amd64.exe" in workflow
-    assert "Include_tcltk=1" in workflow
-    assert "Include_pip=1" in workflow
-    assert "import tkinter" in workflow
-    assert "Start-Process -FilePath $pkg" in workflow
-
+    assert "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" in workflow
+    assert "python-version: '3.13'" in workflow
+    assert "Validate Windows Python runtime" in workflow
+    assert "import sys, tkinter" in workflow
 
 
 def test_windows_verification_is_independent_of_external_full_qualification_gates():
@@ -220,26 +213,23 @@ def test_windows_verification_is_independent_of_external_full_qualification_gate
     assert "Installer install / EXE / UI / uninstall" in workflow
     assert "SEARXNG_URL" not in workflow
     assert "QUALIFY_ENGINE_URL" not in workflow
-    assert "python-3.13.13-amd64.exe" in workflow
-    assert "https://www.python.org/ftp/python/3.13.13/python-3.13.13-amd64.exe" in workflow
-    assert "Include_tcltk=1" in workflow
-    assert "import tkinter" in workflow
-    assert "Start-Process -FilePath $pkg" in workflow
-    assert "Expand-Archive -LiteralPath $pkg" not in workflow
+    assert "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" in workflow
+    assert "python-version: '3.13'" in workflow
+    assert "import sys, tkinter" in workflow
 
 
 def test_fast_regression_gate_is_independent_and_fail_closed():
     root = Path(__file__).resolve().parents[1]
     workflow = (root / ".github" / "workflows" / "fast-regression.yml").read_text(encoding="utf-8")
     assert "runs-on: [self-hosted, Windows, X64, marketradar]" in workflow
-    assert "& $env:MARKETRADAR_PYTHON_EXE -m pytest -q" in workflow
+    assert "python -m pytest -q" in workflow
     assert "product_audit.py" in workflow
     assert "release_audit.py" in workflow
     assert "if-no-files-found" not in workflow
     assert "C:\\Users\\" not in workflow
     assert 'Join-Path $env:SystemDrive "Users"' in workflow
-    assert "Python (\\d+)\\.(\\d+)\\.(\\d+)" in workflow
-    assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
+    assert "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" in workflow
+    assert "python-version: '3.13'" in workflow
 
 
 def test_autonomous_supervisor_persists_hashed_checkpoint_evidence():
