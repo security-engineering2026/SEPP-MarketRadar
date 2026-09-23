@@ -169,3 +169,14 @@ def test_manifest_daily_snapshot_has_immutable_trace_for_all_decision_buckets():
         except Exception as exc:
             assert "immutable" in str(exc).lower()
         cdb.close()
+def test_manifest_qualification_report_uses_current_version_and_gate_name():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "tools" / "full_qualification.py").read_text(encoding="utf-8")
+    from marketradar import __version__
+
+    assert '"product_version": __version__' in source
+    assert '"LIVE_SOURCE_REACHABILITY_500"' in source
+    assert '"LIVE_SOURCE_SCALE_500"' not in source
+    assert '"product_version": "16.1.1"' not in source
+    assert f'FullQualification/{__version__}' in source
+
