@@ -5,6 +5,7 @@ from urllib.parse import urlparse, parse_qs
 from .notifications import unread, mark_read
 from .finance import period_report
 from .security import Approval
+from . import __version__
 
 
 def _json_bytes(v): return json.dumps(v,ensure_ascii=False,default=str).encode('utf-8')
@@ -20,7 +21,7 @@ class AndroidGateway:
     def dashboard(self):
         d=self.runtime.operation_dashboard(); n=[dict(x) for x in unread(self.c,50)]
         fin=period_report(self.c,'monthly')
-        return {'version':'16.1.1','operations':d,'notifications':n,'finance':fin,'pending_approvals':[dict(x) for x in self.c.execute("SELECT * FROM action_authorizations WHERE status='ISSUED' AND expires_at>=strftime('%s','now') ORDER BY issued_at DESC LIMIT 50").fetchall()]}
+        return {'version':__version__,'operations':d,'notifications':n,'finance':fin,'pending_approvals':[dict(x) for x in self.c.execute("SELECT * FROM action_authorizations WHERE status='ISSUED' AND expires_at>=strftime('%s','now') ORDER BY issued_at DESC LIMIT 50").fetchall()]}
 
     def opportunity(self, oid):
         return self.runtime.project_report(int(oid))
@@ -35,7 +36,7 @@ class AndroidGateway:
 
 class _Handler(BaseHTTPRequestHandler):
     gateway=None
-    server_version='MarketRadarAndroidGateway/16.1'
+    server_version='MarketRadarAndroidGateway/'+__version__
     def _reply(self,status,payload):
         data=_json_bytes(payload); self.send_response(status); self.send_header('Content-Type','application/json; charset=utf-8'); self.send_header('Content-Length',str(len(data))); self.end_headers(); self.wfile.write(data)
     def _auth(self):
