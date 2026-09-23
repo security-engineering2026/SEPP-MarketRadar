@@ -186,3 +186,29 @@ The remaining gaps above are now the implementation queue. No item will be repor
 - The full pytest suite executed and passed, including the Manifest alignment tests for temporal contradiction, capability ladder, acquisition fallback, decision trace immutability, ACTION_EXECUTION outcome tracing, and DAILY_SNAPSHOT trace coverage.
 - Four previously evidence-pending Manifest implementation contracts are now PASS: Temporal contradiction model, Source capability ladder, Acquisition fallback contract, Consequential decision trace.
 - Remaining explicit Manifest gaps: Windows product qualification and Full post-audit CI evidence.
+
+
+## 2026-09-23 — Manifest-driven execution framework locked
+- Added `docs/MANIFEST_DRIVEN_ENGINEERING.md` as the durable continuation contract.
+- The engineering chain is now explicitly: MANIFEST -> OUTPUT -> GOAL -> EVIDENCE -> TEST -> ENVIRONMENT -> REUSE -> EXECUTE -> FAILURE EXTRACTION -> ROOT CAUSE -> MINIMAL PATCH -> REGRESSION -> QUALIFICATION -> MANIFEST RECONCILIATION.
+- GitHub is explicitly treated as one evidence environment, not the product definition or decision authority.
+- Added required Goal/Evidence/Environment/Reuse tracking fields and explicit routing for Windows product evidence, Android evidence, live Internet, external endpoints, and release artifacts.
+- Added a reuse hierarchy across MarketRadar, CDR Core, Software Forge, official tooling, and mature open source before new implementation.
+- Added parallel-execution and status-discipline rules; queue state is not product failure.
+
+
+## 2026-09-23 — Atomic Manifest execution matrix registered
+- Added `docs/MANIFEST_EXECUTION_MATRIX_v1.0.md`.
+- The matrix decomposes all **49 normative Manifest sections** into explicit implementation, test/acceptance, status, existing-solution/reuse, external-reference, priority and environment fields.
+- The matrix deliberately does not treat source inspection as runtime PASS.
+- Current explicit PASS rows are 6, 22, 25, 36 and 40; governance/process rows 47 and 48 are marked PASS as process contracts.
+- Remaining rows are OPEN until their required implementation + regression + environment evidence + audit exposure are all proven.
+- This matrix is now the required operational register for every subsequent Manifest-driven implementation cycle.
+
+
+## 2026-09-23 — Atomic evidence decomposition v2
+- Replaced the previous high-level execution table with `docs/MANIFEST_EXECUTION_MATRIX_v1.0.md` v2 content.
+- All 49 Manifest contracts are decomposed into **196 atomic execution/evidence units**: implementation, deterministic regression, failure/adversarial qualification, and environment/evidence reconciliation.
+- Each atomic unit now records the **defect class** separately: code/implementation gap, missing/incomplete regression, missing adversarial coverage, failed qualification, missing environment/evidence, or external prerequisite.
+- The 196-unit denominator is explicitly an engineering execution denominator, not a claim that the normative Manifest literally contains 196 clauses.
+- This decomposition is now the required basis for identifying exactly where progress is blocked and for calculating future evidence-based PASS counts.

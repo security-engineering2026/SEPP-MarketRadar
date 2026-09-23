@@ -1,0 +1,131 @@
+name: Windows Verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketradar-windows-verification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows product verification
+    runs-on: [self-hosted, Windows, X64, marketradar]
+    timeout-minutes: 45
+    env:
+      PYTHONUNBUFFERED: '1'
+      QUALIFICATION_ARTIFACT_DIR: qualification-artifacts
+    defaults:
+      run:
+        shell: powershell -ExecutionPolicy Bypass -File {0}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Validate Windows Python runtime
+        shell: powershell -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = "Stop"
+          python --version
+          python -c "import sys, tkinter; assert sys.version_info >= (3,12); print('PYTHON_RUNTIME=PASS'); print('TKINTER_OK')"
+      - name: Install dependencies
+        run: |
+          & $env:MARKETRADAR_PYTHON_EXE -m pip install -r requirements-dev.txt pillow
+          if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed" }
+      - name: Compile
+        run: |
+          & $env:MARKETRADAR_PYTHON_EXE -m compileall -q marketradar tools
+          if ($LASTEXITCODE -ne 0) { throw "Compile failed" }
+      - name: Core regression
+        run: |
+          & $env:MARKETRADAR_PYTHON_EXE -m pytest -q
+          if ($LASTEXITCODE -ne 0) { throw "Core regression failed" }
+      - name: Product audit
+        run: |
+          & $env:MARKETRADAR_PYTHON_EXE -B tools/product_audit.py
+          if ($LASTEXITCODE -ne 0) { throw "Product audit failed" }
+      - name: Release audit
+        run: |
+          & $env:MARKETRADAR_PYTHON_EXE -B tools/release_audit.py
+          if ($LASTEXITCODE -ne 0) { throw "Release audit failed" }
+      - name: Build portable EXE
+        run: |
+          & .\packaging\build_windows.ps1
+          if ($LASTEXITCODE -ne 0) { throw "Windows EXE build failed" }
+      - name: EXE smoke
+        run: |
+          $exe = Get-ChildItem release\portable\**\MarketRadar.exe,release\portable\MarketRadar.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $exe) { throw "Portable MarketRadar.exe missing" }
+          & $exe.FullName --smoke-test
+          if ($LASTEXITCODE -ne 0) { throw "Portable EXE smoke failed" }
+      - name: UI smoke
+        run: |
+          & $env:MARKETRADAR_PYTHON_EXE -B tools/ui_visual_smoke.py
+          if ($LASTEXITCODE -ne 0) { throw "UI visual smoke failed" }
+      - name: Install Inno Setup if needed
+        run: |
+          $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source
+          if (-not $iscc) {
+            $known = @(
+              "$env:ProgramFiles(x86)\Inno Setup 6\ISCC.exe",
+              "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
+              "$env:ProgramFiles(x86)\Inno Setup 7\ISCC.exe",
+              "$env:ProgramFiles\Inno Setup 7\ISCC.exe",
+              "C:\ProgramData\chocolatey\lib\innosetup\tools\ISCC.exe"
+            )
+            $iscc = $known | Where-Object { Test-Path $_ } | Select-Object -First 1
+          }
+          if (-not $iscc) {
+            $choco = (Get-Command choco.exe -ErrorAction SilentlyContinue).Source
+            if ($choco) {
+              & $choco install innosetup --yes --no-progress
+              if ($LASTEXITCODE -ne 0) { throw "Inno Setup bootstrap failed" }
+            }
+            $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source
+          }
+          if (-not $iscc) { throw "ISCC.exe not found" }
+          "MARKETRADAR_ISCC=$iscc" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Build installer
+        run: |
+          $version = (& $env:MARKETRADAR_PYTHON_EXE -c "from marketradar import __version__; print(__version__)").Trim()
+          New-Item -ItemType Directory -Force release\installer | Out-Null
+          & $env:MARKETRADAR_ISCC "/DMyAppVersion=$version" packaging\installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
+      - name: Installer install / EXE / UI / uninstall
+        run: |
+          $installer = Get-ChildItem release\installer\*Setup-*.exe | Select-Object -First 1
+          if (-not $installer) { throw "Installer artifact missing" }
+          $target = Join-Path $env:RUNNER_TEMP "MarketRadarInstalled-$env:GITHUB_RUN_ID"
+          if (Test-Path $target) { Remove-Item $target -Recurse -Force -ErrorAction SilentlyContinue }
+          $p = Start-Process -FilePath $installer.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$target" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Installer exit code $($p.ExitCode)" }
+          if (-not (Test-Path "$target\MarketRadar.exe")) { throw "Installed EXE missing" }
+          & "$target\MarketRadar.exe" --smoke-test
+          if ($LASTEXITCODE -ne 0) { throw "Installed EXE smoke failed" }
+          & "$target\MarketRadar.exe" --ui-smoke-test
+          if ($LASTEXITCODE -ne 0) { throw "Installed EXE UI smoke failed" }
+          $uninstaller = Join-Path $target "unins000.exe"
+          if (-not (Test-Path $uninstaller)) { throw "Uninstaller missing" }
+          $u = Start-Process -FilePath $uninstaller -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait -PassThru
+          if ($u.ExitCode -ne 0) { throw "Uninstaller exit code $($u.ExitCode)" }
+          if (Test-Path "$target\MarketRadar.exe") { throw "Uninstall did not remove MarketRadar.exe" }
+          Write-Host "WINDOWS_INSTALL_E2E=PASS"
+      - name: Upload Windows verification artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a0 # v7.0.1
+        with:
+          name: marketradar-windows-verification
+          path: |
+            qualification-artifacts/**
+            release/portable/**
+            release/installer/**
+            reports/**
+          if-no-files-found: warn

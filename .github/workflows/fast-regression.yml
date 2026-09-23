@@ -1,0 +1,55 @@
+name: Fast Regression Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketradar-fast-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    name: Fast Windows regression
+    runs-on: [self-hosted, Windows, X64, marketradar]
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: powershell -ExecutionPolicy Bypass -File {0}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Validate Windows Python runtime
+        shell: powershell -ExecutionPolicy Bypass -File {0}
+        run: |
+          $ErrorActionPreference = "Stop"
+          python --version
+          python -c "import sys; assert sys.version_info >= (3,12); print('PYTHON_RUNTIME=PASS')"
+      - name: Install dependencies
+        run: |
+          & $env:MARKETRADAR_PYTHON_EXE -m pip install -r requirements-dev.txt pillow
+          if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed" }
+      - name: Compile
+        run: |
+          & $env:MARKETRADAR_PYTHON_EXE -m compileall -q marketradar tools
+          if ($LASTEXITCODE -ne 0) { throw "Compile failed" }
+      - name: Regression
+        run: |
+          & $env:MARKETRADAR_PYTHON_EXE -m pytest -q
+          if ($LASTEXITCODE -ne 0) { throw "Regression failed" }
+      - name: Product audit
+        run: |
+          & $env:MARKETRADAR_PYTHON_EXE -B tools/product_audit.py
+          if ($LASTEXITCODE -ne 0) { throw "Product audit failed" }
+      - name: Release audit
+        run: |
+          & $env:MARKETRADAR_PYTHON_EXE -B tools/release_audit.py
+          if ($LASTEXITCODE -ne 0) { throw "Release audit failed" }

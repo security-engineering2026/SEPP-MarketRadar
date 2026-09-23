@@ -197,8 +197,99 @@ def test_self_hosted_full_qualification_uses_local_python():
     root = Path(__file__).resolve().parents[1]
     workflow = (root / ".github" / "workflows" / "full-qualification.yml").read_text(encoding="utf-8")
     assert "runs-on: [self-hosted, Windows, X64, marketradar]" in workflow
-    assert "actions/setup-python@" not in workflow
-    assert "Prepare self-hosted Python" in workflow
-    assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
-    assert "PYTHON_VERSION_TOO_OLD" in workflow
+    assert "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" in workflow
+    assert "python-version: '3.13'" in workflow
+    assert "Validate Windows Python runtime" in workflow
+    assert "import sys, tkinter" in workflow
 
+
+def test_windows_verification_is_independent_of_external_full_qualification_gates():
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github" / "workflows" / "windows-verification.yml").read_text(encoding="utf-8")
+    assert "runs-on: [self-hosted, Windows, X64, marketradar]" in workflow
+    assert "Core regression" in workflow
+    assert "Build portable EXE" in workflow
+    assert "Build installer" in workflow
+    assert "Installer install / EXE / UI / uninstall" in workflow
+    assert "SEARXNG_URL" not in workflow
+    assert "QUALIFY_ENGINE_URL" not in workflow
+    assert "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" in workflow
+    assert "python-version: '3.13'" in workflow
+    assert "import sys, tkinter" in workflow
+
+
+def test_fast_regression_gate_is_independent_and_fail_closed():
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github" / "workflows" / "fast-regression.yml").read_text(encoding="utf-8")
+    assert "runs-on: [self-hosted, Windows, X64, marketradar]" in workflow
+    assert "-m pytest -q" in workflow
+    assert "product_audit.py" in workflow
+    assert "release_audit.py" in workflow
+    assert "if-no-files-found" not in workflow
+    assert "C:\\Users\\" not in workflow
+    assert "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" in workflow
+    assert "python-version: '3.13'" in workflow
+
+
+def test_autonomous_supervisor_persists_hashed_checkpoint_evidence():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "tools" / "autonomous_supervisor.py").read_text(encoding="utf-8")
+    assert "AUTONOMOUS_CHECKPOINT.json" in source
+    assert "hashlib.sha256(test_out.encode" in source
+    assert '"evidence_digest": evidence_digest' in source
+    assert "tmp.replace(CHECKPOINT)" in source
+
+
+def test_manifest_mission_is_reflected_in_product_surface():
+    root = Path(__file__).resolve().parents[1]
+    manifest = (root / "docs" / "MANIFEST.md").read_text(encoding="utf-8")
+    readme = (root / "README.md").read_text(encoding="utf-8")
+
+    assert "MarketRadar is an Opportunity Intelligence and Economic Operations System." in manifest
+    assert "evidence-backed opportunities, decisions, authorized actions, outcomes, and learning" in manifest
+    assert "Market → Evidence → Intelligence → Decision → Action → Revenue → Learning" in readme
+
+    required_modules = {
+        "pipeline.py",
+        "goal_completion.py",
+        "runtime.py",
+    }
+    package = root / "marketradar"
+    assert required_modules <= {p.name for p in package.glob("*.py")}
+
+
+
+def test_manifest_core_truth_model_is_explicit_and_persisted():
+    root = Path(__file__).resolve().parents[1]
+    manifest = (root / "docs" / "MANIFEST.md").read_text(encoding="utf-8")
+    required_chain = "WORLD -> OBSERVATION -> SNAPSHOT -> EVIDENCE -> CLAIM -> DOMAIN STATE -> DECISION -> ACTION -> OUTCOME -> LEARNING"
+    assert required_chain in manifest
+    for invariant in (
+        "Evidence is not truth.",
+        "UNKNOWN is a valid state.",
+        "Registration is not verification.",
+        "Reachability is not capability.",
+        "Recommendation is not authorization.",
+        "Payment claim is not payment verification.",
+    ):
+        assert invariant in manifest
+
+    c = connect(":memory:")
+    tables = {row["name"] for row in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    assert {"opportunities", "evidence", "claims", "claim_evidence", "decision_snapshots", "decision_traces", "application_events", "revenue"} <= tables
+    c.close()
+
+
+
+def test_manifest_domain_contract_objects_have_storage_anchors():
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "domain.db")
+        tables = {row["name"] for row in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        required = {
+            "sources", "source_contracts", "raw_observations", "opportunities",
+            "evidence", "claims", "claim_evidence", "entities", "parties",
+            "decision_snapshots", "decision_traces", "approvals", "workflow_state",
+            "workflow_events", "application_events", "revenue",
+        }
+        assert required <= tables
+        c.close()
