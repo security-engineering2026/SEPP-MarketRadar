@@ -30,9 +30,12 @@ jobs:
             "$env:ProgramFiles\Python*\python.exe",
             "$env:ProgramFiles\Python*\*\python.exe",
             "$env:LOCALAPPDATA\Programs\Python\Python*\python.exe",
-            "C:\Users\*\AppData\Local\Programs\Python\Python*\python.exe",
             "C:\Python*\python.exe"
           )
+          $userProfiles = Get-ChildItem -Path (Join-Path $env:SystemDrive "Users") -Directory -ErrorAction SilentlyContinue
+          foreach ($profile in $userProfiles) {
+            $candidates += Join-Path $profile.FullName "AppData\Local\Programs\Python\Python*\python.exe"
+          }
           $python = $null
           foreach ($pattern in $candidates) {
             $found = Get-ChildItem -Path $pattern -File -ErrorAction SilentlyContinue |
