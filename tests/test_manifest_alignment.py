@@ -230,3 +230,5 @@ def test_manifest_policy_engine_is_deterministic_versioned_and_fail_closed():
     assert reasons
 
     assert eligibility(base, evidence_ok=True)[0] == eligibility(base, evidence_ok=True)[0]
+
+# R021 CI trigger checkpoint
