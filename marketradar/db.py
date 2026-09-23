@@ -220,7 +220,10 @@ def connect(path):
         ensure_finance_schema(c)
         ensure_notifications_schema(c)
         ensure_email_schema(c)
-        # Re-assert the raw-evidence security boundary after all extension schema hooks.\n        # Extension migrations may manage their own DDL; raw observations remain append-only.\n        c.execute("CREATE TRIGGER IF NOT EXISTS raw_no_update BEFORE UPDATE ON raw_observations BEGIN SELECT RAISE(ABORT,'raw observations are immutable'); END")\n        c.execute("CREATE TRIGGER IF NOT EXISTS raw_no_delete BEFORE DELETE ON raw_observations BEGIN SELECT RAISE(ABORT,'raw observations are immutable'); END")\n        # Payment checks are append-only observations; the same payment may be checked multiple times.
+        # Re-assert the raw-evidence security boundary after all extension schema hooks.
+        # Extension migrations may manage their own DDL; raw observations remain append-only.
+        c.execute("CREATE TRIGGER IF NOT EXISTS raw_no_update BEFORE UPDATE ON raw_observations BEGIN SELECT RAISE(ABORT,'raw observations are immutable'); END")
+        c.execute("CREATE TRIGGER IF NOT EXISTS raw_no_delete BEFORE DELETE ON raw_observations BEGIN SELECT RAISE(ABORT,'raw observations are immutable'); END")\n        # Payment checks are append-only observations; the same payment may be checked multiple times.
         c.execute('DROP INDEX IF EXISTS idx_payment_ref')
         c.execute('CREATE INDEX IF NOT EXISTS idx_payment_ref_lookup ON payment_verification(payment_ref)')
         c.commit()
