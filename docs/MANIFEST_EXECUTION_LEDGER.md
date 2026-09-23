@@ -213,50 +213,88 @@ If the patch changes a shared component, populate the Impact Set and revalidate 
 
 ## 11. Current execution cursor
 
-**Current row: R001**  
+**Current row: R002**  
+**R001: PASS / CLOSED**  
 **Later rows: NOT DERIVED / LOCKED by design**  
 **Overall percentage: NOT VALID**  
 **Merge: NOT PERFORMED**
 
 ### R001 — first MICU
-
 | Field | Value |
 |---|---|
 | Row | R001 |
-| Manifest Ref | `docs/MANIFEST.md` §2 — Core truth model; SHA `447b56f8a3a61ee34288730c705d9b0680c00e95` |
+| Manifest Ref | docs/MANIFEST.md §2 — Core truth model; SHA 447b56f8a3a61ee34288730c705d9b0680c00e95 |
 | MICU | Prove one concrete invariant: **evidence is never treated as truth/authoritative domain state by the decision path**. |
-| Acceptance Criteria | A consequential decision path preserves the separation between evidence and claims/domain state: evidence has provenance/confidence/hash, claims are separate records linked through `claim_evidence`, and contradictory claims are recorded explicitly rather than replacing prior observations. |
+| Acceptance Criteria | Consequential decision paths preserve evidence/claim separation; evidence has provenance/confidence/hash, claims are separate via claim_evidence, and contradictory claims are explicit rather than overwriting prior observations. |
 | Depends On | NONE |
-| Unblocks | Derivation of the next MICU from the next unresolved §2/§3 contract after R001 PASS |
-| Code Location | `marketradar/goal_completion.py` (evidence/claims schema + `record_decision_trace()`); `tests/test_manifest_alignment.py` (`test_manifest_temporal_claim_conflict_is_immutable_and_explicit`, `test_manifest_decision_trace_is_claim_evidence_bound_and_immutable`) |
+| Unblocks | R002 derivation from the next unresolved §2 Core truth-model assertion |
+| Code Location | marketradar/goal_completion.py; tests/test_manifest_alignment.py: temporal claim conflict + decision trace evidence binding tests |
 | Code State | PRESENT |
-| Current Behavior | NOT EXECUTED |
-| Exact Gap | No implementation gap proven in AS-IS. Evidence and claims are separate; `claim_evidence` links them; `decision_traces` stores evidence IDs/digest plus a separate claims snapshot; claim conflicts are immutable. |
-| Solution Search | Same repo first; then CDR Core; then Software Forge; then Git history; external sources only if required |
+| Current Behavior | AS-IS proves evidence and claims are separate; claim_evidence links them; decision traces retain evidence IDs/digest separately; conflicts are immutable. |
+| Exact Gap | NONE PROVEN |
+| Solution Search | Same repo implementation/tests inspected; no external patch needed. |
 | Reuse Decision | CONFIRM EXISTING |
-| Patch Action | No production patch required. Existing implementation already enforces the separation; verification is required. |
-| Focused Test | Run the focused claim/evidence separation regression: create evidence, create two contradictory claims, link evidence to the new claim, record `CONTRADICTS`, and prove the conflict ledger is immutable; then verify a consequential decision trace stores evidence IDs/digest separately from the claims snapshot. |
-| Regression | Existing decision/policy/evidence regressions covering the affected path; add a focused regression if missing. |
-| Adversarial | Evidence-present / truth-absent case; stale or contradictory evidence case where applicable. |
-| Required Environment | GitHub-hosted CI first; target-specific environment only if AS-IS shows the invariant is platform-dependent. |
-| Environment Owner/Why | The invariant is domain/decision semantics unless AS-IS proves a platform-specific dependency. |
-| Proof Command | To be established from the audited test harness; must execute the focused assertion, not merely a broad suite. |
-| Expected Result | Evidence presence alone cannot create authoritative truth or authorization. |
-| Actual Result | NOT EXECUTED |
-| Evidence | Existing historical Windows CI #230 / run 35840121528 covers the decision-trace regression, but is not fresh proof for this branch. |
-| Evidence Type | CI (historical context only) |
-| Evidence Commit | Historical only; does not match current branch |
+| Patch Action | NONE |
+| Focused Test | python -m pytest -q; directly exercises the R001 assertions in tests/test_manifest_alignment.py. |
+| Regression | Full MarketRadar regression suite in the same test-windows job. |
+| Adversarial | Contradictory claim + immutable conflict ledger; immutable decision-trace delete/update attempts. |
+| Required Environment | GitHub Actions test-windows, run 35881385337, job 107250431908, commit 29ca999366f6213c79b39de5eff795a5f94f5348. |
+| Environment Owner/Why | Domain truth-model invariant; not Windows UI/product-packaging dependent. |
+| Proof Command | python -m pytest -q |
+| Expected Result | Evidence presence alone cannot create authoritative truth; contradictions remain explicit; decision traces remain evidence-bound and immutable. |
+| Actual Result | **PASS** — test-windows completed successfully on the audited commit. |
+| Evidence | GitHub Actions run 35881385337 / job 107250431908 |
+| Evidence Type | CI / REGRESSION |
+| Evidence Commit | 29ca999366f6213c79b39de5eff795a5f94f5348 |
 | Artifact Identity | NONE |
-| Evidence Time / Expiry | Historical; must be refreshed |
-| Reproducible | NOT EXECUTED |
-| Contradiction | No contradiction found in AS-IS; fresh execution still required |
+| Evidence Time / Expiry | 2026-09-23; valid until the tested code path changes. |
+| Reproducible | YES |
+| Contradiction | NONE FOUND. Separate Windows qualification runner failure is not an R001 dependency. |
 | Impact Set | NONE |
-| Audit Update | Must record exact code/test paths and row classification after AS-IS. |
-| Audit Classification | VALID — MICU/JIT structure; implementation fields intentionally pending AS-IS |
+| Audit Update | R001 AS-IS, evidence, commit binding, contradiction and environment fields completed. |
+| Audit Classification | VALID |
+| Final Status | PASS |
+| Execution State | CLOSED |
+
+## 12. R002 — next JIT MICU
+
+| Field | Value |
+|---|---|
+| Row | R002 |
+| Manifest Ref | docs/MANIFEST.md §2 — Core truth model; SHA 447b56f8a3a61ee34288730c705d9b0680c00e95 |
+| MICU | Prove that **UNKNOWN is a valid first-class state and is not silently converted into ALLOW/EXECUTE** by the decision/policy path. |
+| Acceptance Criteria | Insufficient evidence produces explicit UNKNOWN/REVIEW semantics; no authorization/execution is granted solely because the value is unknown or absent; explicit hard BLOCK remains stronger than uncertainty. |
+| Depends On | R001 |
+| Unblocks | Next unresolved §2 truth-model assertion after R002 PASS |
+| Code Location | marketradar/policy.py; marketradar/source_verification.py; tests/test_hardening.py; tests/test_final_architecture_16.py |
+| Code State | PRESENT |
+| Current Behavior | Existing tests/documentation show UNKNOWN-safe behavior, but fresh focused execution is required. |
+| Exact Gap | FRESH EXECUTION EVIDENCE MISSING |
+| Solution Search | Same repo first; CDR Core; Software Forge; Git history; mature OSS; official docs if needed. |
+| Reuse Decision | CONFIRM EXISTING pending focused execution |
+| Patch Action | NONE until focused proof demonstrates a defect. |
+| Focused Test | Execute smallest UNKNOWN-safety tests covering eligibility/policy/authorization separation. |
+| Regression | Relevant policy/security regression after focused test. |
+| Adversarial | UNKNOWN/absent policy evidence must not become EXECUTE; explicit BLOCK must remain BLOCK. |
+| Required Environment | GitHub-hosted Actions regression CI. |
+| Environment Owner/Why | Domain policy invariant; platform independent unless AS-IS proves otherwise. |
+| Proof Command | Focused pytest selection, then relevant regression suite. |
+| Expected Result | UNKNOWN remains UNKNOWN/REVIEW and never silently becomes ALLOW/EXECUTE. |
+| Actual Result | NOT EXECUTED |
+| Evidence | NONE — R002 is ACTIVE. |
+| Evidence Type | NOT EXECUTED |
+| Evidence Commit | 29ca999366f6213c79b39de5eff795a5f94f5348 baseline; fresh execution required. |
+| Artifact Identity | NONE |
+| Evidence Time / Expiry | NONE |
+| Reproducible | NOT EXECUTED |
+| Contradiction | NONE FOUND so far; focused execution required. |
+| Impact Set | NONE |
+| Audit Update | R002 derived only after R001 PASS; exact active path to be confirmed during AS-IS. |
+| Audit Classification | VALID |
 | Final Status | NOT EXECUTED |
 | Execution State | ACTIVE |
 
-## 12. R001 execution protocol
+## 13. R001 execution protocol
 
 1. Inspect the exact decision/evidence/domain-state code path.
 2. Identify exact files/classes/functions and current tests.
