@@ -214,6 +214,9 @@ def test_windows_verification_is_independent_of_external_full_qualification_gate
     assert "Installer install / EXE / UI / uninstall" in workflow
     assert "SEARXNG_URL" not in workflow
     assert "QUALIFY_ENGINE_URL" not in workflow
+    assert "python-3.13.15.nupkg" in workflow
+    assert "https://api.nuget.org/v3-flatcontainer/python/3.13.15/python.3.13.15.nupkg" in workflow
+    assert "Expand-Archive -LiteralPath $pkg" in workflow
 
 
 def test_fast_regression_gate_is_independent_and_fail_closed():
