@@ -195,3 +195,12 @@ Retrieve execution evidence for commit a90b881be167a4f9a66cb65b9278479d27835ac4 
 - Manifest contract regression coverage is present for temporal contradiction, capability ladder, acquisition fallback, and consequential decision trace.
 - Triggering a fresh main workflow cycle is the next evidence step; Windows is routed to `[self-hosted, Windows, X64, marketradar]` and Android remains on GitHub-hosted Ubuntu.
 - No product FAIL is declared until the fresh execution produces a concrete failure.
+
+
+## 2026-09-23 — CI regression extracted and patched
+
+- Windows CI #224 on `536d806a17a144787ab681ac43b48b98da731d38` reached the full pytest suite: compile PASS, dependency install PASS, pytest FAIL with exactly one regression.
+- Root cause: `tests/test_manifest_alignment.py` asserted the old textual fragment `FullQualification/{__version__}`, while the production code correctly uses the full f-string User-Agent expression `SEPP-MarketRadar-FullQualification/{__version__}`.
+- This was a test-contract defect, not a product runtime defect.
+- Minimal regression patch: `da53c43590f5b6711f7893c703d4183ce9cb0a0d`.
+- Fresh Full Qualification #207 and Windows CI #226 were triggered on the patched commit; both are currently queued. No PASS is inferred until they complete.
