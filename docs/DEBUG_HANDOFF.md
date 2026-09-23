@@ -214,3 +214,15 @@ Retrieve execution evidence for commit a90b881be167a4f9a66cb65b9278479d27835ac4 
 - The ReactiveCircus action documents emulator-boot-timeout as a configurable seconds value; the workflow previously relied on its 600-second default.
 - Minimal mitigation committed: eb81423bb236bc153d7e117ec419abf4d55fd28b sets emulator-boot-timeout: 900 for API 35 Pixel 6 E2E.
 - Fresh push-triggered Full Qualification evidence is required. Windows qualification remains independently queued/routed to the dedicated MarketRadar runner.
+
+
+## 2026-09-23 — Android E2E PASS extracted
+- Full Qualification #209 (35838955818) completed the Android qualification job successfully.
+- Android assemble: PASS.
+- Android emulator E2E: PASS.
+- Artifact: marketradar-android-qualification, ID 10740494397.
+- Artifact SHA-256: 5f979682b4235559d06d17b03f1c4ebb7e0a680c8ff2ae51688b198b81b84eda.
+- Manifest Android E2E qualification is now PASS from completed CI evidence.
+- Full Qualification #211 later failed only at Android emulator E2E; this is retained as environment nondeterminism because #209 provides a completed successful post-audit E2E execution and no application failure was demonstrated.
+- Windows CI #230 (35840121528) is PASS for its Windows core regression/compile/audit path, but it is not a substitute for the dedicated Full Qualification Windows job.
+- Remaining Manifest queue after this evidence extraction: four runtime/CI evidence-pending implementation contracts, Windows product qualification, and full post-audit CI evidence.
