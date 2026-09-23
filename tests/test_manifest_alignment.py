@@ -202,3 +202,65 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_manifest_temporal_change_tracks_observation_window_freshness_expiry_revalidation_and_change():
+    from datetime import datetime, timedelta, timezone
+    from marketradar.opportunity_ranker import freshness_score
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "temporal.db")
+        now = datetime.now(timezone.utc)
+        first = (now - timedelta(days=10)).isoformat()
+        last = (now - timedelta(hours=2)).isoformat()
+        c.execute(
+            "INSERT INTO opportunities(source,title,url,state,first_seen,last_seen) VALUES(?,?,?,?,?,?)",
+            ("temporal", "Temporal", "https://example.test/temporal", "DISCOVERED", first, last),
+        )
+        oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/temporal",)).fetchone()["id"]
+        c.execute(
+            "INSERT INTO opportunity_sources(opportunity_id,source,first_seen,last_seen) VALUES(?,?,?,?)",
+            (oid, "temporal", first, last),
+        )
+
+        row = c.execute(
+            "SELECT first_seen,last_seen FROM opportunities WHERE id=?", (oid,)
+        ).fetchone()
+        assert row["first_seen"] == first
+        assert row["last_seen"] == last
+        assert freshness_score(dict(row)) > 0.05
+        assert freshness_score({"last_seen": first}) < freshness_score({"last_seen": last})
+
+        expires = (now + timedelta(hours=1)).isoformat()
+        c.execute(
+            "INSERT INTO claims(entity_type,entity_id,opportunity_id,claim_type,claim_value,confidence,observed_at,expires_at) VALUES(?,?,?,?,?,?,?,?)",
+            ("Opportunity", oid, oid, "payment", "USDT", 0.9, last, expires),
+        )
+        claim = c.execute(
+            "SELECT observed_at,expires_at FROM claims WHERE opportunity_id=? AND claim_type='payment'",
+            (oid,),
+        ).fetchone()
+        assert claim["expires_at"] > claim["observed_at"]
+
+        stale_at = (now + timedelta(days=7)).isoformat()
+        c.execute(
+            "INSERT INTO sources(name,base_url,status,stale_at,last_verified_at) VALUES(?,?,?,?,?)",
+            ("temporal-source", "https://example.test", "active", stale_at, last),
+        )
+        source = c.execute(
+            "SELECT stale_at,last_verified_at FROM sources WHERE name=?",
+            ("temporal-source",),
+        ).fetchone()
+        assert source["last_verified_at"] < source["stale_at"]
+
+        c.execute(
+            "INSERT INTO claims(entity_type,entity_id,opportunity_id,claim_type,claim_value,confidence,observed_at,expires_at) VALUES(?,?,?,?,?,?,?,?)",
+            ("Opportunity", oid, oid, "payment", "FIAT", 0.95, now.isoformat(), (now + timedelta(days=2)).isoformat()),
+        )
+        conflicts = c.execute(
+            "SELECT COUNT(*) AS n FROM claim_conflicts WHERE opportunity_id=? AND claim_type='payment'",
+            (oid,),
+        ).fetchone()
+        assert conflicts["n"] == 0
+
+        c.close()
