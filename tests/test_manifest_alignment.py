@@ -239,3 +239,23 @@ def test_autonomous_supervisor_persists_hashed_checkpoint_evidence():
     assert "hashlib.sha256(test_out.encode" in source
     assert '"evidence_digest": evidence_digest' in source
     assert "tmp.replace(CHECKPOINT)" in source
+
+
+def test_manifest_mission_is_reflected_in_product_surface():
+    root = Path(__file__).resolve().parents[1]
+    manifest = (root / "docs" / "MANIFEST.md").read_text(encoding="utf-8")
+    readme = (root / "README.md").read_text(encoding="utf-8")
+
+    assert "MarketRadar is an Opportunity Intelligence and Economic Operations System." in manifest
+    assert "evidence-backed opportunities, decisions, authorized actions, outcomes, and learning" in manifest
+    assert "Market → Evidence → Intelligence → Decision → Action → Revenue → Learning" in readme
+
+    required_modules = {
+        "pipeline.py",
+        "decision.py",
+        "approval.py",
+        "goal_completion.py",
+        "runtime.py",
+    }
+    package = root / "marketradar"
+    assert required_modules <= {p.name for p in package.glob("*.py")}
