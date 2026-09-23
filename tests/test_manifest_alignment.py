@@ -201,6 +201,12 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "Prepare self-hosted Python" in workflow
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
+    assert "python-3.13.13-amd64.exe" in workflow
+    assert "https://www.python.org/ftp/python/3.13.13/python-3.13.13-amd64.exe" in workflow
+    assert "Include_tcltk=1" in workflow
+    assert "Include_pip=1" in workflow
+    assert "import tkinter" in workflow
+    assert "Start-Process -FilePath $pkg" in workflow
 
 
 
