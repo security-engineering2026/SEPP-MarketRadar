@@ -6,7 +6,7 @@ from .analysis import classify, payment_hint, ttm, score, opportunity_type
 from .policy import eligibility, POLICY_VERSION
 from .quality import canonical_url, item_quality
 from .country_policy import infer_country
-from .payment import detect_payment, detect_kyc
+from .payment import detect_payment, detect_kyc, classify_payment_evidence
 from .opportunity_intelligence import analyze_need
 from .opportunity_ranker import rank_opportunity
 from .learning import load_profile
@@ -86,6 +86,7 @@ class Pipeline:
             trusted_conf = conf if attested else min(conf, 0.75)
             clean_ev.append({'kind':str(e.get('kind','listing'))[:64],'url':eu,'finding':str(e.get('finding',''))[:2000],'confidence':trusted_conf,'provenance_root':source['name'][:128]})
         conf=max([e['confidence'] for e in clean_ev] or [0.0]); quality=item_quality(normalized,conf)
+        payment_evidence_state=classify_payment_evidence(payment, clean_ev, payment_verified=bool(normalized.get('payment_verified')), verification_evidence=bool(normalized.get('payment_verification_evidence')))
         need=analyze_need(normalized)
         capability_match=match_task(need)
         if capability_match['status']=='FULL_MATCH': automation_status='AUTO_AVAILABLE'
@@ -188,6 +189,7 @@ class Pipeline:
         claim_specs=[
             ('eligibility',elig,max(0.0,min(1.0,conf))),
             ('payment',pay,max(0.0,min(1.0,conf))),
+            ('payment_evidence_state',payment_evidence_state,max(0.0,min(1.0,conf))),
             ('kyc_requirement',normalized.get('kyc_requirement','UNKNOWN'),max(0.0,min(1.0,conf))),
             ('iran_access',normalized.get('iran_access','UNKNOWN'),max(0.0,min(1.0,conf))),
         ]
