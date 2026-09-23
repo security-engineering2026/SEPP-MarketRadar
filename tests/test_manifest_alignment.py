@@ -588,3 +588,47 @@ def test_manifest_payment_intelligence_separates_claimed_documented_observed_and
             assert values["payment_evidence_state"] == "DOCUMENTED"
         finally:
             cdb.close()
+
+
+
+def test_manifest_kyc_intelligence_is_separate_and_unknown_never_becomes_allowed():
+    from marketradar.payment import detect_kyc
+    from marketradar.source_policy import classify_source_lane, MARKET_INTELLIGENCE_ONLY
+
+    assert detect_kyc("USDT payout; no KYC required") == "NOT_REQUIRED"
+    assert detect_kyc("USDT payout; government ID required") == "REQUIRED"
+    assert detect_kyc("USDT payout with no stated identity policy") == "UNKNOWN"
+
+    # Payment availability alone must not authorize a foreign source when KYC is UNKNOWN.
+    result = classify_source_lane({
+        "base_url": "https://example.com",
+        "country": "United States",
+        "iran_status": "ALLOW",
+        "kyc_requirement": "UNKNOWN",
+        "payment_status": "USDT",
+        "access_scope": "public",
+    }, {
+        "iran_eligibility": "ALLOW",
+        "kyc_requirement": "UNKNOWN",
+        "payment_capabilities": ["USDT"],
+        "evidence_confidence": 0.95,
+    })
+    assert result.execution_ready is False
+    assert result.lane == MARKET_INTELLIGENCE_ONLY
+
+    # KYC state must not substitute for Iran eligibility.
+    result = classify_source_lane({
+        "base_url": "https://example.com",
+        "country": "United States",
+        "iran_status": "UNKNOWN",
+        "kyc_requirement": "NOT_REQUIRED",
+        "payment_status": "USDT",
+        "access_scope": "public",
+    }, {
+        "iran_eligibility": "UNKNOWN",
+        "kyc_requirement": "NOT_REQUIRED",
+        "payment_capabilities": ["USDT"],
+        "evidence_confidence": 0.95,
+    })
+    assert result.execution_ready is False
+    assert result.lane == MARKET_INTELLIGENCE_ONLY
