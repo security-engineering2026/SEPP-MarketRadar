@@ -18,6 +18,25 @@ def detect_payment(text, currency=None):
         return {'method':'FIAT','asset':c,'network':None,'verified':False,'hint':c}
     return {'method':'UNKNOWN','asset':None,'network':None,'verified':False,'hint':'UNKNOWN'}
 
+
+def classify_payment_evidence(payment, evidence, *, payment_verified=False, verification_evidence=False):
+    """Classify payment-path evidence without treating detection as verification."""
+    if payment_verified and verification_evidence:
+        return "VERIFIED"
+    evidence = evidence if isinstance(evidence, list) else []
+    for item in evidence:
+        if not isinstance(item, dict):
+            continue
+        kind = str(item.get("kind", "")).lower()
+        finding = str(item.get("finding", "")).lower()
+        if kind in {"payment_observation", "payment_receipt", "transaction", "settlement_observation"}:
+            return "OBSERVED"
+        if any(token in kind for token in ("payout", "payment", "withdraw", "settlement")) or any(token in finding for token in ("payout", "withdraw", "payment policy", "payment terms", "settlement")):
+            return "DOCUMENTED"
+    if (payment or {}).get("asset") or (payment or {}).get("method") not in {None, "UNKNOWN"}:
+        return "CLAIMED"
+    return "UNKNOWN"
+
 def validate_crypto_payment(asset, network=None, txid=None, amount=None):
     if asset not in CRYPTO: return False, 'CRYPTO_ASSET_UNSUPPORTED'
     if network and len(str(network))>24: return False, 'CRYPTO_NETWORK_INVALID'
