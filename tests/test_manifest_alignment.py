@@ -202,3 +202,36 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_manifest_registration_is_not_verification():
+    from marketradar.source_onboarding import audit_registry, validate_source
+
+    candidate = {
+        "name": "registered_only",
+        "base_url": "https://registered-only.test",
+        "allow_hosts": ["registered-only.test"],
+        "status": "candidate",
+        "verification_state": "unverified",
+        "source_verification_state": "DISCOVERED",
+        "adapter": "json",
+        "acquisition": "http",
+        "terms_status": "not_reviewed",
+        "access_scope": "public",
+        "policy_lane": "REVIEW",
+        "iran_eligibility": "UNKNOWN",
+        "kyc_requirement": "UNKNOWN",
+    }
+    assert validate_source(candidate).ok
+    assert "registered_only" not in audit_registry([candidate])["promotable"]
+
+    verified = dict(candidate)
+    verified.update({
+        "verification_state": "verified",
+        "source_verification_state": "LIVE_CONFIRMED",
+        "terms_status": "reviewed",
+        "verification_basis": "fresh-source-evidence",
+        "last_verified_at": "2026-09-23T16:00:00+00:00",
+        "iran_policy_url": "https://registered-only.test/iran",
+    })
+    assert "registered_only" in audit_registry([verified])["promotable"]
