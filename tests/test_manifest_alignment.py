@@ -215,7 +215,7 @@ def test_manifest_revenue_payment_requires_explicit_verification_and_rejects_dup
                 ("test", "Payment", "https://example.test/payment", "DELIVERED"),
             )
             oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/payment",)).fetchone()["id"]
-            result = record_payment(c, oid, 100, "USDT", "tx-ref-1", network="TRC20", txid="tx-1", actor="test")
+            result = record_payment(c, oid, 100, "USDT", "tx-ref-1", network="TRC20", txid="a" * 64, actor="test")
             assert result["status"] == "RECORDED_UNVERIFIED"
             revenue = c.execute("SELECT payment_ref,verification_state FROM revenue WHERE opportunity_id=?", (oid,)).fetchone()
             assert revenue["payment_ref"] == "tx-ref-1"
