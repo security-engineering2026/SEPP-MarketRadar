@@ -31,9 +31,18 @@ jobs:
       QUALIFICATION_ARTIFACT_DIR: qualification-artifacts
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: '3.12'
+      - name: Prepare self-hosted Python
+        shell: pwsh
+        run: |
+          $py = Get-Command py -ErrorAction SilentlyContinue
+          if (-not $py) { throw "PYTHON_LAUNCHER_MISSING" }
+          $version = (& py -3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')").Trim()
+          if ([version]$version -lt [version]"3.12") { throw "PYTHON_VERSION_TOO_OLD:$version" }
+          $shim = Join-Path $env:RUNNER_TEMP "python-shim"
+          New-Item -ItemType Directory -Force -Path $shim | Out-Null
+          "@echo off`r`npy -3 %*" | Set-Content -Path (Join-Path $shim "python.cmd") -Encoding ascii
+          $shim | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          python --version
       - name: Install dependencies
         shell: pwsh
         run: python -m pip install -r requirements-dev.txt pillow
