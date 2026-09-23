@@ -162,3 +162,16 @@ Retrieve execution evidence for commit a90b881be167a4f9a66cb65b9278479d27835ac4 
 - Workflow pin defect: corrected; runtime proof required.
 - Final product qualification: OPEN.
 - PR merge: NOT AUTHORIZED.
+
+## 2026-09-23 — Manifest qualification contract correction
+
+- Re-audited `tools/full_qualification.py` against Manifest and current package version.
+- Found two concrete evidence-contract defects:
+  1. qualification artifact hard-coded product version `16.1.1` while current package/Manifest baseline is `16.1.2`;
+  2. the 500-source gate was emitted as `LIVE_SOURCE_SCALE_500` while the Manifest qualification contract names it `LIVE_SOURCE_REACHABILITY_500`.
+- Minimal patch committed in `0dea509a379cc043c3e0b0a235a8d066d64634a6`.
+- Added regression coverage in `b38048dbb7e5e4424379f10133cfb41f56942097` to prevent version/gate-name drift.
+- Qualification User-Agent now derives from the package version instead of a hard-coded version.
+- Runtime PASS is still NOT EXECUTED until GitHub Actions executes the patched commits.
+- Next step: inspect fresh Windows qualification evidence; then classify each gate as PASS/OPEN/FAIL/NOT EXECUTED and patch only concrete failures.
+
