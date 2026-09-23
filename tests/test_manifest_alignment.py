@@ -202,3 +202,15 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_windows_verification_is_independent_of_external_full_qualification_gates():
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github" / "workflows" / "windows-verification.yml").read_text(encoding="utf-8")
+    assert "runs-on: [self-hosted, Windows, X64, marketradar]" in workflow
+    assert "Core regression" in workflow
+    assert "Build portable EXE" in workflow
+    assert "Build installer" in workflow
+    assert "Installer install / EXE / UI / uninstall" in workflow
+    assert "SEARXNG_URL" not in workflow
+    assert "QUALIFY_ENGINE_URL" not in workflow
