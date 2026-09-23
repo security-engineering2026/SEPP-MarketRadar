@@ -202,3 +202,11 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_first_run_bootstrap_is_recoverable_after_failed_federation():
+    root = Path(__file__).resolve().parents[1]
+    desktop = (root / "marketradar" / "desktop.py").read_text(encoding="utf-8")
+    assert "status='OK'" in desktop
+    assert "COALESCE(observation_count, 0) > 0" in desktop
+    assert "return int(successful_runs or 0) == 0" in desktop
