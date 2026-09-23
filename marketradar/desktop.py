@@ -1266,8 +1266,14 @@ class MarketRadarDesktop:
 def needs_initial_acquisition(conn) -> bool:
     """Return True only for a genuinely fresh runtime workspace."""
     opportunities = conn.execute("SELECT COUNT(*) FROM opportunities").fetchone()[0]
-    runs = conn.execute("SELECT COUNT(*) FROM federation_runs").fetchone()[0]
-    return int(opportunities or 0) == 0 and int(runs or 0) == 0
+    if int(opportunities or 0) > 0:
+        return False
+    # Failed or empty first attempts must remain recoverable. Only a run that
+    # actually captured observations establishes that initial acquisition succeeded.
+    successful_runs = conn.execute(
+        "SELECT COUNT(*) FROM federation_runs WHERE status='OK' AND COALESCE(observation_count, 0) > 0"
+    ).fetchone()[0]
+    return int(successful_runs or 0) == 0
 
 
 def smoke_test():
