@@ -209,50 +209,55 @@ def test_manifest_intelligence_builds_demand_competition_ttm_and_market_signals_
 
     with tempfile.TemporaryDirectory() as td:
         c = connect(Path(td) / "intelligence.db")
-        rows = [
-            ("s1", "Python automation", "https://example.test/i1", "Python automation API dashboard", "software", 1000, "USD", "EXECUTE", "DISCOVERED", "2026-09-23T00:00:00+00:00", "2026-09-23T01:00:00+00:00"),
-            ("s2", "Python automation", "https://example.test/i2", "Python automation API dashboard", "software", 2000, "USD", "BLOCK", "DISCOVERED", "2026-09-23T00:00:00+00:00", "2026-09-23T02:00:00+00:00"),
-        ]
-        for row in rows:
+        try:
+            rows = [
+                ("s1", "Python automation", "https://example.test/i1", "Python automation API dashboard", "software", 1000, "USD", "EXECUTE", "DISCOVERED", "2026-09-23T00:00:00+00:00", "2026-09-23T01:00:00+00:00"),
+                ("s2", "Python automation", "https://example.test/i2", "Python automation API dashboard", "software", 2000, "USD", "BLOCK", "DISCOVERED", "2026-09-23T00:00:00+00:00", "2026-09-23T02:00:00+00:00"),
+            ]
+            for row in rows:
+                c.execute(
+                    "INSERT INTO opportunities(source,title,url,description,category,budget,currency,eligibility,state,first_seen,last_seen,competition_score,time_to_money) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    row + (0.4, 24),
+                )
+            ids = [r["id"] for r in c.execute("SELECT id FROM opportunities ORDER BY id").fetchall()]
+            c.execute("UPDATE opportunities SET time_to_money=48 WHERE id=?", (ids[1],))
             c.execute(
-                "INSERT INTO opportunities(source,title,url,description,category,budget,currency,eligibility,state,first_seen,last_seen,competition_score) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-                row + (0.4,),
+                "INSERT INTO ttm_observations(opportunity_id,stage,duration_hours,probability) VALUES(?,?,?,?)",
+                (ids[0], "PROPOSAL", 24, 0.8),
             )
-        ids = [r["id"] for r in c.execute("SELECT id FROM opportunities ORDER BY id").fetchall()]
-        c.execute(
-            "INSERT INTO ttm_observations(opportunity_id,stage,duration_hours,probability) VALUES(?,?,?,?)",
-            (ids[0], "PROPOSAL", 24, 0.8),
-        )
-        c.execute(
-            "INSERT INTO ttm_observations(opportunity_id,stage,duration_hours,probability) VALUES(?,?,?,?)",
-            (ids[0], "PAYMENT", 12, 0.9),
-        )
-        c.commit()
+            c.execute(
+                "INSERT INTO ttm_observations(opportunity_id,stage,duration_hours,probability) VALUES(?,?,?,?)",
+                (ids[0], "PAYMENT", 12, 0.9),
+            )
+            c.commit()
 
-        source_rows = [dict(r) for r in c.execute("SELECT * FROM opportunities ORDER BY id").fetchall()]
-        clusters = build_demand_clusters(c, source_rows)
-        assert clusters
-        cluster = clusters[0]
-        assert cluster["count"] == 2
-        assert cluster["median_budget"] == 2000
-        assert cluster["median_ttm"] == 24
+            source_rows = [dict(r) for r in c.execute("SELECT * FROM opportunities ORDER BY id").fetchall()]
+            clusters = build_demand_clusters(c, source_rows)
+            assert clusters
+            cluster = clusters[0]
+            assert cluster["count"] == 2
+            assert cluster["median_budget"] == 2000
+            assert cluster["median_ttm"] == 48
+            assert cluster["trend_score"] == 0.1
+            assert cluster["label"]
 
-        prediction = calculate_ttm(c, ids[0])
-        assert prediction["expected_hours"] == 36
-        assert prediction["p_paid"] == 0.72
-        assert prediction["expected_value"] == 720
-        assert prediction["confidence"] > 0
+            prediction = calculate_ttm(c, ids[0])
+            assert prediction["expected_hours"] == 36
+            assert prediction["p_paid"] == 0.72
+            assert prediction["expected_value"] == 720
+            assert prediction["confidence"] > 0
 
-        ingest_market_signals(c, source_rows)
-        signal = c.execute(
-            "SELECT * FROM market_signals WHERE signal_type='DEMAND_SKILL' AND signal_key='python'"
-        ).fetchone()
-        assert signal is not None
-        assert signal["confidence"] == 0.65
+            ingest_market_signals(c, source_rows)
+            signal = c.execute(
+                "SELECT * FROM market_signals WHERE signal_type='DEMAND_SKILL' AND signal_key='python'"
+            ).fetchone()
+            assert signal is not None
+            assert signal["confidence"] == 0.65
 
-        policy_states = {
-            r["id"]: r["eligibility"]
-            for r in c.execute("SELECT id,eligibility FROM opportunities ORDER BY id").fetchall()
-        }
-        assert policy_states == {ids[0]: "EXECUTE", ids[1]: "BLOCK"}
-        c.close()
+            policy_states = {
+                r["id"]: r["eligibility"]
+                for r in c.execute("SELECT id,eligibility FROM opportunities ORDER BY id").fetchall()
+            }
+            assert policy_states == {ids[0]: "EXECUTE", ids[1]: "BLOCK"}
+        finally:
+            c.close()
