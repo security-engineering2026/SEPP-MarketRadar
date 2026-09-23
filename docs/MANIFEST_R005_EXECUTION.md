@@ -14,13 +14,13 @@
 - **Focused Test:** `test_manifest_recommendation_is_not_authorization`
 - **Regression:** Full `python -m pytest -q` in GitHub Actions Windows CI.
 - **Adversarial/Boundary Proof:** An opportunity already marked `EXECUTE` may appear in Top-7, but recommendation generation creates zero `action_authorizations` and leaves the opportunity state `DISCOVERED`.
-- **Required Environment:** GitHub-hosted Windows runner, workflow **Windows CI**, job **test-windows**, run **35889928327**, job **107279519032**.
+- **Required Environment:** GitHub-hosted Windows runner, workflow **Windows CI**, job **test-windows**, run **35890104597**, job **107280121446**.
 - **Why This Environment:** Repository Windows CI is the authoritative regression environment for this runtime/domain contract and executes the full test/audit chain.
 - **Proof Command:** `python -m pytest -q`
 - **Expected Result:** Recommendation remains a decision/view output and cannot itself authorize or execute an action.
 - **Actual Result:** **PASS** — Test step completed successfully; Compile, full pytest, Product audit, Release audit and live-search smoke job all completed successfully.
-- **Evidence Commit:** a65e6af6365609d05829f60c4f219374b86bdfc6
-- **Evidence:** GitHub Actions Windows CI run 35889928327 / test-windows job 107279519032.
+- **Evidence Commit:** 7ef42004746f23521b52956262e85c25a313fccf
+- **Evidence:** GitHub Actions Windows CI run 35890104597 / test-windows job 107280121446.
 - **Evidence Type:** CI / REGRESSION / ADVERSARIAL
 - **Reproducible:** YES
 - **Contradiction:** NONE FOUND in inspected recommendation, decision-trace and authorization paths.
