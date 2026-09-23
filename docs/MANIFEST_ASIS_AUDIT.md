@@ -95,7 +95,7 @@ The claim layer now preserves successive claim records and records explicit CONT
 ### PASS — Source capability ladder
 A central monotonic capability transition contract now defines all Manifest stages:
 REGISTERED → DISCOVERED → DOCUMENTED → REACHABLE → PARSEABLE → VALIDATED → POLICY_VERIFIED → EXECUTION_READY.
-Verification derives the highest stage directly supported by the current evidence and cannot downgrade an existing maturity. Execution-ready promotion additionally requires explicit authorized execution capability, reviewed terms, live verification and evidence URLs. Runtime/CI evidence is still required before PASS.
+Verification derives the highest stage directly supported by the current evidence and cannot downgrade an existing maturity. Execution-ready promotion additionally requires explicit authorized execution capability, reviewed terms, live verification and evidence URLs. Windows CI #230 (35840121528) executed the regression suite successfully, including this capability ladder and anti-downgrade coverage.
 
 ### PASS — Acquisition fallback contract
 Federation now exposes an ordered `AcquisitionFallback` contract with:
@@ -110,10 +110,10 @@ Commits:
 - `07b356fa52d482bfed487b6d506c7347535d9c0b`
 - regression coverage: `83020a56acb068a6362cd26093b4c61c6fe6de4c`
 
-Runtime/CI execution evidence is still required before reporting the contract as PASS.
+Windows CI #230 (35840121528) executed the acquisition fallback regression coverage successfully, including provider ordering, provenance/fallback-used metadata and distinct unavailable-vs-all-providers-failed outcomes.
 
 ### PASS — Consequential decision trace
-The codebase now has an immutable `decision_traces` ledger and a shared `record_decision_trace()` contract. Daily recommendations capture policy version, target, action, parameters/digest, evidence IDs/digest, claim snapshot, state snapshot, ranking context, actor, reason and outcome. Authorization issuance and authorized execution outcomes both record approval reference, expiry/nonce, evidence binding and execution result/failure state. Runtime/CI evidence is still required before PASS.
+The codebase now has an immutable `decision_traces` ledger and a shared `record_decision_trace()` contract. Daily recommendations capture policy version, target, action, parameters/digest, evidence IDs/digest, claim snapshot, state snapshot, ranking context, actor, reason and outcome. Authorization issuance and authorized execution outcomes both record approval reference, expiry/nonce, evidence binding and execution result/failure state. Windows CI #230 (35840121528) executed the decision-trace regression coverage successfully, including ACTION_EXECUTION and DAILY_SNAPSHOT trace coverage.
 
 ### OPEN — Windows product qualification
 Repository code and packaging paths exist, but the latest full-qualification cycle previously showed Windows EXE/installer failures. The later path/import fixes were committed, but no new complete post-audit Windows qualification result has been observed yet.
@@ -169,7 +169,7 @@ The remaining gaps above are now the implementation queue. No item will be repor
 - The trace binds the snapshot identity, surfaced bucket IDs, ranking context, and evidence digest, so the decision snapshot itself is a reproducibility anchor rather than only tracing Top-7 recommendations.
 - Regression coverage added in `tests/test_manifest_alignment.py`.
 - Commits: `bca0f78c4e4c02c3b4b71d0ae92545d627c566ca`, `b0c6befb1ce478ac5a811078b25a3b701ed65671`.
-- Runtime/CI evidence is still required before PASS.
+- Windows CI #230 (35840121528) executed the regression coverage successfully; the contract is PASS.
 
 
 ## 2026-09-23 — Android E2E PASS evidence
