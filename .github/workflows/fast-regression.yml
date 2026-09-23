@@ -30,13 +30,23 @@ jobs:
             "$env:ProgramFiles\Python*\python.exe",
             "$env:ProgramFiles\Python*\*\python.exe",
             "$env:LOCALAPPDATA\Programs\Python\Python*\python.exe",
+            "C:\Users\*\AppData\Local\Programs\Python\Python*\python.exe",
             "C:\Python*\python.exe"
           )
           $python = $null
           foreach ($pattern in $candidates) {
             $found = Get-ChildItem -Path $pattern -File -ErrorAction SilentlyContinue |
-              Sort-Object FullName -Descending | Select-Object -First 1
-            if ($found) { $python = $found.FullName; break }
+              Sort-Object FullName -Descending
+            foreach ($candidate in $found) {
+              try {
+                $versionText = (& $candidate.FullName --version 2>$null).Trim()
+                if ($versionText -match 'Python (\d+)\.(\d+)\.(\d+)') {
+                  $major = [int]$Matches[1]; $minor = [int]$Matches[2]
+                  if ($major -gt 3 -or ($major -eq 3 -and $minor -ge 12)) { $python = $candidate.FullName; break }
+                }
+              } catch {}
+            }
+            if ($python) { break }
           }
           if (-not $python) {
             foreach ($root in @("HKLM:\SOFTWARE\Python\PythonCore","HKLM:\SOFTWARE\WOW6432Node\Python\PythonCore")) {
@@ -49,7 +59,7 @@ jobs:
               if ($python) { break }
             }
           }
-          if (-not $python) { throw "PYTHON_RUNTIME_NOT_FOUND" }
+          if (-not $python) { throw "PYTHON_3_12_PLUS_NOT_FOUND" }
           "MARKETRADAR_PYTHON_EXE=$python" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
           Split-Path $python | Out-File $env:GITHUB_PATH -Append -Encoding utf8
           & $python --version
