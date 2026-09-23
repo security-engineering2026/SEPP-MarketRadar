@@ -89,15 +89,15 @@ This follows GitHub's current security guidance that third-party Actions should 
 
 ## 4. Remaining Manifest gaps
 
-### IMPLEMENTED BY CODE — Temporal contradiction model
-The claim layer now preserves successive claim records and records explicit CONTRADICTS relations in an immutable `claim_conflicts` ledger. Claim evidence remains linked to each claim, preventing silent replacement. Source verification also persists stale-at/revalidation metadata. Runtime/CI evidence is still required before PASS.
+### PASS — Temporal contradiction model
+The claim layer now preserves successive claim records and records explicit CONTRADICTS relations in an immutable `claim_conflicts` ledger. Claim evidence remains linked to each claim, preventing silent replacement. Source verification also persists stale-at/revalidation metadata. Windows CI #230 (35840121528) completed the full regression suite successfully, including Manifest alignment tests covering temporal contradiction immutability, source capability maturity/anti-downgrade, acquisition fallback outcomes/provenance, and immutable decision traces. These four contracts therefore have runtime/CI evidence and are PASS.
 
-### IMPLEMENTED BY CODE — Source capability ladder
+### PASS — Source capability ladder
 A central monotonic capability transition contract now defines all Manifest stages:
 REGISTERED → DISCOVERED → DOCUMENTED → REACHABLE → PARSEABLE → VALIDATED → POLICY_VERIFIED → EXECUTION_READY.
 Verification derives the highest stage directly supported by the current evidence and cannot downgrade an existing maturity. Execution-ready promotion additionally requires explicit authorized execution capability, reviewed terms, live verification and evidence URLs. Runtime/CI evidence is still required before PASS.
 
-### IMPLEMENTED BY CODE — Acquisition fallback contract
+### PASS — Acquisition fallback contract
 Federation now exposes an ordered `AcquisitionFallback` contract with:
 - explicit provider chain;
 - per-provider provenance and fallback-used metadata;
@@ -112,7 +112,7 @@ Commits:
 
 Runtime/CI execution evidence is still required before reporting the contract as PASS.
 
-### IMPLEMENTED BY CODE — Consequential decision trace
+### PASS — Consequential decision trace
 The codebase now has an immutable `decision_traces` ledger and a shared `record_decision_trace()` contract. Daily recommendations capture policy version, target, action, parameters/digest, evidence IDs/digest, claim snapshot, state snapshot, ranking context, actor, reason and outcome. Authorization issuance and authorized execution outcomes both record approval reference, expiry/nonce, evidence binding and execution result/failure state. Runtime/CI evidence is still required before PASS.
 
 ### OPEN — Windows product qualification
@@ -180,3 +180,9 @@ The remaining gaps above are now the implementation queue. No item will be repor
 - Artifact SHA-256: 5f979682b4235559d06d17b03f1c4ebb7e0a680c8ff2ae51688b198b81b84eda.
 - Android E2E Manifest item is therefore PASS based on completed CI evidence.
 - Full Qualification #211 later failed its Android emulator E2E step; because #209 already completed the same post-audit Android E2E successfully, #211 is retained as environment nondeterminism unless a reproducible application failure is demonstrated.
+
+## 2026-09-23 — Manifest contract evidence closure
+- Windows CI #230 (35840121528) completed successfully.
+- The full pytest suite executed and passed, including the Manifest alignment tests for temporal contradiction, capability ladder, acquisition fallback, decision trace immutability, ACTION_EXECUTION outcome tracing, and DAILY_SNAPSHOT trace coverage.
+- Four previously evidence-pending Manifest implementation contracts are now PASS: Temporal contradiction model, Source capability ladder, Acquisition fallback contract, Consequential decision trace.
+- Remaining explicit Manifest gaps: Windows product qualification and Full post-audit CI evidence.
