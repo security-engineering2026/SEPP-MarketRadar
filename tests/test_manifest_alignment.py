@@ -285,7 +285,7 @@ def test_manifest_canonical_opportunity_preserves_observation_and_conflicting_ev
             item = {
                 "title": f"Observation {i}", "url": url,
                 "description": "same opportunity observed with different policy evidence",
-                "iran_access": "ALLOW",
+                "iran_access": "ALLOW" if i == 0 else "BLOCK",
                 "evidence": [{"kind": "listing", "url": url, "finding": f"observation-{i}", "confidence": 0.95}],
             }
             p.ingest(source, item, AcquisitionAttestation("CANONICAL_TEST", source["base_url"], digest, 200))
