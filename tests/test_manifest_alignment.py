@@ -256,3 +256,25 @@ def test_manifest_mission_is_reflected_in_product_surface():
     }
     package = root / "marketradar"
     assert required_modules <= {p.name for p in package.glob("*.py")}
+
+
+
+def test_manifest_core_truth_model_is_explicit_and_persisted():
+    root = Path(__file__).resolve().parents[1]
+    manifest = (root / "docs" / "MANIFEST.md").read_text(encoding="utf-8")
+    required_chain = "WORLD -> OBSERVATION -> SNAPSHOT -> EVIDENCE -> CLAIM -> DOMAIN STATE -> DECISION -> ACTION -> OUTCOME -> LEARNING"
+    assert required_chain in manifest
+    for invariant in (
+        "Evidence is not truth.",
+        "UNKNOWN is a valid state.",
+        "Registration is not verification.",
+        "Reachability is not capability.",
+        "Recommendation is not authorization.",
+        "Payment claim is not payment verification.",
+    ):
+        assert invariant in manifest
+
+    c = connect(":memory:")
+    tables = {row["name"] for row in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    assert {"opportunities", "evidence", "claims", "claim_evidence", "decision_snapshots", "decision_traces", "application_events", "revenue"} <= tables
+    c.close()
