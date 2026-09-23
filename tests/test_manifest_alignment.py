@@ -215,6 +215,7 @@ def test_manifest_raw_evidence_identity_is_hashable_replayable_and_distinct():
             "INSERT INTO raw_observations(source,url,observed_at,payload,payload_sha256,observation_kind) VALUES(?,?,?,?,?,?)",
             ("source-a", "https://example.test/item", "2026-09-23T00:00:00+00:00", payload, digest, "raw"),
         )
+        c.commit()
         row = c.execute(
             "SELECT source,url,observed_at,payload,payload_sha256 FROM raw_observations"
         ).fetchone()
