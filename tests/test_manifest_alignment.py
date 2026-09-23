@@ -342,3 +342,28 @@ def test_manifest_deduplication_uses_canonical_opportunity_identity_and_retains_
         assert {row["finding"] for row in evidence} == {"first", "second"}
         assert cdb.execute("SELECT COUNT(*) AS n FROM opportunity_sources WHERE opportunity_id=?", (oid,)).fetchone()["n"] == 1
         cdb.close()
+
+    
+def test_manifest_entity_resolution_exposes_match_possible_and_no_match_with_evidence():
+    from marketradar.goal_completion import resolve_entity
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        existing = resolve_entity(cdb, "Client", "Acme Consulting", domain="acme.example")
+        matched = resolve_entity(cdb, "Client", "Acme Consulting", domain="acme.example", evidence={"source": "exact"})
+        possible = resolve_entity(cdb, "Client", "Acme Consult", domain="other.example", evidence={"source": "similar"})
+        no_match = resolve_entity(cdb, "Client", "Completely Different Buyer", domain="different.example", evidence={"source": "distinct"})
+
+        assert matched == existing
+        assert possible != existing
+        assert no_match != existing
+        rows = cdb.execute(
+            "SELECT decision,confidence,evidence_json FROM identity_matches WHERE entity_type='Client' ORDER BY id"
+        ).fetchall()
+        decisions = {row["decision"] for row in rows}
+        assert {"MATCH", "POSSIBLE_MATCH", "NO_MATCH"} <= decisions
+        for row in rows:
+            assert row["confidence"] is not None
+            assert row["evidence_json"] is not None
+        assert cdb.execute("SELECT COUNT(*) AS n FROM entities WHERE entity_type='Client'").fetchone()["n"] == 3
+        cdb.close()
