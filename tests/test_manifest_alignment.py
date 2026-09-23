@@ -233,7 +233,7 @@ def test_manifest_authorization_broker_is_evidence_bound_expiring_and_replay_pro
 
             execute_authorized(c, aid, "SUBMIT", str(oid), {"opportunity_id": oid, "x": 1}, [eid], lambda: {"ok": True})
             replay = c.execute("SELECT status FROM action_authorizations WHERE approval_id=?", (aid,)).fetchone()
-            assert replay["status"] in {"CONSUMED", "EXECUTED"}
+            assert replay["status"] == "USED"
 
             try:
                 execute_authorized(c, aid, "SUBMIT", str(oid), {"opportunity_id": oid, "x": 1}, [eid], lambda: {"ok": True})
