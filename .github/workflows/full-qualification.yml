@@ -168,7 +168,7 @@ jobs:
           target: google_apis
           profile: pixel_6
           emulator-boot-timeout: 900
-          disable-animations: true
+          disable-animations: false
           emulator-options: -no-snapshot -no-window -no-boot-anim -gpu swiftshader_indirect
           script: bash tools/android_e2e.sh
       - name: Upload Android qualification artifact
