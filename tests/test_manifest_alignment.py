@@ -202,3 +202,13 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_self_hosted_python_bootstrap_uses_machine_visible_fallbacks():
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github" / "workflows" / "full-qualification.yml").read_text(encoding="utf-8")
+    assert "HKLM:\\SOFTWARE\\Python\\PythonCore" in workflow
+    assert "HKLM:\\SOFTWARE\\WOW6432Node\\Python\\PythonCore" in workflow
+    assert "where.exe python.exe" in workflow
+    assert "PYTHON_VERSION_TOO_OLD" in workflow
+    assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
