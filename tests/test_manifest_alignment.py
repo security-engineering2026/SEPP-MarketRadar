@@ -450,7 +450,7 @@ def test_manifest_evidence_graph_links_source_observation_evidence_claim_and_dom
 
 
 def test_manifest_trust_reputation_separates_confidence_from_reputation_and_surfaces_provenance_manipulation_unknown():
-    from marketradar.reputation import analyze_reviews
+    from marketradar.goal_completion import analyze_reviews
 
     with tempfile.TemporaryDirectory() as td:
         cdb = connect(Path(td) / "test.db")
