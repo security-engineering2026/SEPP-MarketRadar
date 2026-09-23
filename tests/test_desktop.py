@@ -87,7 +87,10 @@ def test_initial_acquisition_only_targets_fresh_workspace(tmp_path):
     conn = connect(tmp_path / "fresh.db")
     try:
         assert needs_initial_acquisition(conn) is True
-        conn.execute("INSERT INTO federation_runs (source, status) VALUES (?, ?)", ("test-source", "ERROR"))
+        conn.execute("INSERT INTO federation_runs (source, status, observation_count) VALUES (?, ?, ?)", ("test-source", "ERROR", 0))
+        conn.commit()
+        assert needs_initial_acquisition(conn) is True
+        conn.execute("INSERT INTO federation_runs (source, status, observation_count) VALUES (?, ?, ?)", ("test-source", "OK", 2))
         conn.commit()
         assert needs_initial_acquisition(conn) is False
     finally:
