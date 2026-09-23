@@ -225,17 +225,17 @@ If the patch changes a shared component, populate the Impact Set and revalidate 
 | Row | R001 |
 | Manifest Ref | `docs/MANIFEST.md` §2 — Core truth model; SHA `447b56f8a3a61ee34288730c705d9b0680c00e95` |
 | MICU | Prove one concrete invariant: **evidence is never treated as truth/authoritative domain state by the decision path**. |
-| Acceptance Criteria | A consequential decision/authorization path consumes evidence with explicit provenance/state and cannot promote evidence existence into authoritative truth merely because evidence exists. |
+| Acceptance Criteria | A consequential decision path preserves the separation between evidence and claims/domain state: evidence has provenance/confidence/hash, claims are separate records linked through `claim_evidence`, and contradictory claims are recorded explicitly rather than replacing prior observations. |
 | Depends On | NONE |
 | Unblocks | Derivation of the next MICU from the next unresolved §2/§3 contract after R001 PASS |
-| Code Location | **TO BE ESTABLISHED BY AS-IS AUDIT — do not guess** |
-| Code State | NOT AUDITED |
+| Code Location | `marketradar/goal_completion.py` (evidence/claims schema + `record_decision_trace()`); `tests/test_manifest_alignment.py` (`test_manifest_temporal_claim_conflict_is_immutable_and_explicit`, `test_manifest_decision_trace_is_claim_evidence_bound_and_immutable`) |
+| Code State | PRESENT |
 | Current Behavior | NOT EXECUTED |
-| Exact Gap | NOT YET PROVEN; inspect active decision/evidence/domain-state path before classifying a gap |
+| Exact Gap | No implementation gap proven in AS-IS. Evidence and claims are separate; `claim_evidence` links them; `decision_traces` stores evidence IDs/digest plus a separate claims snapshot; claim conflicts are immutable. |
 | Solution Search | Same repo first; then CDR Core; then Software Forge; then Git history; external sources only if required |
-| Reuse Decision | NOT YET DECIDED |
-| Patch Action | Audit first. Patch only if the focused invariant fails. |
-| Focused Test | Construct evidence that exists but does not constitute verified domain truth; prove the decision path retains the distinction and does not authorize from evidence presence alone. |
+| Reuse Decision | CONFIRM EXISTING |
+| Patch Action | No production patch required. Existing implementation already enforces the separation; verification is required. |
+| Focused Test | Run the focused claim/evidence separation regression: create evidence, create two contradictory claims, link evidence to the new claim, record `CONTRADICTS`, and prove the conflict ledger is immutable; then verify a consequential decision trace stores evidence IDs/digest separately from the claims snapshot. |
 | Regression | Existing decision/policy/evidence regressions covering the affected path; add a focused regression if missing. |
 | Adversarial | Evidence-present / truth-absent case; stale or contradictory evidence case where applicable. |
 | Required Environment | GitHub-hosted CI first; target-specific environment only if AS-IS shows the invariant is platform-dependent. |
@@ -243,13 +243,13 @@ If the patch changes a shared component, populate the Impact Set and revalidate 
 | Proof Command | To be established from the audited test harness; must execute the focused assertion, not merely a broad suite. |
 | Expected Result | Evidence presence alone cannot create authoritative truth or authorization. |
 | Actual Result | NOT EXECUTED |
-| Evidence | NONE |
-| Evidence Type | NOT EXECUTED |
-| Evidence Commit | NONE |
+| Evidence | Existing historical Windows CI #230 / run 35840121528 covers the decision-trace regression, but is not fresh proof for this branch. |
+| Evidence Type | CI (historical context only) |
+| Evidence Commit | Historical only; does not match current branch |
 | Artifact Identity | NONE |
-| Evidence Time / Expiry | NONE |
+| Evidence Time / Expiry | Historical; must be refreshed |
 | Reproducible | NOT EXECUTED |
-| Contradiction | NOT EXECUTED |
+| Contradiction | No contradiction found in AS-IS; fresh execution still required |
 | Impact Set | NONE |
 | Audit Update | Must record exact code/test paths and row classification after AS-IS. |
 | Audit Classification | VALID — MICU/JIT structure; implementation fields intentionally pending AS-IS |
