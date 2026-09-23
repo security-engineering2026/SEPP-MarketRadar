@@ -39,8 +39,15 @@ jobs:
             if (-not $candidate -or -not (Test-Path -LiteralPath $candidate)) { return $null }
             try {
               $v = (& $candidate -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')").Trim()
-              # PYTHON_VERSION_TOO_OLD: candidates below 3.12 are rejected here; fallback bootstrap is attempted next.
-              if ($v -match '^(\d+)\.(\d+)
+              if ($v -match '^(\d+)\.(\d+)$') {
+                $major = [int]$Matches[1]; $minor = [int]$Matches[2]
+                if ($major -gt 3 -or ($major -eq 3 -and $minor -ge 12)) {
+                  try {
+                    & $candidate -c "import tkinter; print('TKINTER_OK')" 2>$null | Out-Null
+                    if ($LASTEXITCODE -eq 0) { return $candidate }
+                  } catch {}
+                }
+              }
             } catch {}
             return $null
           }
