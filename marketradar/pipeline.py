@@ -170,9 +170,17 @@ class Pipeline:
         except Exception:
             pass
         evidence_ids=[]
+        observation_id=None
+        if attested:
+            observation_row=self.c.execute(
+                "SELECT id FROM raw_observations WHERE source=? AND payload_sha256=? AND observation_kind='source_response' AND http_status=200 ORDER BY id DESC LIMIT 1",
+                (source.get('name'), acquisition_attested.sha256.lower()),
+            ).fetchone()
+            if observation_row is not None:
+                observation_id=int(observation_row['id'])
         for e in clean_ev:
             eh=hashlib.sha256(json.dumps([oid,e['kind'],source['name'],e['url'],e['finding'],e['confidence'],e['provenance_root']],sort_keys=True).encode()).hexdigest()
-            self.c.execute('INSERT OR IGNORE INTO evidence(opportunity_id,kind,source,url,finding,confidence,provenance_root,observed_at,evidence_hash) VALUES(?,?,?,?,?,?,?,?,?)',(oid,e['kind'],source['name'],e['url'],e['finding'],e['confidence'],e['provenance_root'],now,eh))
+            self.c.execute('INSERT OR IGNORE INTO evidence(opportunity_id,observation_id,kind,source,url,finding,confidence,provenance_root,observed_at,evidence_hash) VALUES(?,?,?,?,?,?,?,?,?,?)',(oid,observation_id,e['kind'],source['name'],e['url'],e['finding'],e['confidence'],e['provenance_root'],now,eh))
             evidence_row=self.c.execute('SELECT id FROM evidence WHERE evidence_hash=?',(eh,)).fetchone()
             if evidence_row:
                 evidence_ids.append(int(evidence_row['id']))
