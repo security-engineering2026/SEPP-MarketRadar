@@ -202,3 +202,57 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_manifest_raw_evidence_identity_is_hashable_replayable_and_distinct():
+    import hashlib
+    import sqlite3
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "test.db")
+        payload = b'{"title":"immutable evidence","v":1}'
+        digest = hashlib.sha256(payload).hexdigest()
+        c.execute(
+            "INSERT INTO raw_observations(source,url,observed_at,payload,payload_sha256,observation_kind) VALUES(?,?,?,?,?,?)",
+            ("source-a", "https://example.test/item", "2026-09-23T00:00:00+00:00", payload, digest, "raw"),
+        )
+        row = c.execute(
+            "SELECT source,url,observed_at,payload,payload_sha256 FROM raw_observations"
+        ).fetchone()
+        assert row["payload"] == payload
+        assert row["payload_sha256"] == digest
+        assert hashlib.sha256(row["payload"]).hexdigest() == row["payload_sha256"]
+        assert row["source"] == "source-a"
+        assert row["url"] == "https://example.test/item"
+        assert row["observed_at"] == "2026-09-23T00:00:00+00:00"
+        try:
+            c.execute(
+                "INSERT INTO raw_observations(source,url,observed_at,payload,payload_sha256,observation_kind) VALUES(?,?,?,?,?,?)",
+                ("source-a", "https://example.test/item", "2026-09-23T00:00:00+00:00", payload, digest, "raw"),
+            )
+            c.commit()
+            assert False, "duplicate raw snapshot identity was accepted"
+        except sqlite3.IntegrityError:
+            c.rollback()
+        try:
+            c.execute(
+                "UPDATE raw_observations SET payload=? WHERE source=?",
+                (b"tampered", "source-a"),
+            )
+            c.commit()
+            assert False, "raw evidence was mutable"
+        except sqlite3.DatabaseError as exc:
+            assert "immutable" in str(exc).lower()
+            c.rollback()
+        try:
+            c.execute("DELETE FROM raw_observations WHERE source=?", ("source-a",))
+            c.commit()
+            assert False, "raw evidence was deletable"
+        except sqlite3.DatabaseError as exc:
+            assert "immutable" in str(exc).lower()
+            c.rollback()
+        replay = c.execute(
+            "SELECT payload FROM raw_observations WHERE source=? AND url=? AND payload_sha256=?",
+            ("source-a", "https://example.test/item", digest),
+        ).fetchone()
+        assert replay["payload"] == payload
+        c.close()
