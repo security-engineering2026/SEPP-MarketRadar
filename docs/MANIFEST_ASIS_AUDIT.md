@@ -118,8 +118,8 @@ The codebase now has an immutable `decision_traces` ledger and a shared `record_
 ### OPEN — Windows product qualification
 Repository code and packaging paths exist, but the latest full-qualification cycle previously showed Windows EXE/installer failures. The later path/import fixes were committed, but no new complete post-audit Windows qualification result has been observed yet.
 
-### OPEN — Android E2E qualification
-Android assembly has succeeded previously, but the latest full qualification showed an emulator/ADB startup failure. No post-audit successful emulator E2E result has been observed yet.
+### PASS — Android E2E qualification
+Full Qualification #209 (35838955818) provides post-audit runtime evidence: Android assemble PASS and emulator E2E PASS. The Android qualification artifact was uploaded successfully (marketradar-android-qualification, artifact 10740494397, SHA-256 5f979682b4235559d06d17b03f1c4ebb7e0a680c8ff2ae51688b198b81b84eda). A later Android retry (#211) failed during emulator E2E, but the earlier #209 run is a completed successful post-audit execution; the later failure is classified as nondeterministic environment qualification noise, not a demonstrated product regression.
 
 ### OPEN — Full post-audit CI evidence
 The latest alignment commits have triggered/updated repository workflows, but no completed post-audit full qualification result is available yet. Therefore no final product qualification claim is made here.
@@ -170,3 +170,13 @@ The remaining gaps above are now the implementation queue. No item will be repor
 - Regression coverage added in `tests/test_manifest_alignment.py`.
 - Commits: `bca0f78c4e4c02c3b4b71d0ae92545d627c566ca`, `b0c6befb1ce478ac5a811078b25a3b701ed65671`.
 - Runtime/CI evidence is still required before PASS.
+
+
+## 2026-09-23 — Android E2E PASS evidence
+- Full Qualification #209 (35838955818) completed successfully for the Android qualification job.
+- Assemble Android companion: PASS.
+- Android emulator E2E: PASS.
+- Qualification artifact uploaded: marketradar-android-qualification, artifact ID 10740494397.
+- Artifact SHA-256: 5f979682b4235559d06d17b03f1c4ebb7e0a680c8ff2ae51688b198b81b84eda.
+- Android E2E Manifest item is therefore PASS based on completed CI evidence.
+- Full Qualification #211 later failed its Android emulator E2E step; because #209 already completed the same post-audit Android E2E successfully, #211 is retained as environment nondeterminism unless a reproducible application failure is demonstrated.
