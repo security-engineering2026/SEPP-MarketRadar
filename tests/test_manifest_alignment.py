@@ -278,3 +278,18 @@ def test_manifest_core_truth_model_is_explicit_and_persisted():
     tables = {row["name"] for row in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"opportunities", "evidence", "claims", "claim_evidence", "decision_snapshots", "decision_traces", "application_events", "revenue"} <= tables
     c.close()
+
+
+
+def test_manifest_domain_contract_objects_have_storage_anchors():
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "domain.db")
+        tables = {row["name"] for row in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        required = {
+            "sources", "source_contracts", "raw_observations", "opportunities",
+            "evidence", "claims", "claim_evidence", "entities", "parties",
+            "decision_snapshots", "decision_traces", "approvals", "workflow_state",
+            "workflow_events", "application_events", "revenue",
+        }
+        assert required <= tables
+        c.close()
