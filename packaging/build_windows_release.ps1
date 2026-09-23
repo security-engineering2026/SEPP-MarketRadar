@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 $version = (py -c "from marketradar import __version__; print(__version__)").Trim()
 if (-not $version) { throw "Could not read application version" }
 Write-Host "Building SEPP-MarketRadar v$version"
-if ($version -ne "16.1.1") { throw "Unexpected version: $version" }
+
 
 py -3 -m pip install --upgrade pip
 py -3 -m pip install -r requirements.txt pyinstaller
