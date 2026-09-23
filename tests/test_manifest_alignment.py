@@ -225,6 +225,9 @@ def test_fast_regression_gate_is_independent_and_fail_closed():
     assert "release_audit.py" in workflow
     assert "if-no-files-found" not in workflow
     assert "C:\\Users\\" not in workflow
+    assert 'Join-Path $env:SystemDrive "Users"' in workflow
+    assert "Python (\\d+)\\.(\\d+)\\.(\\d+)" in workflow
+    assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
 
 
 def test_autonomous_supervisor_persists_hashed_checkpoint_evidence():
