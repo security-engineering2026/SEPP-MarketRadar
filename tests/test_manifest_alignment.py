@@ -202,3 +202,40 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_manifest_daily_intelligence_center_preserves_top7_do_now_monitor_blocked_and_unknown_views():
+    from marketradar.goal_completion import decision_center
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "daily-center.db")
+        try:
+            for i in range(10):
+                eligibility = "EXECUTE" if i < 5 else "REVIEW"
+                application_ready = 1 if i < 3 else 0
+                c.execute(
+                    "INSERT INTO opportunities(source,title,url,state,eligibility,application_ready,rank_score,score) VALUES(?,?,?,?,?,?,?,?)",
+                    ("test", f"Top {i}", f"https://example.test/{i}", "DISCOVERED", eligibility, application_ready, 1.0 - i / 20, 1.0 - i / 20),
+                )
+            for kind in ("BLOCK", "UNKNOWN"):
+                c.execute(
+                    "INSERT INTO opportunities(source,title,url,state,eligibility,application_ready,rank_score,score) VALUES(?,?,?,?,?,?,?,?)",
+                    ("test", kind, f"https://example.test/{kind.lower()}", "DISCOVERED", kind, 0, 0.1, 0.1),
+                )
+            c.commit()
+            payload = decision_center(c)
+            assert len(payload["top7"]) == 7
+            assert len(payload["do_now"]) <= 3
+            assert len(payload["approval_required"]) <= 2
+            assert len(payload["monitor"]) <= 2
+            assert all(x["eligibility"] == "BLOCK" for x in payload["blocked"])
+            assert all(x["eligibility"] == "UNKNOWN" for x in payload["unknown"])
+            snapshot = c.execute("SELECT * FROM decision_snapshots ORDER BY id DESC LIMIT 1").fetchone()
+            trace = c.execute("SELECT * FROM decision_traces WHERE decision_type='DAILY_SNAPSHOT' ORDER BY id DESC LIMIT 1").fetchone()
+            assert snapshot is not None
+            assert trace is not None
+            assert trace["target_type"] == "DECISION_SNAPSHOT"
+            assert '"blocked"' in trace["claims_json"]
+            assert '"unknown"' in trace["claims_json"]
+        finally:
+            c.close()
