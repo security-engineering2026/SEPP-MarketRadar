@@ -214,3 +214,13 @@ def test_windows_verification_is_independent_of_external_full_qualification_gate
     assert "Installer install / EXE / UI / uninstall" in workflow
     assert "SEARXNG_URL" not in workflow
     assert "QUALIFY_ENGINE_URL" not in workflow
+
+
+def test_fast_regression_gate_is_independent_and_fail_closed():
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github" / "workflows" / "fast-regression.yml").read_text(encoding="utf-8")
+    assert "runs-on: [self-hosted, Windows, X64, marketradar]" in workflow
+    assert "python -m pytest -q" in workflow
+    assert "product_audit.py" in workflow
+    assert "release_audit.py" in workflow
+    assert "if-no-files-found" not in workflow
