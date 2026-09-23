@@ -302,3 +302,42 @@ def test_manifest_outcomes_are_immutable_learning_inputs():
 
         cdb.close()
 
+def test_manifest_learning_does_not_rewrite_historical_observations():
+    from marketradar.outcome_learning import record_outcome
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        cdb.execute(
+            "INSERT INTO opportunities(source,title,url,description,category,budget,state,first_seen,last_seen) VALUES(?,?,?,?,?,?,?,?,?)",
+            ("source-a", "Historical", "https://example.test/historical", "original description", "python_debugging", 1000, "DISCOVERED", "2026-01-01T00:00:00Z", "2026-01-01T00:00:00Z"),
+        )
+        oid = cdb.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/historical",)).fetchone()["id"]
+        payload = b'{"title":"Historical","budget":1000,"version":1}'
+        cdb.execute(
+            "INSERT INTO raw_observations(source,url,observed_at,payload,payload_sha256,http_status,content_type) VALUES(?,?,?,?,?,?,?)",
+            ("source-a", "https://example.test/historical", "2026-01-01T00:00:00Z", payload, "digest-v1", 200, "application/json"),
+        )
+        before_obs = dict(cdb.execute(
+            "SELECT source,url,observed_at,payload,payload_sha256,http_status,content_type FROM raw_observations WHERE url=?",
+            ("https://example.test/historical",),
+        ).fetchone())
+        before_opp = dict(cdb.execute(
+            "SELECT source,title,url,description,category,budget,state,first_seen,last_seen FROM opportunities WHERE id=?",
+            (oid,),
+        ).fetchone())
+
+        record_outcome(cdb, oid, "REJECTED", reason="budget")
+
+        after_obs = dict(cdb.execute(
+            "SELECT source,url,observed_at,payload,payload_sha256,http_status,content_type FROM raw_observations WHERE url=?",
+            ("https://example.test/historical",),
+        ).fetchone())
+        after_opp = dict(cdb.execute(
+            "SELECT source,title,url,description,category,budget,state,first_seen,last_seen FROM opportunities WHERE id=?",
+            (oid,),
+        ).fetchone())
+        assert after_obs == before_obs
+        assert after_opp == before_opp
+        assert cdb.execute("SELECT COUNT(*) FROM raw_observations WHERE url=?", ("https://example.test/historical",)).fetchone()[0] == 1
+        cdb.close()
+
