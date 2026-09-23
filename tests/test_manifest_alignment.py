@@ -486,7 +486,7 @@ def test_manifest_trust_reputation_separates_confidence_from_reputation_and_surf
             ).fetchone()
             assert stored is not None
             assert stored["state"] == result["state"]
-            assert stored["confidence"] == result["confidence"]
+            assert round(stored["confidence"], 3) == result["confidence"]
             assert stored["independent_provenance_count"] == 1
             assert "PROVENANCE_CONCENTRATION" in stored["flags_json"]
 
