@@ -202,3 +202,25 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+def test_manifest_recommendation_is_not_authorization():
+    from marketradar.recommendation_engine import recommend
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        cdb.execute(
+            "INSERT INTO sources(name,source_lane,iran_eligibility) VALUES(?,?,?)",
+            ("test", "DAILY_PROJECT_SCAN", "ALLOW"),
+        )
+        cdb.execute(
+            "INSERT INTO opportunities(source,title,url,state,eligibility,rank_score,score,task_type,difficulty_score,evidence_confidence) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?)",
+            ("test", "Recommended", "https://example.test/recommend", "DISCOVERED", "EXECUTE", 0.95, 0.95, "python_automation", 2, 0.9),
+        )
+        cdb.commit()
+
+        result = recommend(cdb, {"selected_domains": ["python"]})
+        assert result["top7"]
+        assert result["top7"][0]["opportunity_id"] == cdb.execute("SELECT id FROM opportunities WHERE title=?", ("Recommended",)).fetchone()["id"]
+        assert cdb.execute("SELECT COUNT(*) AS n FROM action_authorizations").fetchone()["n"] == 0
+        assert cdb.execute("SELECT state FROM opportunities WHERE title=?", ("Recommended",)).fetchone()["state"] == "DISCOVERED"
+        cdb.close()
