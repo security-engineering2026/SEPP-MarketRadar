@@ -302,3 +302,43 @@ def test_manifest_canonical_opportunity_preserves_observation_and_conflicting_ev
         raw_count = cdb.execute("SELECT COUNT(*) AS n FROM raw_observations WHERE source='CANONICAL_TEST'").fetchone()["n"]
         assert raw_count == 2
         cdb.close()
+
+    
+def test_manifest_deduplication_uses_canonical_opportunity_identity_and_retains_history():
+    from marketradar.pipeline import Pipeline
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        source = {
+            "name": "DEDUP_TEST", "base_url": "https://example.test/feed",
+            "adapter": "json", "status": "active", "source_kind": "website",
+            "acquisition": "http", "access_scope": "public", "iran_status": "ALLOW",
+            "kyc_status": "ALLOW", "payment_status": "USDT", "terms_status": "allowed",
+        }
+        p = Pipeline(cdb)
+        first = {
+            "title": "Stable identity",
+            "url": "https://example.test/op/42?utm_source=feed",
+            "description": "first observation",
+            "evidence": [{"kind": "listing", "url": "https://example.test/op/42", "finding": "first", "confidence": 0.9}],
+        }
+        second = {
+            "title": "Stable identity updated",
+            "url": "https://EXAMPLE.TEST/op/42#tracking",
+            "description": "second observation",
+            "evidence": [{"kind": "listing", "url": "https://example.test/op/42", "finding": "second", "confidence": 0.9}],
+        }
+        p.ingest(source, first)
+        cdb.commit()
+        p.ingest(source, second)
+        cdb.commit()
+
+        opportunities = cdb.execute("SELECT id,title FROM opportunities").fetchall()
+        assert len(opportunities) == 1
+        oid = opportunities[0]["id"]
+        assert cdb.execute("SELECT url FROM opportunities WHERE id=?", (oid,)).fetchone()["url"] == "https://example.test/op/42"
+
+        evidence = cdb.execute("SELECT finding FROM evidence WHERE opportunity_id=? ORDER BY id", (oid,)).fetchall()
+        assert {row["finding"] for row in evidence} == {"first", "second"}
+        assert cdb.execute("SELECT COUNT(*) AS n FROM opportunity_sources WHERE opportunity_id=?", (oid,)).fetchone()["n"] == 1
+        cdb.close()
