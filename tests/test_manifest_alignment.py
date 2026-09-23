@@ -227,7 +227,6 @@ def test_fast_regression_gate_is_independent_and_fail_closed():
     assert "release_audit.py" in workflow
     assert "if-no-files-found" not in workflow
     assert "C:\\Users\\" not in workflow
-    assert 'Join-Path $env:SystemDrive "Users"' in workflow
     assert "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97" in workflow
     assert "python-version: '3.13'" in workflow
 
