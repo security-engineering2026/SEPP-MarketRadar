@@ -37,7 +37,12 @@ jobs:
               $versionText = (& $candidate --version 2>$null).Trim()
               if ($versionText -match 'Python (\d+)\.(\d+)\.(\d+)') {
                 $major = [int]$Matches[1]; $minor = [int]$Matches[2]
-                if ($major -gt 3 -or ($major -eq 3 -and $minor -ge 12)) { return $candidate }
+                if ($major -gt 3 -or ($major -eq 3 -and $minor -ge 12)) {
+                  try {
+                    & $candidate -c "import tkinter; print('TKINTER_OK')" 2>$null | Out-Null
+                    if ($LASTEXITCODE -eq 0) { return $candidate }
+                  } catch {}
+                }
               }
             } catch {}
             return $null
@@ -99,8 +104,8 @@ jobs:
           }
           if (-not $python) {
             $root = Join-Path $env:RUNNER_TEMP "marketradar-python"
-            $pkg = Join-Path $env:RUNNER_TEMP "python-3.13.15.zip"
-            $url = "https://api.nuget.org/v3-flatcontainer/python/3.13.15/python.3.13.15.nupkg"
+            $pkg = Join-Path $env:RUNNER_TEMP "python-3.13.13-amd64.exe"
+            $url = "https://www.python.org/ftp/python/3.13.13/python-3.13.13-amd64.exe"
             New-Item -ItemType Directory -Force -Path $root | Out-Null
             try {
               Invoke-WebRequest -Uri $url -OutFile $pkg -UseBasicParsing -TimeoutSec 240
@@ -108,11 +113,12 @@ jobs:
               & curl.exe --fail --location --retry 3 --retry-all-errors --connect-timeout 20 --max-time 240 -o $pkg $url
               if ($LASTEXITCODE -ne 0) { throw "Python bootstrap download failed; curl exit=$LASTEXITCODE" }
             }
-            if ((Get-Item $pkg).Length -lt 1000000) { throw "Python bootstrap package is unexpectedly small." }
-            Expand-Archive -LiteralPath $pkg -DestinationPath $root -Force
-            $python = Get-ChildItem -LiteralPath $root -Filter "python.exe" -Recurse -File |
-              Select-Object -First 1 -ExpandProperty FullName
-            $python = Test-PythonCandidate $python
+            if ((Get-Item $pkg).Length -lt 20000000) { throw "Python bootstrap installer is unexpectedly small." }
+            New-Item -ItemType Directory -Force -Path $root | Out-Null
+            $args = '/quiet InstallAllUsers=0 PrependPath=0 Include_test=0 Include_tcltk=1 Include_pip=1 TargetDir="' + $root + '"'
+            $installer = Start-Process -FilePath $pkg -ArgumentList $args -Wait -PassThru
+            if ($installer.ExitCode -ne 0) { throw "Python bootstrap installer failed: $($installer.ExitCode)" }
+            $python = Test-PythonCandidate (Join-Path $root "python.exe")
           }
           if (-not $python) { throw "PYTHON_3_12_PLUS_NOT_FOUND" }
           "MARKETRADAR_PYTHON_EXE=$python" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
