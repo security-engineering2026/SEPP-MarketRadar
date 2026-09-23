@@ -202,3 +202,31 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_manifest_application_lifecycle_enforces_valid_transitions_and_rejects_invalid_state_changes():
+    from marketradar.application import transition
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "lifecycle.db")
+        try:
+            c.execute(
+                "INSERT INTO opportunities(source,title,url,state) VALUES(?,?,?,?)",
+                ("test", "Lifecycle", "https://example.test/lifecycle", "DISCOVERED"),
+            )
+            oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/lifecycle",)).fetchone()["id"]
+            transition(c, oid, "ELIGIBILITY_CHECK", actor="test")
+            transition(c, oid, "APPROVAL_PENDING", actor="test")
+            transition(c, oid, "SUBMITTED", actor="test")
+            row = c.execute("SELECT state FROM opportunities WHERE id=?", (oid,)).fetchone()
+            assert row["state"] == "SUBMITTED"
+            with pytest.raises(ValueError):
+                transition(c, oid, "PAID", actor="test")
+            events = c.execute("SELECT from_state,to_state,actor FROM application_events WHERE opportunity_id=? ORDER BY id", (oid,)).fetchall()
+            assert [(r["from_state"], r["to_state"]) for r in events] == [
+                ("DISCOVERED", "ELIGIBILITY_CHECK"),
+                ("ELIGIBILITY_CHECK", "APPROVAL_PENDING"),
+                ("APPROVAL_PENDING", "SUBMITTED"),
+            ]
+        finally:
+            c.close()
