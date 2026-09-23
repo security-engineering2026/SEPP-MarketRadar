@@ -186,3 +186,12 @@ The remaining gaps above are now the implementation queue. No item will be repor
 - The full pytest suite executed and passed, including the Manifest alignment tests for temporal contradiction, capability ladder, acquisition fallback, decision trace immutability, ACTION_EXECUTION outcome tracing, and DAILY_SNAPSHOT trace coverage.
 - Four previously evidence-pending Manifest implementation contracts are now PASS: Temporal contradiction model, Source capability ladder, Acquisition fallback contract, Consequential decision trace.
 - Remaining explicit Manifest gaps: Windows product qualification and Full post-audit CI evidence.
+
+
+## 2026-09-23 — Manifest-driven execution framework locked
+- Added `docs/MANIFEST_DRIVEN_ENGINEERING.md` as the durable continuation contract.
+- The engineering chain is now explicitly: MANIFEST -> OUTPUT -> GOAL -> EVIDENCE -> TEST -> ENVIRONMENT -> REUSE -> EXECUTE -> FAILURE EXTRACTION -> ROOT CAUSE -> MINIMAL PATCH -> REGRESSION -> QUALIFICATION -> MANIFEST RECONCILIATION.
+- GitHub is explicitly treated as one evidence environment, not the product definition or decision authority.
+- Added required Goal/Evidence/Environment/Reuse tracking fields and explicit routing for Windows product evidence, Android evidence, live Internet, external endpoints, and release artifacts.
+- Added a reuse hierarchy across MarketRadar, CDR Core, Software Forge, official tooling, and mature open source before new implementation.
+- Added parallel-execution and status-discipline rules; queue state is not product failure.
