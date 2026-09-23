@@ -224,3 +224,12 @@ def test_fast_regression_gate_is_independent_and_fail_closed():
     assert "product_audit.py" in workflow
     assert "release_audit.py" in workflow
     assert "if-no-files-found" not in workflow
+
+
+def test_autonomous_supervisor_persists_hashed_checkpoint_evidence():
+    root = Path(__file__).resolve().parents[1]
+    source = (root / "tools" / "autonomous_supervisor.py").read_text(encoding="utf-8")
+    assert "AUTONOMOUS_CHECKPOINT.json" in source
+    assert "hashlib.sha256(test_out.encode" in source
+    assert '"evidence_digest": evidence_digest' in source
+    assert "tmp.replace(CHECKPOINT)" in source
