@@ -430,8 +430,8 @@ def test_manifest_evidence_graph_links_source_observation_evidence_claim_and_dom
         opportunity = cdb.execute("SELECT id,source FROM opportunities WHERE url=?", ("https://example.test/op/graph",)).fetchone()
         observations = cdb.execute("SELECT id,source,payload_sha256 FROM raw_observations WHERE payload_sha256 IN (?,?) ORDER BY id", (digests[0], digests[1])).fetchall()
         evidence_rows = cdb.execute("SELECT id,opportunity_id,observation_id,source,finding FROM evidence WHERE opportunity_id=? ORDER BY id", (opportunity["id"],)).fetchall()
-        claim = cdb.execute("SELECT id,opportunity_id,claim_type FROM claims WHERE opportunity_id=? ORDER BY id LIMIT 1", (opportunity["id"],)).fetchone()
-        claim_links = cdb.execute("SELECT claim_id,evidence_id FROM claim_evidence WHERE claim_id=?", (claim["id"],)).fetchall()
+        claims = cdb.execute("SELECT id,opportunity_id,claim_type,claim_value FROM claims WHERE opportunity_id=? ORDER BY id", (opportunity["id"],)).fetchall()
+        claim_links = cdb.execute("SELECT claim_id,evidence_id FROM claim_evidence WHERE claim_id IN (SELECT id FROM claims WHERE opportunity_id=?)", (opportunity["id"],)).fetchall()
         conflicts = cdb.execute("SELECT relation FROM claim_conflicts WHERE opportunity_id=? AND claim_type='iran_access'", (opportunity["id"],)).fetchall()
 
         assert len(observations) == 2
@@ -441,7 +441,9 @@ def test_manifest_evidence_graph_links_source_observation_evidence_claim_and_dom
         assert {row["observation_id"] for row in evidence_rows} == {row["id"] for row in observations}
         assert all(row["opportunity_id"] == opportunity["id"] and row["source"] == "GRAPH_TEST" for row in evidence_rows)
         assert {row["finding"] for row in evidence_rows} == {"observed-0", "observed-1"}
-        assert claim["opportunity_id"] == opportunity["id"]
+        assert len(claims) >= 1
+        assert all(row["opportunity_id"] == opportunity["id"] for row in claims)
         assert {row["evidence_id"] for row in claim_links} == {row["id"] for row in evidence_rows}
+        assert all(row["claim_id"] in {c["id"] for c in claims} for row in claim_links)
         assert any(row["relation"] == "CONTRADICTS" for row in conflicts)
         cdb.close()
