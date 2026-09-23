@@ -454,44 +454,53 @@ def test_manifest_trust_reputation_separates_confidence_from_reputation_and_surf
 
     with tempfile.TemporaryDirectory() as td:
         cdb = connect(Path(td) / "test.db")
-        party = cdb.execute(
-            "INSERT INTO entities(entity_type,name,normalized_name,domain,created_at) VALUES(?,?,?,?,?)",
-            ("Party", "Trust Test Party", "trust test party", "trust.example", "2026-09-23T20:00:00+00:00"),
-        ).lastrowid
-
-        for i in range(4):
-            cdb.execute(
-                "INSERT INTO reviews(party_entity_id,source,author_key,text,rating,observed_at,provenance_root,verified) VALUES(?,?,?,?,?,?,?,?)",
+        try:
+            party = cdb.execute(
+                "INSERT INTO entities(entity_type,canonical_name,normalized_name,domain,created_at,updated_at) VALUES(?,?,?,?,?,?)",
                 (
-                    party, "review-source", f"author-{i}", "Useful service", 5,
-                    f"2026-09-23T20:0{i}:00+00:00", "same-root", 1,
+                    "Party", "Trust Test Party", "trust test party", "trust.example",
+                    "2026-09-23T20:00:00+00:00", "2026-09-23T20:00:00+00:00",
                 ),
-            )
-        cdb.commit()
+            ).lastrowid
 
-        result = analyze_reviews(cdb, party)
-        assert result["independent_provenance_count"] == 1
-        assert "PROVENANCE_CONCENTRATION" in result["flags"]
-        assert result["state"] == "MIXED"
+            for i in range(4):
+                cdb.execute(
+                    "INSERT INTO reviews(party_entity_id,source,author_key,text,rating,observed_at,provenance_root,verified) VALUES(?,?,?,?,?,?,?,?)",
+                    (
+                        party, "review-source", f"author-{i}", f"Useful service review {i}", 5,
+                        f"2026-09-{20+i:02d}T20:00:00+00:00", "same-root", 1,
+                    ),
+                )
+            cdb.commit()
 
-        stored = cdb.execute(
-            "SELECT state,confidence,independent_provenance_count,flags_json "
-            "FROM trust_assessments WHERE entity_id=? AND target_type='REPUTATION' AND target_id=?",
-            (party, str(party)),
-        ).fetchone()
-        assert stored is not None
-        assert stored["state"] == result["state"]
-        assert stored["confidence"] == result["confidence"]
-        assert stored["independent_provenance_count"] == 1
-        assert "PROVENANCE_CONCENTRATION" in stored["flags_json"]
+            result = analyze_reviews(cdb, party)
+            assert result["independent_provenance_count"] == 1
+            assert "PROVENANCE_CONCENTRATION" in result["flags"]
+            assert result["state"] == "MIXED"
+            assert result["confidence"] > 0
 
-        unknown_party = cdb.execute(
-            "INSERT INTO entities(entity_type,name,normalized_name,domain,created_at) VALUES(?,?,?,?,?)",
-            ("Party", "Unknown Party", "unknown party", "unknown.example", "2026-09-23T20:00:00+00:00"),
-        ).lastrowid
-        unknown = analyze_reviews(cdb, unknown_party)
-        assert unknown["state"] == "UNKNOWN"
-        assert unknown["confidence"] == 0
-        assert unknown["independent_provenance_count"] == 0
-        assert "NO_REVIEWS" in unknown["flags"]
-        cdb.close()
+            stored = cdb.execute(
+                "SELECT state,confidence,independent_provenance_count,flags_json "
+                "FROM trust_assessments WHERE entity_id=? AND target_type='REPUTATION' AND target_id=?",
+                (party, str(party)),
+            ).fetchone()
+            assert stored is not None
+            assert stored["state"] == result["state"]
+            assert stored["confidence"] == result["confidence"]
+            assert stored["independent_provenance_count"] == 1
+            assert "PROVENANCE_CONCENTRATION" in stored["flags_json"]
+
+            unknown_party = cdb.execute(
+                "INSERT INTO entities(entity_type,canonical_name,normalized_name,domain,created_at,updated_at) VALUES(?,?,?,?,?,?)",
+                (
+                    "Party", "Unknown Party", "unknown party", "unknown.example",
+                    "2026-09-23T20:00:00+00:00", "2026-09-23T20:00:00+00:00",
+                ),
+            ).lastrowid
+            unknown = analyze_reviews(cdb, unknown_party)
+            assert unknown["state"] == "UNKNOWN"
+            assert unknown["confidence"] == 0
+            assert unknown["independent_provenance_count"] == 0
+            assert "NO_REVIEWS" in unknown["flags"]
+        finally:
+            cdb.close()
