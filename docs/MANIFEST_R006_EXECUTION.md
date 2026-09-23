@@ -1,0 +1,32 @@
+# R006 — Payment claim is not payment verification
+
+- **Manifest Ref:** docs/MANIFEST.md §2 Core truth model; §32 Revenue/payment
+- **Manifest SHA:** 447b56f8a3a61ee34288730c705d9b0680c00e95
+- **MICU:** Prove that a payment claim/recording is not payment verification and cannot itself produce PAID.
+- **Depends On:** R005
+- **Code Location:** marketradar/application.py (`record_revenue`, `verify_payment`); marketradar/db.py revenue/payment verification schema
+- **Code State:** PRESENT
+- **Current Behavior:** `record_revenue()` requires DELIVERED, records payment as `RECORDED_UNVERIFIED`, and does not transition the opportunity. `verify_payment()` is a separate authority path; only VERIFIED transitions DELIVERED → PAID. Revenue payment references are unique.
+- **Exact Gap:** Fresh direct regression proof for the full claim → non-verified verification → duplicate-reference → verified-PAID boundary was missing; no production implementation defect was found.
+- **Solution Search:** Same repository `application.py`, DB schema and existing lifecycle/security tests inspected. No external implementation was required.
+- **Reuse Decision:** CONFIRM EXISTING — existing revenue/verification separation is the authoritative implementation.
+- **Patch Action:** Production code unchanged. Added `test_manifest_payment_claim_is_not_payment_verification` to `tests/test_manifest_alignment.py`.
+- **Focused Test:** `test_manifest_payment_claim_is_not_payment_verification`
+- **Regression:** Full `python -m pytest -q` in Windows CI.
+- **Adversarial:** Payment claim leaves state DELIVERED; NOT_VERIFIED verification leaves it DELIVERED; duplicate payment reference is rejected; only VERIFIED verification reaches PAID.
+- **Required Environment:** GitHub-hosted Actions, Windows CI / job test-windows, run **35890808568**, job **107282475259**.
+- **Environment Owner/Why:** Revenue/payment lifecycle is a core domain invariant; repository Windows CI is the authoritative regression gate for this execution queue.
+- **Proof Command:** `python -m pytest -q`
+- **Expected Result:** Claim and verification remain separate; PAID requires explicit VERIFIED payment verification; duplicate references are rejected.
+- **Actual Result:** **PASS** — Compile, full pytest, Product audit, Release audit and live-search smoke completed successfully.
+- **Evidence Commit:** 4566fd251af47b3dc88b331703241f90fb86d50d
+- **Evidence:** GitHub Actions Windows CI run 35890808568 / test-windows job 107282475259.
+- **Evidence Type:** CI / REGRESSION / ADVERSARIAL
+- **Reproducible:** YES
+- **Contradiction:** NONE FOUND in payment lifecycle, revenue recording, verification and DB schema paths inspected.
+- **Impact Set:** NONE — production code unchanged; regression test only.
+- **Audit Update:** R006 execution record added; next MICU remains locked until this row is closed.
+- **Audit Classification:** VALID
+- **Final Status:** PASS
+- **Execution State:** CLOSED
+- **Merge:** NOT PERFORMED
