@@ -199,6 +199,6 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "runs-on: [self-hosted, Windows, X64, marketradar]" in workflow
     assert "actions/setup-python@" not in workflow
     assert "Prepare self-hosted Python" in workflow
-    assert "py -3" in workflow
+    assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
