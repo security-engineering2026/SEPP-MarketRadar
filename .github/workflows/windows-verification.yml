@@ -30,8 +30,6 @@ jobs:
       - name: Resolve Python runtime
         run: |
           $candidates = @(
-            "C:\Users\Lotus Store\AppData\Local\Programs\Python\Python314\python.exe",
-            "C:\Users\Lotus Store\AppData\Local\Programs\Python\Python313\python.exe",
             "$env:ProgramFiles\Python*\python.exe",
             "$env:ProgramFiles\Python*\*\python.exe",
             "$env:LOCALAPPDATA\Programs\Python\Python*\python.exe",
