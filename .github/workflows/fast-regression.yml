@@ -39,9 +39,18 @@ jobs:
             } catch {}
             return $null
           }
+          $pythonLauncher = (Get-Command py.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1)
+          if ($pythonLauncher) {
+            try {
+              $resolved = (& $pythonLauncher -3 -c "import sys; print(sys.executable)" 2>$null).Trim()
+              if ($resolved) {
+                $valid = Test-PythonCandidate $resolved
+                if ($valid) { $python = $valid }
+              }
+            } catch {}
+          }
           $candidates = @(
             (Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1),
-            (Get-Command py.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1),
             "$env:ProgramFiles\Python*\python.exe",
             "$env:ProgramFiles\Python*\*\python.exe",
             "$env:LOCALAPPDATA\Programs\Python\Python*\python.exe",
