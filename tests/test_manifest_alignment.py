@@ -202,3 +202,45 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_manifest_ranking_is_separate_from_policy_and_exposes_scoring_factors():
+    from marketradar.opportunity_ranker import rank_opportunity
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "ranking.db")
+        try:
+            base = {
+                "title": "Python automation",
+                "description": "Python API automation dashboard",
+                "category": "software",
+                "eligibility": "BLOCK",
+                "evidence_confidence": 0.95,
+                "quality_score": 0.95,
+                "budget": 1500,
+                "last_seen": "2026-09-23T00:00:00+00:00",
+                "skill_fit": 0.95,
+                "difficulty_fit": 0.9,
+            }
+            ranked = rank_opportunity(base, {"skills": ["Python", "API"], "learning": {"level": 3, "tracks": ["software_engineering"], "stretch": True}})
+            assert 0 <= ranked["rank_score"] <= 1
+            for key in {"skill_fit", "difficulty_fit", "learning_value", "competition_score", "application_speed_score", "freshness_score"}:
+                assert key in ranked
+
+            c.execute(
+                "INSERT INTO opportunities(source,title,url,state,eligibility,application_ready,rank_score,score) VALUES(?,?,?,?,?,?,?,?)",
+                ("test", "Blocked", "https://example.test/blocked", "DISCOVERED", "BLOCK", 1, ranked["rank_score"], ranked["rank_score"]),
+            )
+            c.execute(
+                "INSERT INTO opportunities(source,title,url,state,eligibility,application_ready,rank_score,score) VALUES(?,?,?,?,?,?,?,?)",
+                ("test", "Unknown", "https://example.test/unknown", "DISCOVERED", "UNKNOWN", 1, ranked["rank_score"], ranked["rank_score"]),
+            )
+            c.commit()
+            from marketradar.goal_completion import decision_center
+            payload = decision_center(c)
+            assert all(x["eligibility"] != "BLOCK" for x in payload["do_now"])
+            assert all(x["eligibility"] != "UNKNOWN" for x in payload["do_now"])
+            assert any(x["eligibility"] == "BLOCK" for x in payload["blocked"])
+            assert any(x["eligibility"] == "UNKNOWN" for x in payload["unknown"])
+        finally:
+            c.close()
