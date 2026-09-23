@@ -202,3 +202,33 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_manifest_delivery_records_immutable_artifact_evidence_and_rejects_bad_checksum():
+    from hashlib import sha256
+    from marketradar.operational_completion import OperationalError, record_delivery
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "delivery.db")
+        artifact = Path(td) / "artifact.txt"
+        artifact.write_text("delivery-proof", encoding="utf-8")
+        try:
+            c.execute(
+                "INSERT INTO opportunities(source,title,url,state) VALUES(?,?,?,?)",
+                ("test", "Delivery", "https://example.test/delivery", "IN_PROGRESS"),
+            )
+            oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/delivery",)).fetchone()["id"]
+            digest = sha256(artifact.read_bytes()).hexdigest()
+            result = record_delivery(c, oid, str(artifact), checksum=digest, evidence_url="https://example.test/evidence", actor="test")
+            assert result["status"] == "DELIVERED"
+            assert result["artifact_sha256"] == digest
+            row = c.execute("SELECT artifact_sha256,evidence_url,actor FROM delivery_evidence WHERE opportunity_id=?", (oid,)).fetchone()
+            assert row["artifact_sha256"] == digest
+            assert row["evidence_url"] == "https://example.test/evidence"
+            assert row["actor"] == "test"
+            assert c.execute("SELECT state FROM opportunities WHERE id=?", (oid,)).fetchone()["state"] == "DELIVERED"
+
+            with pytest.raises(OperationalError, match="DELIVERY_CHECKSUM_MISMATCH"):
+                record_delivery(c, oid, str(artifact), checksum="0" * 64)
+        finally:
+            c.close()
