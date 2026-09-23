@@ -192,3 +192,13 @@ def test_manifest_runtime_version_surfaces_are_not_hardcoded():
     assert "16.1.1" not in android
     assert "FINAL_VERIFICATION_16.1.1.json" not in cli
     assert '16.1.1' not in release
+
+def test_self_hosted_full_qualification_uses_local_python():
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github" / "workflows" / "full-qualification.yml").read_text(encoding="utf-8")
+    assert "runs-on: [self-hosted, Windows, X64, marketradar]" in workflow
+    assert "actions/setup-python@" not in workflow
+    assert "Prepare self-hosted Python" in workflow
+    assert "py -3" in workflow
+    assert "PYTHON_VERSION_TOO_OLD" in workflow
+
