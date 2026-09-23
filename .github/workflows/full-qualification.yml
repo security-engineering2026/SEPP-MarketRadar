@@ -57,6 +57,7 @@ jobs:
           foreach ($candidate in ($candidates | Where-Object { $_ } | Select-Object -Unique)) {
             try {
               $v = (& $candidate -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')").Trim()
+              # PYTHON_VERSION_TOO_OLD: candidates below 3.12 are rejected here.
               if ([version]$v -ge [version]'3.12') { $python = $candidate; break }
               $tooOld = $true
             } catch {}
