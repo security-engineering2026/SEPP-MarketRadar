@@ -178,7 +178,7 @@ def test_manifest_qualification_report_uses_current_version_and_gate_name():
     assert '"LIVE_SOURCE_REACHABILITY_500"' in source
     assert '"LIVE_SOURCE_SCALE_500"' not in source
     assert '"product_version": "16.1.1"' not in source
-    assert f'FullQualification/{__version__}' in source
+    assert '"User-Agent": f"SEPP-MarketRadar-FullQualification/{__version__}"' in source
 
 def test_manifest_runtime_version_surfaces_are_not_hardcoded():
     root = Path(__file__).resolve().parents[1]
