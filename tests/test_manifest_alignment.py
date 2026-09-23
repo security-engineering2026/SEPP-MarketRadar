@@ -202,3 +202,11 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_self_hosted_python_bootstrap_does_not_corrupt_github_environment():
+    root = Path(__file__).resolve().parents[1]
+    workflow = (root / ".github" / "workflows" / "full-qualification.yml").read_text(encoding="utf-8")
+    assert "$python | Out-File -FilePath $env:GITHUB_ENV" not in workflow
+    assert "PYTHON_VERSION_TOO_OLD" in workflow
+    assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
