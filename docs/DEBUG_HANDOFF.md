@@ -114,3 +114,11 @@ Use the newest main commit as the source of truth. Inspect the next push-trigger
 - Cycle 001 is NOT EXECUTED. No PASS claim is made.
 - The current workflow already requests `copilot-requests: write` and supplies the Actions `GITHUB_TOKEN`; changing branch selection is not the remedy.
 - Next action: resolve Copilot CLI policy/licensing at the GitHub owner level, then rerun Cycle 001.
+
+## 2026-09-23 — Qualification continuation checkpoint
+
+- Test strategy: continue Manifest qualification on GitHub-hosted Windows/Android runners.
+- Environment-only blockers are recorded and bypassed after repeated failure; they are not treated as product defects without code evidence.
+- Product gates with concrete evidence remain priority: regression, compile, packaging, UI, installer, lifecycle, acquisition, source reachability, and Manifest contract coverage.
+- External engine/application/payment/push and dynamic discovery remain OPEN when required endpoints/secrets are absent; no synthetic PASS is allowed.
+- Next cycle: execute fresh Windows qualification and use the resulting gate evidence to separate product defects from runner/environment limitations.
