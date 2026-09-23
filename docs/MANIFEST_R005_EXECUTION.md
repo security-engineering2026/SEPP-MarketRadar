@@ -1,0 +1,30 @@
+# R005 — Recommendation is not authorization
+
+- **Manifest Ref:** docs/MANIFEST.md §2 — Core truth model
+- **Manifest SHA:** 447b56f8a3a61ee34288730c705d9b0680c00e95
+- **MICU:** Prove that recommendation output does not itself authorize or execute an action.
+- **Depends On:** R004
+- **Code Location:** marketradar/recommendation_engine.py; marketradar/goal_completion.py
+- **Code State:** PRESENT
+- **Current Behavior:** `recommend()` only constructs/persists recommendation records. It does not call authorization issuance or mutate opportunity execution state. Authorization is a separate `authorize_action()` path bound to evidence/policy/target/parameters.
+- **Exact Gap:** Fresh direct regression proof was missing; no production implementation defect was found.
+- **Solution Search:** Same-repository recommendation and authorization paths inspected. Existing decision-trace and authorization implementation confirmed the separation. No external patch was required.
+- **Reuse Decision:** CONFIRM EXISTING
+- **Patch Action:** Production code unchanged. Added `test_manifest_recommendation_is_not_authorization` in `tests/test_manifest_alignment.py`.
+- **Focused Test:** `test_manifest_recommendation_is_not_authorization`
+- **Regression:** Full `python -m pytest -q` in GitHub Actions Windows CI.
+- **Adversarial/Boundary Proof:** An opportunity already marked `EXECUTE` may appear in Top-7, but recommendation generation creates zero `action_authorizations` and leaves the opportunity state `DISCOVERED`.
+- **Required Environment:** GitHub-hosted Windows runner, workflow **Windows CI**, job **test-windows**, run **35890104597**, job **107280121446**.
+- **Why This Environment:** Repository Windows CI is the authoritative regression environment for this runtime/domain contract and executes the full test/audit chain.
+- **Proof Command:** `python -m pytest -q`
+- **Expected Result:** Recommendation remains a decision/view output and cannot itself authorize or execute an action.
+- **Actual Result:** **PASS** — Test step completed successfully; Compile, full pytest, Product audit, Release audit and live-search smoke job all completed successfully.
+- **Evidence Commit:** 7ef42004746f23521b52956262e85c25a313fccf
+- **Evidence:** GitHub Actions Windows CI run 35890104597 / test-windows job 107280121446.
+- **Evidence Type:** CI / REGRESSION / ADVERSARIAL
+- **Reproducible:** YES
+- **Contradiction:** NONE FOUND in inspected recommendation, decision-trace and authorization paths.
+- **Impact Set:** NONE — production code unchanged; regression test only.
+- **Final Status:** **PASS**
+- **Execution State:** **CLOSED**
+- **Merge:** NOT PERFORMED

@@ -202,3 +202,62 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+def test_manifest_recommendation_is_not_authorization():
+    from marketradar.recommendation_engine import recommend
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        cdb.execute(
+            "INSERT INTO sources(name,source_lane,iran_eligibility) VALUES(?,?,?)",
+            ("test", "DAILY_PROJECT_SCAN", "ALLOW"),
+        )
+        cdb.execute(
+            "INSERT INTO opportunities(source,title,url,state,eligibility,rank_score,score,task_type,difficulty_score,evidence_confidence) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?)",
+            ("test", "Recommended", "https://example.test/recommend", "DISCOVERED", "EXECUTE", 0.95, 0.95, "python_automation", 2, 0.9),
+        )
+        cdb.commit()
+
+        result = recommend(cdb, {"selected_domains": ["python"]})
+        assert result["top7"]
+        assert result["top7"][0]["opportunity_id"] == cdb.execute("SELECT id FROM opportunities WHERE title=?", ("Recommended",)).fetchone()["id"]
+        assert cdb.execute("SELECT COUNT(*) AS n FROM action_authorizations").fetchone()["n"] == 0
+        assert cdb.execute("SELECT state FROM opportunities WHERE title=?", ("Recommended",)).fetchone()["state"] == "DISCOVERED"
+        cdb.close()
+
+
+def test_manifest_payment_claim_is_not_payment_verification():
+    from marketradar.application import record_revenue, verify_payment
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        cdb.execute(
+            "INSERT INTO opportunities(source,title,url,state) VALUES(?,?,?,?)",
+            ("test", "Payment", "https://example.test/payment", "DELIVERED"),
+        )
+        oid = cdb.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/payment",)).fetchone()["id"]
+
+        record_revenue(
+            cdb, oid, 100, "USD", "2026-09-23T12:00:00+00:00", "PAY-001", commit=True
+        )
+        assert cdb.execute("SELECT state FROM opportunities WHERE id=?", (oid,)).fetchone()["state"] == "DELIVERED"
+        assert cdb.execute("SELECT verification_state FROM revenue WHERE payment_ref=?", ("PAY-001",)).fetchone()["verification_state"] == "RECORDED_UNVERIFIED"
+
+        result = verify_payment(cdb, oid, "PAY-001", status="NOT_VERIFIED", actor="test")
+        assert result["status"] == "NOT_VERIFIED"
+        assert cdb.execute("SELECT state FROM opportunities WHERE id=?", (oid,)).fetchone()["state"] == "DELIVERED"
+
+        try:
+            record_revenue(cdb, oid, 100, "USD", "2026-09-23T12:01:00+00:00", "PAY-001", commit=True)
+            assert False, "duplicate payment reference was accepted"
+        except Exception as exc:
+            assert "unique" in str(exc).lower() or "constraint" in str(exc).lower()
+
+        verify_payment(cdb, oid, "PAY-001", status="VERIFIED", actor="test")
+        assert cdb.execute("SELECT state FROM opportunities WHERE id=?", (oid,)).fetchone()["state"] == "PAID"
+        verification = cdb.execute(
+            "SELECT status FROM payment_verification WHERE opportunity_id=? AND payment_ref=? ORDER BY id DESC LIMIT 1",
+            (oid, "PAY-001"),
+        ).fetchone()
+        assert verification["status"] == "VERIFIED"
+        cdb.close()
