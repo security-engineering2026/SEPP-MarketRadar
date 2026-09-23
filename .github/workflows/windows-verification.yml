@@ -27,104 +27,15 @@ jobs:
         shell: powershell -ExecutionPolicy Bypass -File {0}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - name: Resolve Python runtime
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+      - name: Validate Windows Python runtime
+        shell: powershell -ExecutionPolicy Bypass -File {0}
         run: |
           $ErrorActionPreference = "Stop"
-          $python = $null
-          function Test-PythonCandidate([string]$candidate) {
-            if (-not $candidate -or -not (Test-Path -LiteralPath $candidate)) { return $null }
-            try {
-              $versionText = (& $candidate --version 2>$null).Trim()
-              if ($versionText -match 'Python (\d+)\.(\d+)\.(\d+)') {
-                $major = [int]$Matches[1]; $minor = [int]$Matches[2]
-                if ($major -gt 3 -or ($major -eq 3 -and $minor -ge 12)) {
-                  try {
-                    & $candidate -c "import tkinter; print('TKINTER_OK')" 2>$null | Out-Null
-                    if ($LASTEXITCODE -eq 0) { return $candidate }
-                  } catch {}
-                }
-              }
-            } catch {}
-            return $null
-          }
-          $pythonLauncher = (Get-Command py.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1)
-          if ($pythonLauncher) {
-            try {
-              $resolved = (& $pythonLauncher -3 -c "import sys; print(sys.executable)" 2>$null).Trim()
-              if ($resolved) {
-                $valid = Test-PythonCandidate $resolved
-                if ($valid) { $python = $valid }
-              }
-            } catch {}
-          }
-          $candidates = @(
-            (Get-Command python.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1),
-            "$env:ProgramFiles\Python*\python.exe",
-            "$env:ProgramFiles\Python*\*\python.exe",
-            "$env:LOCALAPPDATA\Programs\Python\Python*\python.exe",
-            "$env:USERPROFILE\AppData\Local\Programs\Python\Python*\python.exe",
-            "C:\Python*\python.exe"
-          )
-          $userProfiles = Get-ChildItem -Path (Join-Path $env:SystemDrive "Users") -Directory -ErrorAction SilentlyContinue
-          foreach ($profile in $userProfiles) {
-            $candidates += Join-Path $profile.FullName "AppData\Local\Programs\Python\Python*\python.exe"
-          }
-          foreach ($pattern in ($candidates | Where-Object { $_ } | Select-Object -Unique)) {
-            $found = Get-ChildItem -Path $pattern -File -ErrorAction SilentlyContinue |
-              Sort-Object FullName -Descending
-            foreach ($candidate in $found) {
-              $valid = Test-PythonCandidate $candidate.FullName
-              if ($valid) { $python = $valid; break }
-            }
-            if ($python) { break }
-            $valid = Test-PythonCandidate $pattern
-            if ($valid) { $python = $valid; break }
-          }
-          if (-not $python) {
-            foreach ($root in @(
-              "HKLM:\SOFTWARE\Python\PythonCore",
-              "HKLM:\SOFTWARE\WOW6432Node\Python\PythonCore",
-              "HKCU:\SOFTWARE\Python\PythonCore"
-            )) {
-              foreach ($key in @(Get-ChildItem $root -ErrorAction SilentlyContinue | Sort-Object PSChildName -Descending)) {
-                $install = (Get-ItemProperty $key.PSPath -ErrorAction SilentlyContinue).InstallPath
-                $valid = Test-PythonCandidate (Join-Path $install "python.exe")
-                if ($valid) { $python = $valid; break }
-              }
-              if ($python) { break }
-            }
-          }
-          if (-not $python) {
-            try {
-              foreach ($path in @(where.exe python.exe 2>$null)) {
-                $valid = Test-PythonCandidate $path
-                if ($valid) { $python = $valid; break }
-              }
-            } catch {}
-          }
-          if (-not $python) {
-            $root = Join-Path $env:RUNNER_TEMP "marketradar-python"
-            $pkg = Join-Path $env:RUNNER_TEMP "python-3.13.13-amd64.exe"
-            $url = "https://www.python.org/ftp/python/3.13.13/python-3.13.13-amd64.exe"
-            New-Item -ItemType Directory -Force -Path $root | Out-Null
-            try {
-              Invoke-WebRequest -Uri $url -OutFile $pkg -UseBasicParsing -TimeoutSec 240
-            } catch {
-              & curl.exe --fail --location --retry 3 --retry-all-errors --connect-timeout 20 --max-time 240 -o $pkg $url
-              if ($LASTEXITCODE -ne 0) { throw "Python bootstrap download failed; curl exit=$LASTEXITCODE" }
-            }
-            if ((Get-Item $pkg).Length -lt 20000000) { throw "Python bootstrap installer is unexpectedly small." }
-            New-Item -ItemType Directory -Force -Path $root | Out-Null
-            $args = '/quiet InstallAllUsers=0 PrependPath=0 Include_test=0 Include_tcltk=1 Include_pip=1 TargetDir="' + $root + '"'
-            $installer = Start-Process -FilePath $pkg -ArgumentList $args -Wait -PassThru
-            if ($installer.ExitCode -ne 0) { throw "Python bootstrap installer failed: $($installer.ExitCode)" }
-            $python = Test-PythonCandidate (Join-Path $root "python.exe")
-          }
-          if (-not $python) { throw "PYTHON_3_12_PLUS_NOT_FOUND" }
-          "MARKETRADAR_PYTHON_EXE=$python" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
-          Split-Path $python | Out-File $env:GITHUB_PATH -Append -Encoding utf8
-          & $python --version
-          Write-Host "PYTHON_RUNTIME=PASS"
+          python --version
+          python -c "import sys, tkinter; assert sys.version_info >= (3,12); print('PYTHON_RUNTIME=PASS'); print('TKINTER_OK')"
       - name: Install dependencies
         run: |
           & $env:MARKETRADAR_PYTHON_EXE -m pip install -r requirements-dev.txt pillow
