@@ -202,3 +202,55 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_manifest_observation_layer_preserves_acquisition_metadata_and_provenance():
+    from marketradar.source_health import persist_health
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        source = {
+            "name": "OBS_TEST",
+            "base_url": "https://example.test/feed",
+            "adapter": "json",
+            "status": "active",
+            "source_kind": "website",
+            "acquisition": "http",
+            "access_scope": "public",
+        }
+        payload = b'{"items":[{"title":"observed"}]}'
+        import hashlib
+        digest = hashlib.sha256(payload).hexdigest()
+        observed_at = "2026-09-23T18:00:00+00:00"
+        cdb.execute(
+            "INSERT INTO raw_observations(source,url,observed_at,payload,payload_sha256,http_status,content_type,observation_kind) VALUES(?,?,?,?,?,?,?,?)",
+            ("OBS_TEST", source["base_url"], observed_at, payload, digest, 200, "application/json", "source_response"),
+        )
+        cdb.commit()
+        persist_health(cdb, source, {
+            "status": "OK", "http_status": 200, "sha256": digest,
+            "parse_ok": True, "parsed_count": 1, "error": None, "parse_error": None,
+        })
+        raw = cdb.execute(
+            "SELECT source,url,observed_at,payload,payload_sha256,http_status,content_type,observation_kind "
+            "FROM raw_observations WHERE payload_sha256=?", (digest,)
+        ).fetchone()
+        run = cdb.execute(
+            "SELECT source,status,http_status,observation_count,snapshot_sha256 "
+            "FROM federation_runs WHERE snapshot_sha256=? ORDER BY id DESC LIMIT 1", (digest,)
+        ).fetchone()
+        health = cdb.execute(
+            "SELECT source,http_status,parse_ok,parsed_count,snapshot_sha256 "
+            "FROM source_health_history WHERE snapshot_sha256=? ORDER BY id DESC LIMIT 1", (digest,)
+        ).fetchone()
+        assert raw is not None and run is not None and health is not None
+        assert raw["source"] == run["source"] == health["source"] == "OBS_TEST"
+        assert raw["url"] == source["base_url"]
+        assert raw["observed_at"] == observed_at
+        assert raw["payload"] == payload
+        assert raw["payload_sha256"] == digest
+        assert raw["http_status"] == run["http_status"] == health["http_status"] == 200
+        assert raw["content_type"] == "application/json"
+        assert raw["observation_kind"] == "source_response"
+        assert run["snapshot_sha256"] == health["snapshot_sha256"] == digest
+        assert health["parse_ok"] == 1 and health["parsed_count"] == 1
+        cdb.close()
