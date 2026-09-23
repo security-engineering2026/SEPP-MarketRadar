@@ -387,3 +387,50 @@ def test_manifest_party_resolution_keeps_party_roles_distinct():
         assert {row["party_type"] for row in rows} == {"Agency", "Client", "Employer"}
         assert all(row["entity_id"] != rows[(i + 1) % len(rows)]["entity_id"] for i, row in enumerate(rows))
         cdb.close()
+
+    
+def test_manifest_evidence_graph_links_source_observation_evidence_claim_and_domain_object():
+    from marketradar.pipeline import AcquisitionAttestation, Pipeline
+    import hashlib
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        source = {
+            "name": "GRAPH_TEST", "base_url": "https://example.test/feed",
+            "adapter": "json", "status": "active", "source_kind": "website",
+            "acquisition": "http", "access_scope": "public", "iran_status": "ALLOW",
+            "kyc_status": "ALLOW", "payment_status": "USDT", "terms_status": "allowed",
+        }
+        payload = b'{"items":[{"title":"Graph opportunity","url":"https://example.test/op/graph"}]}'
+        digest = hashlib.sha256(payload).hexdigest()
+        cdb.execute(
+            "INSERT INTO raw_observations(source,url,observed_at,payload,payload_sha256,http_status,content_type,observation_kind) VALUES(?,?,?,?,?,?,?,?)",
+            ("GRAPH_TEST", source["base_url"], "2026-09-23T20:00:00+00:00", payload, digest, 200, "application/json", "source_response"),
+        )
+        cdb.commit()
+
+        Pipeline(cdb).ingest(
+            source,
+            {
+                "title": "Graph opportunity",
+                "url": "https://example.test/op/graph",
+                "description": "graph evidence",
+                "iran_access": "ALLOW",
+                "evidence": [{"kind": "listing", "url": "https://example.test/op/graph", "finding": "observed", "confidence": 0.95}],
+            },
+            AcquisitionAttestation("GRAPH_TEST", source["base_url"], digest, 200),
+        )
+        cdb.commit()
+
+        opportunity = cdb.execute("SELECT id,source FROM opportunities WHERE url=?", ("https://example.test/op/graph",)).fetchone()
+        observation = cdb.execute("SELECT id,source,payload_sha256 FROM raw_observations WHERE payload_sha256=?", (digest,)).fetchone()
+        evidence = cdb.execute("SELECT id,opportunity_id,observation_id,source FROM evidence WHERE opportunity_id=?", (opportunity["id"],)).fetchone()
+        claim = cdb.execute("SELECT id,opportunity_id,claim_type FROM claims WHERE opportunity_id=? ORDER BY id LIMIT 1", (opportunity["id"],)).fetchone()
+        claim_link = cdb.execute("SELECT claim_id,evidence_id FROM claim_evidence WHERE claim_id=? AND evidence_id=?", (claim["id"], evidence["id"])).fetchone()
+
+        assert opportunity["source"] == observation["source"] == evidence["source"] == "GRAPH_TEST"
+        assert evidence["observation_id"] == observation["id"]
+        assert evidence["opportunity_id"] == opportunity["id"]
+        assert claim["opportunity_id"] == opportunity["id"]
+        assert claim_link is not None
+        cdb.close()
