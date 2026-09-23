@@ -180,3 +180,15 @@ def test_manifest_qualification_report_uses_current_version_and_gate_name():
     assert '"product_version": "16.1.1"' not in source
     assert f'FullQualification/{__version__}' in source
 
+def test_manifest_runtime_version_surfaces_are_not_hardcoded():
+    root = Path(__file__).resolve().parents[1]
+    android = (root / "marketradar" / "android_gateway.py").read_text(encoding="utf-8")
+    cli = (root / "marketradar" / "cli.py").read_text(encoding="utf-8")
+    release = (root / "packaging" / "build_windows_release.ps1").read_text(encoding="utf-8")
+
+    assert "return {'version':__version__" in android
+    assert "FINAL_VERIFICATION_{__version__}.json" in cli
+    assert 'Unexpected version: $version' not in release
+    assert "16.1.1" not in android
+    assert "FINAL_VERIFICATION_16.1.1.json" not in cli
+    assert '16.1.1' not in release
