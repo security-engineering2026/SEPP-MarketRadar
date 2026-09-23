@@ -235,3 +235,22 @@ def test_manifest_registration_is_not_verification():
         "iran_policy_url": "https://registered-only.test/iran",
     })
     assert "registered_only" in audit_registry([verified])["promotable"]
+
+
+def test_manifest_reachability_is_not_capability():
+    from marketradar.capability import capability_evidence_for_verification, advance_capability
+
+    reachable_only = capability_evidence_for_verification(
+        reachable=True, parseable=False, validated=False,
+        policy_verified=False, execution_ready=False
+    )
+    assert reachable_only.stage == "REACHABLE"
+    assert advance_capability("REGISTERED", reachable_only) == "REACHABLE"
+    assert reachable_only.stage != "EXECUTION_READY"
+
+    parsed_only = capability_evidence_for_verification(
+        reachable=True, parseable=True, validated=False,
+        policy_verified=False, execution_ready=False
+    )
+    assert parsed_only.stage == "PARSEABLE"
+    assert parsed_only.stage != "EXECUTION_READY"
