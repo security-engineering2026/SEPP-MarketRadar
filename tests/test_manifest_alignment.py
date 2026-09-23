@@ -192,3 +192,41 @@ def test_manifest_runtime_version_surfaces_are_not_hardcoded():
     assert "16.1.1" not in android
     assert "FINAL_VERIFICATION_16.1.1.json" not in cli
     assert '16.1.1' not in release
+
+
+
+def test_manifest_policy_engine_is_deterministic_versioned_and_fail_closed():
+    from marketradar.policy import eligibility, POLICY_VERSION
+
+    assert POLICY_VERSION == "policy.v1"
+    base = {
+        "iran_status": "ALLOW",
+        "kyc_status": "ALLOW",
+        "payment_status": "USDT",
+        "terms_status": "reviewed",
+    }
+    state, reasons = eligibility(base, evidence_ok=True)
+    assert state == "EXECUTE"
+    assert reasons
+
+    for source in (
+        {**base, "iran_status": "BLOCK"},
+        {**base, "kyc_status": "BLOCK"},
+        {**base, "terms_status": "blocked"},
+    ):
+        state, reasons = eligibility(source, evidence_ok=True)
+        assert state == "BLOCK"
+        assert reasons
+
+    assert eligibility({**base, "iran_status": "UNKNOWN"}, evidence_ok=True)[0] == "UNKNOWN"
+    assert eligibility({**base, "kyc_status": "UNKNOWN"}, evidence_ok=True)[0] == "REVIEW"
+    assert eligibility({**base, "payment_status": "UNKNOWN"}, evidence_ok=True)[0] == "REVIEW"
+    assert eligibility({**base, "terms_status": "needs_review"}, evidence_ok=True)[0] == "REVIEW"
+    assert eligibility(base, evidence_ok=False)[0] == "UNKNOWN"
+
+    blocked_opportunity = {"country": "Israel"}
+    state, reasons = eligibility(base, evidence_ok=True, opportunity=blocked_opportunity)
+    assert state == "BLOCK"
+    assert reasons
+
+    assert eligibility(base, evidence_ok=True)[0] == eligibility(base, evidence_ok=True)[0]
