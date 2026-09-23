@@ -12,6 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+from marketradar import __version__
 VALID = {"PASS", "OPEN", "FAIL", "SKIPPED"}
 
 def now():
@@ -28,7 +29,7 @@ def http_probe(url, timeout=10, method="GET", payload=None):
         data=payload,
         method=method,
         headers={
-            "User-Agent": "SEPP-MarketRadar-FullQualification/16.1.2",
+            "User-Agent": f"SEPP-MarketRadar-FullQualification/{__version__}",
             "Accept": "application/json,text/plain,text/html,*/*",
             "X-MarketRadar-Qualification": "sandbox",
         },
@@ -217,7 +218,7 @@ def live_source_scale_gate(limit=500):
         conn.close()
 
     return gate(
-        "LIVE_SOURCE_SCALE_500",
+        "LIVE_SOURCE_REACHABILITY_500",
         "PASS" if confirmed >= limit else "OPEN",
         {
             "candidate_registry": len(records),
@@ -377,7 +378,7 @@ def main():
     }
     report = {
         "qualification_version": "FULL-QUALIFICATION-V1",
-        "product_version": "16.1.1",
+        "product_version": __version__,
         "generated_at": now(),
         "summary": summary,
         "gates": gates,
