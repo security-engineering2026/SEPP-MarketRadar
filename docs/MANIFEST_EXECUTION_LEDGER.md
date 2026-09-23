@@ -213,8 +213,9 @@ If the patch changes a shared component, populate the Impact Set and revalidate 
 
 ## 11. Current execution cursor
 
-**Current row: R002**  
+**Current row: R003 (to be derived JIT)**  
 **R001: PASS / CLOSED**  
+**R002: PASS / CLOSED**  
 **Later rows: NOT DERIVED / LOCKED by design**  
 **Overall percentage: NOT VALID**  
 **Merge: NOT PERFORMED**
@@ -256,7 +257,7 @@ If the patch changes a shared component, populate the Impact Set and revalidate 
 | Final Status | PASS |
 | Execution State | CLOSED |
 
-## 12. R002 — next JIT MICU
+## 12. R002 — UNKNOWN safety
 
 | Field | Value |
 |---|---|
@@ -266,34 +267,33 @@ If the patch changes a shared component, populate the Impact Set and revalidate 
 | Acceptance Criteria | Insufficient evidence produces explicit UNKNOWN/REVIEW semantics; no authorization/execution is granted solely because the value is unknown or absent; explicit hard BLOCK remains stronger than uncertainty. |
 | Depends On | R001 |
 | Unblocks | Next unresolved §2 truth-model assertion after R002 PASS |
-| Code Location | marketradar/policy.py; marketradar/source_verification.py; tests/test_hardening.py; tests/test_final_architecture_16.py |
+| Code Location | marketradar/policy.py; tests/test_hardening.py; tests/test_final_architecture_16.py; marketradar/source_verification.py inspected for UNKNOWN propagation |
 | Code State | PRESENT |
-| Current Behavior | Existing tests/documentation show UNKNOWN-safe behavior, but fresh focused execution is required. |
-| Exact Gap | FRESH EXECUTION EVIDENCE MISSING |
-| Solution Search | Same repo first; CDR Core; Software Forge; Git history; mature OSS; official docs if needed. |
-| Reuse Decision | CONFIRM EXISTING pending focused execution |
-| Patch Action | NONE until focused proof demonstrates a defect. |
-| Focused Test | Execute smallest UNKNOWN-safety tests covering eligibility/policy/authorization separation. |
-| Regression | Relevant policy/security regression after focused test. |
-| Adversarial | UNKNOWN/absent policy evidence must not become EXECUTE; explicit BLOCK must remain BLOCK. |
-| Required Environment | GitHub-hosted Actions regression CI. |
-| Environment Owner/Why | Domain policy invariant; platform independent unless AS-IS proves otherwise. |
-| Proof Command | Focused pytest selection, then relevant regression suite. |
-| Expected Result | UNKNOWN remains UNKNOWN/REVIEW and never silently becomes ALLOW/EXECUTE. |
-| Actual Result | NOT EXECUTED |
-| Evidence | NONE — R002 is ACTIVE. |
-| Evidence Type | NOT EXECUTED |
-| Evidence Commit | 29ca999366f6213c79b39de5eff795a5f94f5348 baseline; fresh execution required. |
+| Current Behavior | eligibility() checks hard BLOCK conditions first; insufficient evidence returns UNKNOWN; non-ALLOW Iran access returns UNKNOWN; unknown KYC returns REVIEW; unknown payment/terms remain REVIEW. Existing authorization-boundary tests prevent execution without authorization. |
+| Exact Gap | FRESH DIRECT REGRESSION PROOF was missing; implementation defect not found. |
+| Solution Search | Same repository implementation/tests inspected. CDR Core and Software Forge were not needed because the same-repo policy contract already directly implements the invariant. |
+| Reuse Decision | CONFIRM EXISTING — existing deterministic policy path is the authoritative implementation. |
+| Patch Action | NONE to production code. Added focused regression test_unknown_is_never_authorized_and_hard_block_dominates_uncertainty to tests/test_hardening.py. |
+| Focused Test | test_unknown_not_execute; test_unknown_is_never_authorized_and_hard_block_dominates_uncertainty; test_unknown_property_500; test_terms_not_reviewed_cannot_yield_execute. |
+| Regression | Full python -m pytest -q in Windows CI. |
+| Adversarial | evidence_ok=False with otherwise ALLOW inputs returns UNKNOWN; explicit Iran BLOCK and terms BLOCK remain BLOCK even under insufficient evidence; 500 randomized UNKNOWN/BLOCK cases never return EXECUTE. |
+| Required Environment | GitHub-hosted Actions, Windows CI / job test-windows, run 35887426312. |
+| Environment Owner/Why | Policy/domain invariant; platform-independent semantics, with Windows CI serving as the repository's current authoritative regression gate. |
+| Proof Command | python -m pytest -q |
+| Expected Result | UNKNOWN remains UNKNOWN/REVIEW and never silently becomes ALLOW/EXECUTE; hard BLOCK remains stronger than uncertainty; full regression remains green. |
+| Actual Result | **PASS** — Test step completed successfully; full pytest suite reached 100% with no failure, and product/release audits also completed successfully. |
+| Evidence | GitHub Actions Windows CI run 35887426312, job 107271035932; test command logged as python -m pytest -q. |
+| Evidence Type | CI / REGRESSION / ADVERSARIAL |
+| Evidence Commit | 1814425eb78f754ccb2f9afe8b14cb00c163c2a5 |
 | Artifact Identity | NONE |
-| Evidence Time / Expiry | NONE |
-| Reproducible | NOT EXECUTED |
-| Contradiction | NONE FOUND so far; focused execution required. |
-| Impact Set | NONE |
-| Audit Update | R002 derived only after R001 PASS; exact active path to be confirmed during AS-IS. |
+| Evidence Time / Expiry | 2026-09-23; valid until the tested policy/test paths change. |
+| Reproducible | YES |
+| Contradiction | NONE FOUND in inspected policy, verification, hardening, and architecture paths. |
+| Impact Set | NONE — production policy.py was unchanged; only a regression test was added. |
+| Audit Update | R002 row updated with exact tests, adversarial proof, run/job IDs, tested commit, and contradiction/impact result. |
 | Audit Classification | VALID |
-| Final Status | NOT EXECUTED |
-| Execution State | ACTIVE |
-
+| Final Status | PASS |
+| Execution State | CLOSED |
 ## 13. R001 execution protocol
 
 1. Inspect the exact decision/evidence/domain-state code path.
