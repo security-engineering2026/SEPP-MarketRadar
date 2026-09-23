@@ -204,3 +204,13 @@ Retrieve execution evidence for commit a90b881be167a4f9a66cb65b9278479d27835ac4 
 - This was a test-contract defect, not a product runtime defect.
 - Minimal regression patch: `da53c43590f5b6711f7893c703d4183ce9cb0a0d`.
 - Fresh Full Qualification #207 and Windows CI #226 were triggered on the patched commit; both are currently queued. No PASS is inferred until they complete.
+
+
+## 2026-09-23 — Android E2E environment blocker extracted
+
+- Full Qualification #207 (35836661861) completed the Android assemble step successfully, then Android emulator E2E failed at emulator boot with `Timeout waiting for emulator to boot.` after the action's 600-second boot window.
+- The failure occurred before tools/android_e2e.sh executed, so this run provides no evidence of an Android application/test failure.
+- Classification: OPEN / ENVIRONMENT-QUALIFICATION pending retry; do not count as product FAIL.
+- The ReactiveCircus action documents emulator-boot-timeout as a configurable seconds value; the workflow previously relied on its 600-second default.
+- Minimal mitigation committed: eb81423bb236bc153d7e117ec419abf4d55fd28b sets emulator-boot-timeout: 900 for API 35 Pixel 6 E2E.
+- Fresh push-triggered Full Qualification evidence is required. Windows qualification remains independently queued/routed to the dedicated MarketRadar runner.
