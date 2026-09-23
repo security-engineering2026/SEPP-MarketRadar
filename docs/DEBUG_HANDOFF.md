@@ -122,3 +122,43 @@ Use the newest main commit as the source of truth. Inspect the next push-trigger
 - Product gates with concrete evidence remain priority: regression, compile, packaging, UI, installer, lifecycle, acquisition, source reachability, and Manifest contract coverage.
 - External engine/application/payment/push and dynamic discovery remain OPEN when required endpoints/secrets are absent; no synthetic PASS is allowed.
 - Next cycle: execute fresh Windows qualification and use the resulting gate evidence to separate product defects from runner/environment limitations.
+
+## 2026-09-23 — Two-channel execution + new-chat handoff
+
+### What was done
+1. Inspected the Manifest AS-IS audit and confirmed: MANIFEST -> GAP -> PATCH -> TEST -> CI -> RE-AUDIT -> NEXT GAP.
+2. Inspected Full Qualification and confirmed the 15 Manifest qualification gates.
+3. Routed Windows qualification to the dedicated runner: runs-on: [self-hosted, Windows, X64, marketradar].
+4. Found a workflow pin typo in the runner-routing commit: actions/upload-artifact SHA had one extra trailing character.
+5. Corrected it in commit a90b881be167a4f9a66cb65b9278479d27835ac4.
+6. Verified the workflow still targets the MarketRadar runner.
+7. No runtime PASS claimed until completed execution evidence exists.
+
+### Two-channel policy
+- GitHub hosted: Android build/E2E and independent hosted checks.
+- Dedicated Windows runner: Windows regression, compile, 15 gates, audits, EXE, UI, installer, install/uninstall and source archive.
+- Product failure -> root cause -> minimal patch -> regression -> commit -> CI retest.
+- Environment-only failure -> classify -> record -> bypass -> continue independent gates.
+- OPEN and NOT EXECUTED are never PASS.
+
+### New-chat continuation protocol
+Do not restart or redesign the project. Read first:
+1. docs/MANIFEST.md
+2. docs/MANIFEST_ASIS_AUDIT.md
+3. docs/DEBUG_HANDOFF.md
+4. .github/workflows/full-qualification.yml
+
+Then inspect current main HEAD, retrieve newest GitHub Actions evidence, inspect the dedicated Windows runner result, map every result to the 15 Manifest gates plus packaging/audit gates, patch only concrete product defects, and update this handoff after each logical stage. Never merge a PR unless explicitly instructed.
+
+### First action in a new chat
+Retrieve execution evidence for commit a90b881be167a4f9a66cb65b9278479d27835ac4 and compare with b55fc2c0191f5e890a0f9d4078cdb31251864aa8. If the connector cannot retrieve the run, continue repository-side Manifest audit instead of inventing status.
+
+### Checkpoint
+- Manifest gates: 15.
+- Post-a90b881 runtime evidence: NOT EXECUTED / not yet retrievable.
+- New PASS: 0.
+- New FAIL: 0.
+- Dedicated Windows runner: automatic service and workflow-targeted.
+- Workflow pin defect: corrected; runtime proof required.
+- Final product qualification: OPEN.
+- PR merge: NOT AUTHORIZED.
