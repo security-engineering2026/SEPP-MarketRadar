@@ -213,7 +213,7 @@ If the patch changes a shared component, populate the Impact Set and revalidate 
 
 ## 11. Current execution cursor
 
-**Current row: R003 (to be derived JIT)**  
+**Current row: R004 (to be derived JIT)**  
 **R001: PASS / CLOSED**  
 **R002: PASS / CLOSED**  
 **Later rows: NOT DERIVED / LOCKED by design**  
@@ -291,6 +291,43 @@ If the patch changes a shared component, populate the Impact Set and revalidate 
 | Contradiction | NONE FOUND in inspected policy, verification, hardening, and architecture paths. |
 | Impact Set | NONE — production policy.py was unchanged; only a regression test was added. |
 | Audit Update | R002 row updated with exact tests, adversarial proof, run/job IDs, tested commit, and contradiction/impact result. |
+| Audit Classification | VALID |
+| Final Status | PASS |
+| Execution State | CLOSED |
+## 13. R003 — Registration is not verification
+
+| Field | Value |
+|---|---|
+| Row | R003 |
+| Manifest Ref | docs/MANIFEST.md §2 — Core truth model; SHA 447b56f8a3a61ee34288730c705d9b0680c00e95 |
+| MICU | Prove that **source registration/discovery does not itself constitute source verification**. |
+| Acceptance Criteria | A registered/candidate source may exist as a valid registry record while remaining unverified/discovered; it must not enter the promotable/verified set without explicit verification state and fresh verification evidence. |
+| Depends On | R002 |
+| Unblocks | Next unresolved §2 Core truth-model assertion |
+| Code Location | marketradar/source_onboarding.py; marketradar/source_registry.py; tests/test_manifest_alignment.py |
+| Code State | PRESENT |
+| Current Behavior | validate_source() defaults verification to unverified and source verification state to DISCOVERED. audit_registry() promotes a source only when it is schema-valid, warning-free, not blocked, source_verification_state is LIVE_CONFIRMED, and verification_state is verified. load_source_records() validates registry records but does not promote them. |
+| Exact Gap | FRESH DIRECT REGRESSION PROOF was missing; implementation defect not found. |
+| Solution Search | Same repository source onboarding/registry and existing Manifest tests inspected. External repositories were not required because the invariant is explicitly implemented in the same source lifecycle. |
+| Reuse Decision | CONFIRM EXISTING — existing onboarding and registry audit enforce the separation. |
+| Patch Action | NONE to production code. Added focused regression test_manifest_registration_is_not_verification to tests/test_manifest_alignment.py. |
+| Focused Test | test_manifest_registration_is_not_verification |
+| Regression | Full python -m pytest -q in Windows CI. |
+| Adversarial | Candidate/registered source with DISCOVERED + unverified must not be promotable; only explicit LIVE_CONFIRMED + verified with verification basis/evidence may become promotable. |
+| Required Environment | GitHub-hosted Actions, Windows CI / job test-windows, run 35888699186. |
+| Environment Owner/Why | Source lifecycle/domain invariant; platform-independent, with repository Windows CI as authoritative regression gate. |
+| Proof Command | python -m pytest -q |
+| Expected Result | Registration remains distinct from verification; no implicit promotion from registry presence. |
+| Actual Result | **PASS** — full pytest test step completed successfully; compile, product audit and release audit also succeeded. |
+| Evidence | GitHub Actions Windows CI run 35888699186, job 107275379167. |
+| Evidence Type | CI / REGRESSION / ADVERSARIAL |
+| Evidence Commit | b61d7d446696b8158b7e308b834b76de96229264 |
+| Artifact Identity | NONE |
+| Evidence Time / Expiry | 2026-09-23; valid until the tested source-lifecycle paths change. |
+| Reproducible | YES |
+| Contradiction | NONE FOUND in inspected source onboarding, registry loading, audit promotion, and tests. |
+| Impact Set | NONE — production implementation unchanged; regression test only. |
+| Audit Update | R003 added with exact Manifest traceability, AS-IS behavior, focused regression, CI evidence, contradiction and impact checks. |
 | Audit Classification | VALID |
 | Final Status | PASS |
 | Execution State | CLOSED |
