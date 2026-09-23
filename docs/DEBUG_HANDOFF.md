@@ -175,3 +175,14 @@ Retrieve execution evidence for commit a90b881be167a4f9a66cb65b9278479d27835ac4 
 - Runtime PASS is still NOT EXECUTED until GitHub Actions executes the patched commits.
 - Next step: inspect fresh Windows qualification evidence; then classify each gate as PASS/OPEN/FAIL/NOT EXECUTED and patch only concrete failures.
 
+## 2026-09-23 — Runtime version-truth sweep
+
+- Static repository search found additional stale `16.1.1` literals in production/runtime surfaces after the qualification-report fix.
+- Patched Android gateway dashboard/server version to use package `__version__`: `cea60f8f65df9c6234af4ab8e35b5c97a1ec9e6d`.
+- Patched CLI final-verification report filename to use package `__version__`: `d6c0175e198048f7654bc68011b90064e8be939c`.
+- Removed stale version assertion from the legacy Windows release builder so it follows the package version: `101f4a4a37709c57842c187b9cc59c6953cd030b`.
+- Added regression coverage for runtime version surfaces: `8c2190f5bb1393763ea7784eb6990a0f03c37cdd`.
+- Removed the stale 16.1.1 default destination from Windows preparation: `4928400744700059e103ca10ef413ecd93d049c0`.
+- Historical 16.1.1 release documents remain intentionally historical and are not treated as runtime defects.
+- These are repository fixes only. Runtime PASS remains NOT EXECUTED until fresh GitHub Actions evidence runs against the patched main.
+
