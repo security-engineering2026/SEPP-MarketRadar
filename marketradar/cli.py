@@ -53,7 +53,7 @@ def main():
         elif a.command=='final-verify':
             from .final_readiness import run_final_verification
             result=run_final_verification();
-            report=__import__('pathlib').Path(__file__).resolve().parents[1]/'reports'/'FINAL_VERIFICATION_16.1.1.json'; report.parent.mkdir(parents=True,exist_ok=True); report.write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8');
+            report=__import__('pathlib').Path(__file__).resolve().parents[1]/'reports'/f'FINAL_VERIFICATION_{__version__}.json'; report.parent.mkdir(parents=True,exist_ok=True); report.write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8');
             print(json.dumps(result,ensure_ascii=False,indent=2));
             if not result.get('pass'): raise SystemExit(2)
         elif a.command=='test-db': print('database: OK')
