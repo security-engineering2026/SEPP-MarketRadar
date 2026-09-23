@@ -202,3 +202,26 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_manifest_outcome_ledger_preserves_allowed_outcomes_reasons_and_rejects_invalid_values():
+    from marketradar.outcome_learning import record_outcome
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "outcome.db")
+        try:
+            c.execute(
+                "INSERT INTO opportunities(source,title,url,state) VALUES(?,?,?,?)",
+                ("test", "Outcome", "https://example.test/outcome", "SUBMITTED"),
+            )
+            oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/outcome",)).fetchone()["id"]
+            result = record_outcome(c, oid, "REJECTED", reason="budget mismatch", notes="learning signal")
+            assert result["outcome"] == "REJECTED"
+            row = c.execute("SELECT outcome,reason,notes FROM outcomes WHERE opportunity_id=? ORDER BY id DESC LIMIT 1", (oid,)).fetchone()
+            assert row["outcome"] == "REJECTED"
+            assert row["reason"] == "budget mismatch"
+            assert row["notes"] == "learning signal"
+            with pytest.raises(ValueError, match="INVALID_OUTCOME"):
+                record_outcome(c, oid, "NOT_A_REAL_OUTCOME")
+        finally:
+            c.close()
