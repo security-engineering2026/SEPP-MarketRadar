@@ -1,206 +1,318 @@
-# SEPP-MarketRadar — Manifest Operational Execution Ledger v1.0
+# SEPP-MarketRadar — Manifest Operational Execution Ledger v1.1
 
-**Role:** operational execution table for `docs/MANIFEST.md` v1.0.  
-**Relationship:** Manifest = normative contract; this ledger = sequential proof/execution control.  
-**Baseline:** v16.1.2.  
-**Source coverage:** `docs/MANIFEST_REQUIREMENT_MATRIX_V2.md` v2.0.  
-**Initial state:** every row below starts as **NOT EXECUTED** until a real AS-IS audit establishes its code/test/evidence state. No inferred PASS is accepted.
+**Role:** active operational execution controller for `docs/MANIFEST.md`.  
+**Normative Manifest:** `docs/MANIFEST.md` v1.0  
+**Manifest SHA:** `447b56f8a3a61ee34288730c705d9b0680c00e95`  
+**Baseline:** SEPP-MarketRadar v16.1.2  
+**Coverage reference:** `docs/MANIFEST_REQUIREMENT_MATRIX_V2.md` v2.0 — coverage/reference only, not the execution queue.  
+**Current branch:** `process/manifest-execution-ledger`  
+**Initial execution state:** one JIT-derived MICU only. No speculative future rows.
 
-## 1. Execution contract
+## 1. Authority and operating model
 
-Execution loop:
+The locked Manifest is the specification. This ledger is the execution controller.
 
-`MANIFEST → COVERAGE CHECK → AS-IS AUDIT → GAP → SOLUTION SEARCH → IMPLEMENT/PATCH → REGRESSION → REQUIRED ENVIRONMENT → CI/EVIDENCE → CONTRADICTION CHECK → AUDIT UPDATE → CLOSE/LOCK`
+`MANIFEST → COVERAGE CHECK → AS-IS AUDIT → MICU → EXACT GAP → SOLUTION SEARCH → IMPLEMENT/PATCH → FOCUSED TEST → REGRESSION → ADVERSARIAL (when applicable) → EXACT ENVIRONMENT → FRESH EVIDENCE → CONTRADICTION CHECK → IMPACT REVALIDATION → AUDIT UPDATE → PASS → DERIVE NEXT MICU`
 
-### Allowed status values
-Only: **PASS / OPEN / FAIL / NOT EXECUTED**
+This ledger MUST NOT weaken, reorder, reinterpret, or silently amend the Manifest.
+
+### Non-negotiable controls
+
+1. **One execution cursor:** exactly one row may be ACTIVE.
+2. **Strict sequential closure:** Row N must reach PASS before Row N+1 is derived/activated, except work explicitly required to remove an external environment blocker.
+3. **Just-in-time decomposition:** do not pre-generate 139 execution rows. Derive the next MICU from the next unresolved Manifest requirement, dependency graph, current AS-IS, and impact set.
+4. **MICU:** one independently closable behavior/invariant, not a whole Manifest section, feature family, or CI suite.
+5. **Code existence is not proof.**
+6. **Focused evidence is mandatory:** a large green CI run cannot close a requirement unless the requirement's own assertion is directly exercised.
+7. **Environment is part of the acceptance contract.**
+8. **Evidence must bind to the audited commit.**
+9. **Historical evidence is context only until freshly revalidated.**
+10. **Failure loop:** FAIL → proven root cause → solution/reuse search → minimal patch → regression → retest → fresh evidence.
+11. **Contradiction gate:** old/bypass/duplicate paths that violate the same invariant block PASS.
+12. **Impact gate:** changes may reopen earlier PASS rows; only affected rows are revalidated.
+13. **Scope lock:** unrelated work becomes a future MICU.
+14. **No merge:** no branch/PR is merged without explicit user instruction.
+15. **No global percentage:** do not report a project percentage from an intentionally un-derived execution queue.
+
+## 2. Status and execution state
+
+### Final status — only these values
+
+`PASS / OPEN / FAIL / NOT EXECUTED / SKIPPED`
 
 ### Execution state
-- **LOCKED:** not eligible for execution yet.
-- **ACTIVE:** current row being worked.
-- **CLOSED:** row reached PASS with all proof gates satisfied.
-- A CLOSED row reopens when an impact analysis, contract change, evidence expiry, or contradiction invalidates its proof.
 
-### PASS predicate
-A row is PASS only if all applicable conditions are true:
-1. implementation satisfies the atomic contract;
-2. positive regression proof exists;
-3. negative/adversarial proof exists where the contract has unsafe failure modes;
-4. required authoritative environment proof exists;
-5. evidence is linked to the verified commit/environment and is reproducible;
-6. audit/reporting exposes the resulting state where required;
-7. no reachable contradictory legacy path remains;
-8. all direct dependencies required by the row are PASS.
+- `LOCKED` — not the current work unit.
+- `ACTIVE` — current MICU.
+- `CLOSED` — PASS with all proof gates satisfied.
+- A CLOSED row reopens if its contract, code path, dependency, evidence freshness, environment proof, or contradiction state is invalidated.
 
-Code existence alone is never PASS.
+### Structural audit classification
 
-### Required solution-search order
-`Same Repo → CDR Core → Software_Forge → Git History → Mature OSS → Official Library/Docs`
+These are audit metadata, not replacement statuses:
 
-For every non-PASS row, the search and decision must be recorded before rebuilding an already-solved capability.
+`VALID / NEEDS_SPLIT / NEEDS_REWRITE / MANIFEST_MISMATCH / MISSING_PROOF / OVER_SCOPED / DUPLICATE`
 
-### Environment ownership
-| Environment | Authoritative proof |
+## 3. Coverage vs execution
+
+`docs/MANIFEST_REQUIREMENT_MATRIX_V2.md` remains the broad Manifest coverage/reference artifact.
+
+It answers:
+
+> Where are all Manifest requirements represented?
+
+This ledger answers:
+
+> What is the single next independently closable unit, and what proof is required to close it?
+
+The matrix MUST NOT be copied into the active execution queue merely to obtain row coverage.
+
+Before R001 execution, the coverage gate must establish that every applicable Manifest clause is represented somewhere in the coverage artifact. An unmapped clause is a governance gap, not permission to invent a guessed execution row.
+
+## 4. Required MICU row schema
+
+| Field | Meaning |
 |---|---|
-| GitHub-hosted CI | unit/regression/domain/contract/security |
-| Self-hosted Windows | EXE/installer/UI/service/filesystem/live network/source scale |
-| Android Linux emulator | Android build/E2E/authority boundary |
-| External sandbox | engine/application/payment/notification contracts |
-| Live provider/network | source reachability/policy/terms/provider behavior |
+| Row | Stable execution ID |
+| Manifest Ref | Exact Manifest file + section/clause + Manifest SHA |
+| MICU | One independently closable behavior/invariant |
+| Acceptance Criteria | Objective, testable closure criteria derived from the Manifest |
+| Depends On | Exact prerequisite row IDs, or NONE |
+| Unblocks | What becomes derivable/eligible after PASS |
+| Code Location | Exact file/module/class/function discovered during AS-IS |
+| Code State | MISSING / PARTIAL / PRESENT |
+| Current Behavior | Observed behavior, not assumption |
+| Exact Gap | Concrete deficiency or “none proven” |
+| Solution Search | Repositories/history/docs actually inspected |
+| Reuse Decision | REUSE / ADAPT / CONFIRM EXISTING / CREATE-NEW + reason |
+| Patch Action | Exact change required, or no patch |
+| Focused Test | Smallest direct executable proof |
+| Regression | Required regression proof |
+| Adversarial | Negative/failure proof when relevant |
+| Required Environment | Exact environment, runner/resource, not a generic category |
+| Environment Owner/Why | Why this environment is authoritative for this MICU |
+| Proof Command | Exact command/workflow/test gate |
+| Expected Result | Objective expected result |
+| Actual Result | Captured actual result |
+| Evidence | Run/job/local execution/artifact reference |
+| Evidence Type | UNIT / REGRESSION / INTEGRATION / WINDOWS / CLEAN_WINDOWS / CI / ARTIFACT / SECURITY / ADVERSARIAL / UI / RELEASE / ANDROID / EXTERNAL |
+| Evidence Commit | Exact tested commit SHA |
+| Artifact Identity | SHA-256/version/path where applicable |
+| Evidence Time / Expiry | Fresh timestamp and expiry when time-bound |
+| Reproducible | YES / NO / NOT EXECUTED |
+| Contradiction | Conflicting implementation/test/UI/API/docs/CI path, or NONE |
+| Impact Set | Earlier PASS rows potentially invalidated |
+| Audit Update | Exact audit/traceability record updated |
+| Audit Classification | Structural quality of the row |
+| Final Status | PASS / OPEN / FAIL / NOT EXECUTED / SKIPPED |
+| Execution State | LOCKED / ACTIVE / CLOSED |
 
-### Evidence contract
-Every proof record must identify: `ROW_ID`, verified commit, run/job, environment, command, input or snapshot, expected result, actual result, artifact/log reference, timestamp, and expiry when the evidence is time-bound.
+## 5. PASS gate
 
-### Change-impact rule
-A later patch does not require a full-suite rerun by default. It reopens only rows whose code path, contract, dependency, artifact, environment proof, or evidence is affected. The affected-row list must be recorded.
+A row may be PASS only when all applicable gates are true:
 
-### Manifest coverage gate
-All Manifest clauses must map to one or more ledger rows. Current source matrix contains **139 atomic rows**. No Row 1 execution may start if a Manifest clause is unmapped.
+- Manifest clause is exact and traceable to the locked Manifest SHA.
+- MICU is independently closable and not over-scoped.
+- Current implementation was inspected.
+- Exact gap was resolved or its absence was proven.
+- Focused executable assertion passed.
+- Required regression passed.
+- Required adversarial/failure proof passed when applicable.
+- Exact authoritative environment was used.
+- Evidence is fresh and reproducible.
+- Evidence commit matches the audited commit.
+- Run/job/artifact identity is captured where applicable.
+- No unresolved blocker remains.
+- No contradictory reachable path remains.
+- Impacted previous PASS rows were revalidated.
+- Audit/traceability was updated.
 
-## 2. Operational ledger
+A broad CI PASS, a workflow definition, a test definition, or historical markdown is not sufficient by itself.
 
-> **Column discipline:** blank audit fields mean **NOT EXECUTED**, not PASS and not “probably complete”.  
-> `GAP_TYPE=UNKNOWN` is allowed before AS-IS audit; it must be replaced by the exact diagnosed category for any non-PASS row.
+## 6. Exact environment rule
 
-| Seq | Row ID | Manifest Ref | Atomic Requirement | Acceptance Criteria | Positive Assertion | Negative Assertion | Dependencies | Code Location | Current Behavior | Current Tests | Current Evidence | Gap Type | Solution Search/Decision | Implementation Action | Regression Test | Test Command | Required Environment | Proof Command | Expected Result | Actual Result | Evidence Ref | Verified Commit | Evidence Timestamp | Expiry | Reproducible | Legacy/Contradiction Check | Affected Rows | Status | Execution State | Lock State | Audit Result |
-|---:|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | M-001 | Manifest §1–2 | pipeline باید observation تا learning را مدل کند | زنجیره کامل قابل replay | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows + CI | TBD | زنجیره کامل قابل replay | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 2 | M-002 | Manifest §1–2 | evidence از truth جدا باشد | evidence هرگز truth تلقی نشود | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | evidence هرگز truth تلقی نشود | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 3 | M-003 | Manifest §1–2 | UNKNOWN یک state معتبر باشد | UNKNOWN به ALLOW تبدیل نشود | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | UNKNOWN به ALLOW تبدیل نشود | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 4 | M-004 | Manifest §1–2 | observation مستقل از claim باشد | observation قابل بازسازی | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | observation قابل بازسازی | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 5 | M-005 | Manifest §1–2 | decision snapshot قابل بازسازی باشد | decision deterministic/replayable | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows CI | TBD | decision deterministic/replayable | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 6 | M-006 | Manifest §1–2 | outcome از payment جدا باشد | delivery ≠ payment | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI + sandbox | TBD | delivery ≠ payment | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 7 | D-001 | Manifest §3 | Source identity | source شناسه پایدار | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | source شناسه پایدار | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 8 | D-002 | Manifest §3 | Endpoint identity | endpoint قابل تشخیص | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | endpoint قابل تشخیص | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 9 | D-003 | Manifest §3 | Observation identity | observation تکراری ایجاد نشود | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | observation تکراری ایجاد نشود | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 10 | D-004 | Manifest §3 | Evidence identity/hash | evidence digest پایدار | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | evidence digest پایدار | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 11 | D-005 | Manifest §3 | Claim identity | claim قابل ردیابی | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | claim قابل ردیابی | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 12 | D-006 | Manifest §3 | Entity identity | identity محافظه‌کارانه | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | identity محافظه‌کارانه | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 13 | D-007 | Manifest §3 | Party role | roleها مخلوط نشوند | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI + live | TBD | roleها مخلوط نشوند | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 14 | D-008 | Manifest §3 | Opportunity identity | opportunity stable identity | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | opportunity stable identity | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 15 | D-009 | Manifest §3 | Decision identity | decision trace | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | decision trace | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 16 | D-010 | Manifest §3 | Action identity | action یک‌بار/صحیح | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI + Windows | TBD | action یک‌بار/صحیح | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 17 | D-011 | Manifest §3 | Outcome identity | outcome immutable | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | outcome immutable | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 18 | D-012 | Manifest §3 | Financial observation | financial state evidence-bound | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | sandbox | TBD | financial state evidence-bound | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 19 | S-001 | Manifest §4–7 | registry candidate state | candidate | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI + live | TBD | candidate | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 20 | S-002 | Manifest §4–7 | registered ≠ verified | truthful counts | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | truthful counts | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 21 | S-003 | Manifest §4–7 | source adapter schema | every adapter declared | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | every adapter declared | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 22 | S-004 | Manifest §4–7 | acquisition method declaration | method explicit | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | method explicit | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 23 | S-005 | Manifest §4–7 | endpoint declaration | endpoint explicit | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | endpoint explicit | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 24 | S-006 | Manifest §4–7 | input/output contract | schema-bound adapter | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | schema-bound adapter | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 25 | S-007 | Manifest §4–7 | access scope/auth declaration | scope explicit | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | scope explicit | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 26 | S-008 | Manifest §4–7 | rate/size/timeout declaration | bounded acquisition | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | bounded acquisition | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 27 | S-009 | Manifest §4–7 | failure semantics | SOURCE_UNAVAILABLE vs provider failure | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows CI | TBD | SOURCE_UNAVAILABLE vs provider failure | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 28 | S-010 | Manifest §4–7 | verification evidence | verification reproducible | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows live | TBD | verification reproducible | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 29 | S-011 | Manifest §4–7 | stale/revalidation | time-bounded truth | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows live | TBD | time-bounded truth | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 30 | S-012 | Manifest §4–7 | capability ladder | monotonic maturity | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows CI | TBD | monotonic maturity | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 31 | S-013 | Manifest §4–7 | 500 live reachability | ≥500 LIVE_CONFIRMED | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows live | TBD | ≥500 LIVE_CONFIRMED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 32 | S-014 | Manifest §4–7 | live acquisition sample | real observation | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows live | TBD | real observation | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 33 | S-015 | Manifest §4–7 | social source surface | social/community surface | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows live | TBD | social/community surface | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 34 | S-016 | Manifest §4–7 | procurement source surface | procurement surface | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows live | TBD | procurement surface | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 35 | S-017 | Manifest §4–7 | dynamic JS | rendered source acquisition | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows live | TBD | rendered source acquisition | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 36 | A-001 | Manifest §9–11 | host-bound acquisition | no SSRF redirect escape | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI + live | TBD | no SSRF redirect escape | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 37 | A-002 | Manifest §9–11 | private-IP protection | private targets blocked | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | private targets blocked | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 38 | A-003 | Manifest §9–11 | size bound | memory bounded | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | memory bounded | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 39 | A-004 | Manifest §9–11 | timeout bound | timeout deterministic | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | timeout deterministic | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 40 | A-005 | Manifest §9–11 | retry bound | bounded retry | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | bounded retry | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 41 | A-006 | Manifest §9–11 | secret isolation | secrets never cross boundary | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | secrets never cross boundary | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 42 | A-007 | Manifest §9–11 | immutable raw payload | original payload preserved | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | original payload preserved | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 43 | A-008 | Manifest §9–11 | snapshot source binding | source-bound snapshot | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | source-bound snapshot | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 44 | A-009 | Manifest §9–11 | observation metadata | URL/time/http/content metadata | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | URL/time/http/content metadata | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 45 | A-010 | Manifest §9–11 | provenance retention | every object traceable | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | every object traceable | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 46 | C-001 | Manifest §12–16 | normalize source observations | canonical opportunity | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | canonical opportunity | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 47 | C-002 | Manifest §12–16 | retain contradictory observations | no destructive overwrite | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | no destructive overwrite | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 48 | C-003 | Manifest §12–16 | stable opportunity ID | same opportunity identity | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | same opportunity identity | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 49 | C-004 | Manifest §12–16 | dedup without title-only replacement | safe dedup | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | safe dedup | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 50 | C-005 | Manifest §12–16 | MATCH/POSSIBLE_MATCH/NO_MATCH | reversible resolution | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | reversible resolution | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 51 | C-006 | Manifest §12–16 | party temporal role | role history | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI + live | TBD | role history | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 52 | C-007 | Manifest §12–16 | evidence graph links | complete provenance | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | complete provenance | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 53 | C-008 | Manifest §12–16 | claim-level provenance | consequential claims traceable | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | consequential claims traceable | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 54 | C-009 | Manifest §12–16 | trust ≠ evidence confidence | trust separate | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | trust separate | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 55 | C-010 | Manifest §12–16 | UNKNOWN trust | no forced trust value | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | no forced trust value | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 56 | P-001 | Manifest §18–21 | eligibility independent | independent state | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI + live | TBD | independent state | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 57 | P-002 | Manifest §18–21 | ALLOW | explicit allow | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | explicit allow | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 58 | P-003 | Manifest §18–21 | REVIEW | review | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | review | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 59 | P-004 | Manifest §18–21 | BLOCK | block | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | block | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 60 | P-005 | Manifest §18–21 | UNKNOWN | unknown | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | unknown | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 61 | P-006 | Manifest §18–21 | policy version | versioned decision | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | versioned decision | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 62 | P-007 | Manifest §18–21 | payment detection | detected ≠ verified | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | detected ≠ verified | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 63 | P-008 | Manifest §18–21 | payment verification | verified payment | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | sandbox | TBD | verified payment | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 64 | P-009 | Manifest §18–21 | PAID transition | PAID only after proof | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI+sandbox | TBD | PAID only after proof | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 65 | P-010 | Manifest §18–21 | KYC documented | KYC requirement | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI + live | TBD | KYC requirement | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 66 | P-011 | Manifest §18–21 | KYC UNKNOWN | UNKNOWN/REVIEW | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | UNKNOWN/REVIEW | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 67 | P-012 | Manifest §18–21 | policy fail closed | no unsafe execution | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | no unsafe execution | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 68 | I-001 | Manifest §23–26 | classification | normalized class | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | normalized class | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 69 | I-002 | Manifest §23–26 | summarization | evidence-bound summary | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | evidence-bound summary | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 70 | I-003 | Manifest §23–26 | demand signal | demand metric | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | demand metric | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 71 | I-004 | Manifest §23–26 | competition signal | competition metric | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | competition metric | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 72 | I-005 | Manifest §23–26 | TTM/market signal | time-to-market signal | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | time-to-market signal | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 73 | I-006 | Manifest §23–26 | intelligence cannot authorize | AI/heuristic never authority | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | AI/heuristic never authority | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 74 | I-007 | Manifest §23–26 | ranking separate from policy | ranking cannot override | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | ranking cannot override | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 75 | I-008 | Manifest §23–26 | ranking factors exposed | explainable ranking | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | explainable ranking | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 76 | I-009 | Manifest §23–26 | Top 7 | exactly 7 | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI + Windows | TBD | exactly 7 | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 77 | I-010 | Manifest §23–26 | Do-Now 3 | exactly 3 | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI + Windows | TBD | exactly 3 | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 78 | X-001 | Manifest §27–29 | explicit approval | no approval → no action | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | no approval → no action | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 79 | X-002 | Manifest §27–29 | target binding | target exact | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | target exact | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 80 | X-003 | Manifest §27–29 | action binding | action exact | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | action exact | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 81 | X-004 | Manifest §27–29 | params digest | params exact | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | params exact | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 82 | X-005 | Manifest §27–29 | evidence digest | evidence exact | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | evidence exact | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 83 | X-006 | Manifest §27–29 | policy version binding | policy exact | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | policy exact | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 84 | X-007 | Manifest §27–29 | expiry | expiry fail | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | expiry fail | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 85 | X-008 | Manifest §27–29 | one-time nonce | replay blocked | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | replay blocked | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 86 | X-009 | Manifest §27–29 | idempotent action | no duplicate side effect | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI+sandbox | TBD | no duplicate side effect | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 87 | X-010 | Manifest §27–29 | external reference | external result trace | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | sandbox | TBD | external result trace | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 88 | X-011 | Manifest §27–29 | lifecycle valid transitions | invalid transition blocked | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | invalid transition blocked | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 89 | X-012 | Manifest §27–29 | human approval audit | auditable approval | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | auditable approval | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 90 | L-001 | Manifest §30–35 | application lifecycle | lifecycle valid | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI+sandbox | TBD | lifecycle valid | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 91 | L-002 | Manifest §30–35 | negotiation state | negotiation tracked | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | negotiation tracked | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 92 | L-003 | Manifest §30–35 | acceptance state | acceptance tracked | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | acceptance tracked | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 93 | L-004 | Manifest §30–35 | delivery evidence | delivery proof | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI+sandbox | TBD | delivery proof | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 94 | L-005 | Manifest §30–35 | delivery ≠ payment | no false PAID | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | no false PAID | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 95 | L-006 | Manifest §30–35 | revenue separation | revenue auditable | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | sandbox | TBD | revenue auditable | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 96 | L-007 | Manifest §30–35 | duplicate payment rejection | duplicate blocked | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | sandbox | TBD | duplicate blocked | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 97 | L-008 | Manifest §30–35 | outcome immutable | immutable outcome | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | immutable outcome | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 98 | L-009 | Manifest §30–35 | rejection first class | negative evidence retained | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | negative evidence retained | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 99 | L-010 | Manifest §30–35 | failure first class | failure reusable | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | failure reusable | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 100 | L-011 | Manifest §30–35 | market learning | additive learning | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | additive learning | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 101 | L-012 | Manifest §30–35 | learning cannot rewrite observations | history preserved | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | history preserved | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 102 | R-001 | Manifest §37–38, §42–43 | durable scheduler | resumable job | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows | TBD | resumable job | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 103 | R-002 | Manifest §37–38, §42–43 | bounded retry | bounded retry | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | bounded retry | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 104 | R-003 | Manifest §37–38, §42–43 | stale handling | stale explicit | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows | TBD | stale explicit | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 105 | R-004 | Manifest §37–38, §42–43 | recovery | recoverable state | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows | TBD | recoverable state | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 106 | R-005 | Manifest §37–38, §42–43 | SSRF private IP | private IP blocked | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | private IP blocked | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 107 | R-006 | Manifest §37–38, §42–43 | redirect boundary | host boundary | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI + live | TBD | host boundary | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 108 | R-007 | Manifest §37–38, §42–43 | secret isolation | no secret leakage | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | no secret leakage | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 109 | R-008 | Manifest §37–38, §42–43 | replay detection | replay blocked | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | replay blocked | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 110 | R-009 | Manifest §37–38, §42–43 | immutable audit | audit immutable | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | audit immutable | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 111 | R-010 | Manifest §37–38, §42–43 | parser isolation | parser cannot network | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | parser cannot network | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 112 | R-011 | Manifest §37–38, §42–43 | least privilege | least privilege proven | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows | TBD | least privilege proven | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 113 | R-012 | Manifest §37–38, §42–43 | DB FK/unique | invalid state rejected | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | invalid state rejected | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 114 | R-013 | Manifest §37–38, §42–43 | transaction rollback | atomic transaction | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | atomic transaction | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 115 | R-014 | Manifest §37–38, §42–43 | idempotency keys | no duplicate | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | no duplicate | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 116 | W-001 | Manifest §39–45 | portable EXE | EXE artifact | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows runner | TBD | EXE artifact | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 117 | W-002 | Manifest §39–45 | EXE smoke | process exits 0 | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows | TBD | process exits 0 | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 118 | W-003 | Manifest §39–45 | UI smoke | UI starts/closes | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows | TBD | UI starts/closes | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 119 | W-004 | Manifest §39–45 | installer build | installer artifact | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows | TBD | installer artifact | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 120 | W-005 | Manifest §39–45 | clean install | clean install | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows | TBD | clean install | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 121 | W-006 | Manifest §39–45 | installed EXE | installed product runs | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows | TBD | installed product runs | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 122 | W-007 | Manifest §39–45 | uninstall | removal clean | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows | TBD | removal clean | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 123 | W-008 | Manifest §39–45 | first-run acquisition | fresh install starts acquisition | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows live | TBD | fresh install starts acquisition | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 124 | W-009 | Manifest §39–45 | Windows service/filesystem | runtime permission contract | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows | TBD | runtime permission contract | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 125 | W-010 | Manifest §39–45 | Android authority boundary | Windows remains authority | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Android emulator | TBD | Windows remains authority | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 126 | W-011 | Manifest §39–45 | Android E2E | companion E2E | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Linux emulator | TBD | companion E2E | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 127 | W-012 | Manifest §39–45 | UI truth states | truthfully displayed state | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows UI | TBD | truthfully displayed state | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 128 | W-013 | Manifest §39–45 | observability status taxonomy | status truthful | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI + Windows | TBD | status truthful | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 129 | W-014 | Manifest §39–45 | reporting counts | registry≠verified counts | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | registry≠verified counts | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 130 | W-015 | Manifest §39–45 | audit exposure | OPEN gaps visible | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | OPEN gaps visible | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 131 | G-001 | Manifest §46–49 | every feature maps to Manifest | no unmapped feature | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | no unmapped feature | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 132 | G-002 | Manifest §46–49 | AS-IS audit before implementation | gap known before coding | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | gap known before coding | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 133 | G-003 | Manifest §46–49 | solution search before rebuild | reuse considered | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | reuse considered | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 134 | G-004 | Manifest §46–49 | regression after patch | patch proven | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | patch proven | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 135 | G-005 | Manifest §46–49 | environment-specific evidence | correct environment | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | correct environment | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 136 | G-006 | Manifest §46–49 | legacy contradictions retired | old path removed/disabled | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | old path removed/disabled | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 137 | G-007 | Manifest §46–49 | audit update after test | status current | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | status current | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 138 | G-008 | Manifest §46–49 | Manifest terminology locked | no silent contract drift | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | CI | TBD | no silent contract drift | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
-| 139 | G-009 | Manifest §46–49 | final architecture boundaries | WORLD→OBS→EVIDENCE→STATE→DECISION→ACTION→OUTCOME→LEARNING | TBD by audit | TBD by audit | TBD | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | UNKNOWN | REQUIRED | TBD | TBD | TBD | Windows + CI | TBD | WORLD→OBS→EVIDENCE→STATE→DECISION→ACTION→OUTCOME→LEARNING | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | NOT EXECUTED | TBD | TBD | NOT EXECUTED | LOCKED | LOCKED | NOT EXECUTED | NOT EXECUTED |
+Environment is retained as a required column and is strengthened from a generic category to an exact execution target.
 
+Examples:
+
+| Generic class | Active-row value |
+|---|---|
+| CI | GitHub-hosted Actions, workflow `<name>`, job `<name>`, run `<id>` |
+| Windows | Self-hosted runner `MARKETRADAR-WINDOWS-01`, Windows version, run/job ID |
+| Clean Windows | Clean Windows VM/image identifier + run |
+| Live network | Authorized live-network execution + source/sample + run |
+| Android | GitHub Linux runner + emulator API/device + run |
+| External sandbox | Named sandbox/provider + environment/run |
+
+A value such as “Windows/live as required” is acceptable only before AS-IS routing. Once the row is ACTIVE, it MUST be resolved to the exact environment and reason.
+
+## 7. Dependency model
+
+Dependencies are not inferred from row numbering.
+
+**Execution dependency:** A → B means B cannot become ACTIVE/derived until A is PASS.
+
+**Change-impact dependency:** component X → PASS row R means a change to X may invalidate R.
+
+Therefore:
+
+`CODE CHANGE → IMPACT ANALYSIS → AFFECTED PASS ROWS → REVALIDATION → RETAIN/REOPEN PASS`
+
+The active row MUST name its exact prerequisite rows. “Depends on an older row” is invalid when the immediate invariant actually requires the current row.
+
+## 8. Reuse/search record
+
+For every non-PASS active row, search and record in this order:
+
+1. Same repository
+2. CDR Core
+3. Software Forge
+4. Git history
+5. Mature OSS
+6. Official libraries/documentation
+
+For each inspected candidate record:
+
+- source/repository;
+- path/module/test;
+- commit/version where relevant;
+- observed behavior;
+- contract compatibility;
+- security implications;
+- license where external;
+- decision: REUSE / ADAPT / CONFIRM EXISTING / CREATE-NEW;
+- reason.
+
+**Reuse policy is not evidence.** The active row must contain the concrete inspected implementation/test when solution search matters.
+
+## 9. Failure/recovery record
+
+A failed row remains the active row until closed or explicitly classified as blocked by an external environment condition.
+
+Required chain:
+
+`FAIL → EXACT FAILURE → PROVEN ROOT CAUSE → SOLUTION SEARCH → MINIMAL PATCH → REGRESSION → RETEST → FRESH EVIDENCE`
+
+Do not open an unrelated implementation row merely because the current row failed.
+
+## 10. Contradiction and impact gates
+
+Before PASS search for:
+
+- duplicate implementations;
+- old APIs with conflicting semantics;
+- stale tests asserting old behavior;
+- alternate UI/API paths bypassing the invariant;
+- documentation claiming obsolete behavior;
+- CI gates that can report PASS without executing the requirement;
+- packaging/release paths that bypass the tested implementation.
+
+Record the result in the active row.
+
+If the patch changes a shared component, populate the Impact Set and revalidate only affected PASS rows.
+
+## 11. Current execution cursor
+
+**Current row: R001**  
+**Later rows: NOT DERIVED / LOCKED by design**  
+**Overall percentage: NOT VALID**  
+**Merge: NOT PERFORMED**
+
+### R001 — first MICU
+
+| Field | Value |
+|---|---|
+| Row | R001 |
+| Manifest Ref | `docs/MANIFEST.md` §2 — Core truth model; SHA `447b56f8a3a61ee34288730c705d9b0680c00e95` |
+| MICU | Prove one concrete invariant: **evidence is never treated as truth/authoritative domain state by the decision path**. |
+| Acceptance Criteria | A consequential decision/authorization path consumes evidence with explicit provenance/state and cannot promote evidence existence into authoritative truth merely because evidence exists. |
+| Depends On | NONE |
+| Unblocks | Derivation of the next MICU from the next unresolved §2/§3 contract after R001 PASS |
+| Code Location | **TO BE ESTABLISHED BY AS-IS AUDIT — do not guess** |
+| Code State | NOT AUDITED |
+| Current Behavior | NOT EXECUTED |
+| Exact Gap | NOT YET PROVEN; inspect active decision/evidence/domain-state path before classifying a gap |
+| Solution Search | Same repo first; then CDR Core; then Software Forge; then Git history; external sources only if required |
+| Reuse Decision | NOT YET DECIDED |
+| Patch Action | Audit first. Patch only if the focused invariant fails. |
+| Focused Test | Construct evidence that exists but does not constitute verified domain truth; prove the decision path retains the distinction and does not authorize from evidence presence alone. |
+| Regression | Existing decision/policy/evidence regressions covering the affected path; add a focused regression if missing. |
+| Adversarial | Evidence-present / truth-absent case; stale or contradictory evidence case where applicable. |
+| Required Environment | GitHub-hosted CI first; target-specific environment only if AS-IS shows the invariant is platform-dependent. |
+| Environment Owner/Why | The invariant is domain/decision semantics unless AS-IS proves a platform-specific dependency. |
+| Proof Command | To be established from the audited test harness; must execute the focused assertion, not merely a broad suite. |
+| Expected Result | Evidence presence alone cannot create authoritative truth or authorization. |
+| Actual Result | NOT EXECUTED |
+| Evidence | NONE |
+| Evidence Type | NOT EXECUTED |
+| Evidence Commit | NONE |
+| Artifact Identity | NONE |
+| Evidence Time / Expiry | NONE |
+| Reproducible | NOT EXECUTED |
+| Contradiction | NOT EXECUTED |
+| Impact Set | NONE |
+| Audit Update | Must record exact code/test paths and row classification after AS-IS. |
+| Audit Classification | VALID — MICU/JIT structure; implementation fields intentionally pending AS-IS |
+| Final Status | NOT EXECUTED |
+| Execution State | ACTIVE |
+
+## 12. R001 execution protocol
+
+1. Inspect the exact decision/evidence/domain-state code path.
+2. Identify exact files/classes/functions and current tests.
+3. Compare behavior directly to Manifest §2.
+4. Record Code State and Exact Gap.
+5. Search same-repo, CDR, Forge, history for proven solutions.
+6. Select the reuse/implementation decision.
+7. Run the focused positive assertion.
+8. Run regression.
+9. Run negative/adversarial proof where applicable.
+10. Execute in the exact authoritative environment.
+11. Capture evidence bound to the tested commit.
+12. Run contradiction and impact checks.
+13. Update the audit record.
+14. Only when every applicable PASS gate is satisfied, set R001 = PASS.
+15. Only then derive R002.
+
+## 13. Coverage and traceability rule
+
+The 139-row Matrix v2 is retained as a **coverage register**, not an execution queue.
+
+When a MICU closes, its Manifest coverage mapping is updated. If one Matrix item contains multiple independently closable invariants, the active ledger may derive them JIT over multiple rows. If multiple Matrix items are one inseparable invariant, they may map to one MICU.
+
+This prevents both failure modes:
+- one coarse row hiding several unproven invariants;
+- hundreds of pre-generated rows pretending to be executed work.
+
+## 14. Revalidation rule
+
+If evidence was produced for SHA A and implementation changes to SHA B:
+
+**SHA-A evidence does not prove SHA-B behavior.**
+
+Use:
+
+`changed files → impact mapping → affected PASS rows → targeted revalidation → evidence refresh`
+
+No automatic full-suite rerun is required unless the Manifest gate or impact analysis requires it.
+
+## 15. Release truth
+
+Passing the currently derived MICU queue does not make the product FINAL, Production, or Verified.
+
+Release claims require applicable Manifest requirements to have been operationally decomposed and closed with fresh evidence.
+
+## 16. Audit conclusion for v1.1
+
+The previous 139-row operational ledger was structurally too close to a static requirement inventory.
+
+v1.1 deliberately changes it to:
+
+`LOCKED MANIFEST → COVERAGE MATRIX → AS-IS → ONE MICU → EXACT GAP → REUSE SEARCH → PATCH/EXISTING → FOCUSED TEST → REGRESSION → ADVERSARIAL → EXACT ENVIRONMENT → FRESH EVIDENCE → CONTRADICTION → IMPACT → PASS → NEXT MICU`
+
+**Environment is retained.**  
+**Dependency is row-specific and immediate.**  
+**Generic templates are not closure evidence.**  
+**Acceptance is minimum-sufficient and requirement-specific.**  
+**Only the current MICU is active.**  
+**Future rows are not guessed.**
