@@ -220,10 +220,11 @@ def test_fast_regression_gate_is_independent_and_fail_closed():
     root = Path(__file__).resolve().parents[1]
     workflow = (root / ".github" / "workflows" / "fast-regression.yml").read_text(encoding="utf-8")
     assert "runs-on: [self-hosted, Windows, X64, marketradar]" in workflow
-    assert "python -m pytest -q" in workflow
+    assert "& $env:MARKETRADAR_PYTHON_EXE -m pytest -q" in workflow
     assert "product_audit.py" in workflow
     assert "release_audit.py" in workflow
     assert "if-no-files-found" not in workflow
+    assert "C:\\Users\\" not in workflow
 
 
 def test_autonomous_supervisor_persists_hashed_checkpoint_evidence():
