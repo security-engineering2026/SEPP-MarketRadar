@@ -242,5 +242,6 @@ def test_manifest_ranking_is_separate_from_policy_and_exposes_scoring_factors():
             assert all(x["eligibility"] != "UNKNOWN" for x in payload["do_now"])
             assert any(x["eligibility"] == "BLOCK" for x in payload["blocked"])
             assert any(x["eligibility"] == "UNKNOWN" for x in payload["unknown"])
+            assert payload["top7"]
         finally:
             c.close()
