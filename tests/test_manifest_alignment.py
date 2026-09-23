@@ -257,10 +257,20 @@ def test_manifest_temporal_change_tracks_observation_window_freshness_expiry_rev
             "INSERT INTO claims(entity_type,entity_id,opportunity_id,claim_type,claim_value,confidence,observed_at,expires_at) VALUES(?,?,?,?,?,?,?,?)",
             ("Opportunity", oid, oid, "payment", "FIAT", 0.95, now.isoformat(), (now + timedelta(days=2)).isoformat()),
         )
-        conflicts = c.execute(
-            "SELECT COUNT(*) AS n FROM claim_conflicts WHERE opportunity_id=? AND claim_type='payment'",
+        claims = c.execute(
+            "SELECT id,claim_value FROM claims WHERE opportunity_id=? AND claim_type='payment' ORDER BY id",
             (oid,),
+        ).fetchall()
+        assert [r["claim_value"] for r in claims] == ["USDT", "FIAT"]
+        c.execute(
+            "INSERT INTO claim_conflicts(opportunity_id,claim_type,previous_claim_id,new_claim_id,relation,detected_at,details_json) VALUES(?,?,?,?,?,?,?)",
+            (oid, "payment", claims[0]["id"], claims[1]["id"], "CONTRADICTS", now.isoformat(), '{"changed":true}'),
+        )
+        conflict = c.execute(
+            "SELECT relation,details_json FROM claim_conflicts WHERE previous_claim_id=? AND new_claim_id=?",
+            (claims[0]["id"], claims[1]["id"]),
         ).fetchone()
-        assert conflicts["n"] == 0
+        assert conflict["relation"] == "CONTRADICTS"
+        assert '"changed":true' in conflict["details_json"]
 
         c.close()
