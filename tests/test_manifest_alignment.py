@@ -216,6 +216,7 @@ def test_manifest_application_lifecycle_enforces_valid_transitions_and_rejects_i
             )
             oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/lifecycle",)).fetchone()["id"]
             transition(c, oid, "ELIGIBILITY_CHECK", actor="test")
+            transition(c, oid, "RECOMMENDED", actor="test")
             transition(c, oid, "APPROVAL_PENDING", actor="test")
             transition(c, oid, "SUBMITTED", actor="test")
             row = c.execute("SELECT state FROM opportunities WHERE id=?", (oid,)).fetchone()
@@ -225,7 +226,8 @@ def test_manifest_application_lifecycle_enforces_valid_transitions_and_rejects_i
             events = c.execute("SELECT from_state,to_state,actor FROM application_events WHERE opportunity_id=? ORDER BY id", (oid,)).fetchall()
             assert [(r["from_state"], r["to_state"]) for r in events] == [
                 ("DISCOVERED", "ELIGIBILITY_CHECK"),
-                ("ELIGIBILITY_CHECK", "APPROVAL_PENDING"),
+                ("ELIGIBILITY_CHECK", "RECOMMENDED"),
+                ("RECOMMENDED", "APPROVAL_PENDING"),
                 ("APPROVAL_PENDING", "SUBMITTED"),
             ]
         finally:
