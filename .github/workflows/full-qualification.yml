@@ -34,15 +34,24 @@ jobs:
       - name: Prepare self-hosted Python
         shell: pwsh
         run: |
-          $py = Get-Command py -ErrorAction SilentlyContinue
-          if (-not $py) { throw "PYTHON_LAUNCHER_MISSING" }
-          $version = (& py -3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')").Trim()
-          if ([version]$version -lt [version]"3.12") { throw "PYTHON_VERSION_TOO_OLD:$version" }
-          $shim = Join-Path $env:RUNNER_TEMP "python-shim"
+          $candidates = @(
+            (Get-Command python.exe -ErrorAction SilentlyContinue).Source,
+            (Get-Command py.exe -ErrorAction SilentlyContinue).Source
+          ) + @(Get-ChildItem 'C:\Program Files\Python*\python.exe','C:\Program Files\Python*\*\python.exe','C:\Users\*\AppData\Local\Programs\Python\Python*\python.exe' -ErrorAction SilentlyContinue | ForEach-Object FullName)
+          $python = $null
+          foreach ($candidate in ($candidates | Where-Object { $_ } | Select-Object -Unique)) {
+            try {
+              $v = (& $candidate -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')").Trim()
+              if ([version]$v -ge [version]'3.12') { $python = $candidate; break }
+            } catch {}
+          }
+          if (-not $python) { throw 'PYTHON_3_12_PLUS_NOT_FOUND' }
+          $python | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $shim = Join-Path $env:RUNNER_TEMP 'python-shim'
           New-Item -ItemType Directory -Force -Path $shim | Out-Null
-          "@echo off`r`npy -3 %*" | Set-Content -Path (Join-Path $shim "python.cmd") -Encoding ascii
+          ('@echo off' + [Environment]::NewLine + '"' + $python + '" %*') | Set-Content -Path (Join-Path $shim 'python.cmd') -Encoding ascii
           $shim | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          python --version
+          & $python --version
       - name: Install dependencies
         shell: pwsh
         run: python -m pip install -r requirements-dev.txt pillow
