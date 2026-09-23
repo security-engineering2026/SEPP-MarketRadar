@@ -223,7 +223,7 @@ def test_manifest_revenue_payment_requires_explicit_verification_and_rejects_dup
             pv = c.execute("SELECT status,network,txid FROM payment_verification WHERE opportunity_id=?", (oid,)).fetchone()
             assert pv["status"] == "PENDING"
             assert pv["network"] == "TRC20"
-            assert pv["txid"] == "tx-1"
+            assert pv["txid"] == "a" * 64
             with pytest.raises(Exception):
                 record_payment(c, oid, 100, "USDT", "tx-ref-1", network="TRC20", txid="tx-1", actor="test")
             assert c.execute("SELECT state FROM opportunities WHERE id=?", (oid,)).fetchone()["state"] == "DELIVERED"
