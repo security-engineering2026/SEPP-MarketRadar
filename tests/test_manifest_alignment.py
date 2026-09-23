@@ -252,6 +252,7 @@ def test_manifest_temporal_change_tracks_observation_window_freshness_expiry_rev
             ("temporal-source",),
         ).fetchone()
         assert source["last_verified_at"] < source["stale_at"]
+        assert freshness_score({"first_seen": first, "last_seen": last}) == freshness_score({"last_seen": last})
 
         c.execute(
             "INSERT INTO claims(entity_type,entity_id,opportunity_id,claim_type,claim_value,confidence,observed_at,expires_at) VALUES(?,?,?,?,?,?,?,?)",
