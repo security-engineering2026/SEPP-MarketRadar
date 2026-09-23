@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+import pytest
 
 from marketradar.application import transition
 from marketradar.db import connect
@@ -202,3 +203,45 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_manifest_authorization_broker_is_evidence_bound_expiring_and_replay_protected():
+    from marketradar.goal_completion import authorize_action, execute_authorized
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "authorization.db")
+        try:
+            c.execute(
+                "INSERT INTO opportunities(source,title,url,state,eligibility) VALUES(?,?,?,?,?)",
+                ("test", "Authorized", "https://example.test/auth", "APPROVAL_PENDING", "EXECUTE"),
+            )
+            oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/auth",)).fetchone()["id"]
+            c.execute(
+                "INSERT INTO evidence(opportunity_id,kind,source,url,finding,confidence,provenance_root,observed_at,evidence_hash) VALUES(?,?,?,?,?,?,?,?,?)",
+                (oid, "policy", "test", "https://example.test/e", "authorized evidence", 0.95, "test", "2026-09-23T00:00:00+00:00", "f" * 64),
+            )
+            eid = c.execute("SELECT id FROM evidence WHERE evidence_hash=?", ("f" * 64,)).fetchone()["id"]
+            c.commit()
+
+            aid = authorize_action(c, "SUBMIT", str(oid), {"opportunity_id": oid, "x": 1}, [eid], POLICY_VERSION, "test", ttl_seconds=60)
+            auth = c.execute("SELECT * FROM action_authorizations WHERE approval_id=?", (aid,)).fetchone()
+            assert auth is not None
+            assert auth["evidence_digest"]
+            assert auth["parameters_digest"]
+            assert auth["policy_version"] == POLICY_VERSION
+            assert auth["nonce"]
+
+            execute_authorized(c, aid, "SUBMIT", str(oid), {"opportunity_id": oid, "x": 1}, [eid], lambda: {"ok": True})
+            replay = c.execute("SELECT status FROM action_authorizations WHERE approval_id=?", (aid,)).fetchone()
+            assert replay["status"] in {"CONSUMED", "EXECUTED"}
+
+            try:
+                execute_authorized(c, aid, "SUBMIT", str(oid), {"opportunity_id": oid, "x": 1}, [eid], lambda: {"ok": True})
+                assert False, "authorization replay was accepted"
+            except Exception as exc:
+                assert "replay" in str(exc).lower() or "used" in str(exc).lower()
+
+            with pytest.raises(ValueError, match="AUTH_EVIDENCE_TARGET_MISMATCH"):
+                authorize_action(c, "SUBMIT", str(oid + 1), {"opportunity_id": oid + 1}, [eid], POLICY_VERSION, "test", ttl_seconds=60)
+        finally:
+            c.close()
