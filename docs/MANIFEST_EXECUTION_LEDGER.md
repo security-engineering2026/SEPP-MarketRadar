@@ -213,7 +213,7 @@ If the patch changes a shared component, populate the Impact Set and revalidate 
 
 ## 11. Current execution cursor
 
-**Current row: R004 (to be derived JIT)**  
+**Current row: R005 (to be derived JIT)**  
 **R001: PASS / CLOSED**  
 **R002: PASS / CLOSED**  
 **Later rows: NOT DERIVED / LOCKED by design**  
@@ -328,6 +328,38 @@ If the patch changes a shared component, populate the Impact Set and revalidate 
 | Contradiction | NONE FOUND in inspected source onboarding, registry loading, audit promotion, and tests. |
 | Impact Set | NONE — production implementation unchanged; regression test only. |
 | Audit Update | R003 added with exact Manifest traceability, AS-IS behavior, focused regression, CI evidence, contradiction and impact checks. |
+| Audit Classification | VALID |
+| Final Status | PASS |
+| Execution State | CLOSED |
+## 14. R004 — Reachability is not capability
+
+| Field | Value |
+|---|---|
+| Row | R004 |
+| Manifest Ref | docs/MANIFEST.md §2 — Core truth model; §6 Capability maturity; SHA 447b56f8a3a61ee34288730c705d9b0680c00e95 |
+| MICU | Prove that **endpoint reachability does not itself constitute source capability or execution readiness**. |
+| Acceptance Criteria | A responding endpoint may establish REACHABLE only; PARSEABLE, VALIDATED, POLICY_VERIFIED and EXECUTION_READY require their own evidence. No silent jump from reachability to execution authority. |
+| Depends On | R003 |
+| Code Location | marketradar/capability.py; marketradar/source_verification.py; tests/test_manifest_alignment.py |
+| Code State | PRESENT |
+| Current Behavior | capability_evidence_for_verification() derives REACHABLE only when the endpoint responds and parsing is not proven; higher stages require explicit parseable/validated/policy/execution evidence. SourceVerificationEngine separately computes execution readiness from explicit evidence and authorization capability. advance_capability() is monotonic and does not infer higher stages. |
+| Exact Gap | FRESH DIRECT REGRESSION PROOF was missing; implementation defect not found. |
+| Solution Search | Same-repository capability state machine and source verification path inspected. External repos were not required. |
+| Reuse Decision | CONFIRM EXISTING — existing capability ladder is the authoritative implementation. |
+| Patch Action | NONE to production code. Added test_manifest_reachability_is_not_capability to tests/test_manifest_alignment.py. |
+| Focused Test | test_manifest_reachability_is_not_capability |
+| Regression | Full python -m pytest -q in Windows CI. |
+| Adversarial | reachable=True with parseable/validated/policy_verified/execution_ready=False yields exactly REACHABLE; parsed-only yields PARSEABLE, never EXECUTION_READY. |
+| Required Environment | GitHub-hosted Actions, Windows CI / job test-windows, run 35889129302. |
+| Proof Command | python -m pytest -q |
+| Actual Result | **PASS** — full pytest completed successfully; compile, product audit and release audit also succeeded. |
+| Evidence | GitHub Actions Windows CI run 35889129302, job 107276854498. |
+| Evidence Type | CI / REGRESSION / ADVERSARIAL |
+| Evidence Commit | 2e7da934c4c23ff69402d9020f73f8d6a02b7020 |
+| Evidence Time / Expiry | 2026-09-23; valid until tested capability/verification paths change. |
+| Reproducible | YES |
+| Contradiction | NONE FOUND in capability ladder, source verification, and relevant tests. |
+| Impact Set | NONE — production implementation unchanged; regression test only. |
 | Audit Classification | VALID |
 | Final Status | PASS |
 | Execution State | CLOSED |
