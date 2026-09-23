@@ -261,3 +261,44 @@ def test_manifest_payment_claim_is_not_payment_verification():
         ).fetchone()
         assert verification["status"] == "VERIFIED"
         cdb.close()
+
+def test_manifest_outcomes_are_immutable_learning_inputs():
+    from marketradar.outcome_learning import learning_summary
+    from marketradar.runtime import MarketRadarRuntime
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        cdb.execute(
+            "INSERT INTO opportunities(source,title,url,state,category,budget) VALUES(?,?,?,?,?,?)",
+            ("test", "Outcome", "https://example.test/outcome", "DISCOVERED", "python_debugging", 500),
+        )
+        oid = cdb.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/outcome",)).fetchone()["id"]
+        runtime = object.__new__(MarketRadarRuntime)
+        runtime.c = cdb
+
+        result = runtime.record_outcome(oid, "REJECTED", reason="budget", notes="immutable test")
+        assert result["acceptance_probability"] >= 0
+        row = cdb.execute(
+            "SELECT outcome,reason,notes FROM opportunity_outcomes WHERE opportunity_id=? ORDER BY id DESC LIMIT 1",
+            (oid,),
+        ).fetchone()
+        assert row["outcome"] == "REJECTED"
+        assert row["reason"] == "budget"
+        assert row["notes"] == "immutable test"
+        assert cdb.execute("SELECT state FROM opportunities WHERE id=?", (oid,)).fetchone()["state"] == "REJECTED"
+        assert any(item["reason"] == "budget" and item["outcome"] == "REJECTED" for item in learning_summary(cdb)["reasons"])
+
+        try:
+            cdb.execute("UPDATE opportunity_outcomes SET notes='tampered' WHERE opportunity_id=?", (oid,))
+            assert False, "opportunity outcome ledger allowed update"
+        except Exception as exc:
+            assert "immutable" in str(exc).lower()
+
+        try:
+            cdb.execute("DELETE FROM opportunity_outcomes WHERE opportunity_id=?", (oid,))
+            assert False, "opportunity outcome ledger allowed deletion"
+        except Exception as exc:
+            assert "immutable" in str(exc).lower()
+
+        cdb.close()
+\n
