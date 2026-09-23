@@ -202,3 +202,19 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_manifest_policy_engine_is_deterministic_versioned_and_fail_closed():
+    from marketradar.policy import eligibility, POLICY_VERSION
+
+    assert POLICY_VERSION == "policy.v1"
+    base = {"iran_status": "ALLOW", "kyc_status": "ALLOW", "payment_status": "USDT", "terms_status": "reviewed"}
+    assert eligibility(base, evidence_ok=True)[0] == "EXECUTE"
+    for source in ({**base, "iran_status": "BLOCK"}, {**base, "kyc_status": "BLOCK"}, {**base, "terms_status": "blocked"}):
+        assert eligibility(source, evidence_ok=True)[0] == "BLOCK"
+    assert eligibility({**base, "iran_status": "UNKNOWN"}, evidence_ok=True)[0] == "UNKNOWN"
+    assert eligibility({**base, "kyc_status": "UNKNOWN"}, evidence_ok=True)[0] == "REVIEW"
+    assert eligibility({**base, "payment_status": "UNKNOWN"}, evidence_ok=True)[0] == "REVIEW"
+    assert eligibility({**base, "terms_status": "needs_review"}, evidence_ok=True)[0] == "REVIEW"
+    assert eligibility(base, evidence_ok=False)[0] == "UNKNOWN"
+    assert eligibility(base, evidence_ok=True, opportunity={"country": "Israel"})[0] == "BLOCK"
