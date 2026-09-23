@@ -1,0 +1,75 @@
+name: Fast Regression Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketradar-fast-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    name: Fast Windows regression
+    runs-on: [self-hosted, Windows, X64, marketradar]
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: powershell -ExecutionPolicy Bypass -File {0}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Resolve Python runtime
+        run: |
+          $candidates = @(
+            "$env:ProgramFiles\Python*\python.exe",
+            "$env:ProgramFiles\Python*\*\python.exe",
+            "$env:LOCALAPPDATA\Programs\Python\Python*\python.exe",
+            "C:\Python*\python.exe"
+          )
+          $python = $null
+          foreach ($pattern in $candidates) {
+            $found = Get-ChildItem -Path $pattern -File -ErrorAction SilentlyContinue |
+              Sort-Object FullName -Descending | Select-Object -First 1
+            if ($found) { $python = $found.FullName; break }
+          }
+          if (-not $python) {
+            foreach ($root in @("HKLM:\SOFTWARE\Python\PythonCore","HKLM:\SOFTWARE\WOW6432Node\Python\PythonCore")) {
+              foreach ($key in @(Get-ChildItem $root -ErrorAction SilentlyContinue | Sort-Object PSChildName -Descending)) {
+                $install = (Get-ItemProperty $key.PSPath -ErrorAction SilentlyContinue).InstallPath
+                if ($install -and (Test-Path (Join-Path $install "python.exe"))) {
+                  $python = Join-Path $install "python.exe"; break
+                }
+              }
+              if ($python) { break }
+            }
+          }
+          if (-not $python) { throw "PYTHON_RUNTIME_NOT_FOUND" }
+          "MARKETRADAR_PYTHON_EXE=$python" | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+          Split-Path $python | Out-File $env:GITHUB_PATH -Append -Encoding utf8
+          & $python --version
+      - name: Install dependencies
+        run: |
+          & $env:MARKETRADAR_PYTHON_EXE -m pip install -r requirements-dev.txt pillow
+          if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed" }
+      - name: Compile
+        run: |
+          & $env:MARKETRADAR_PYTHON_EXE -m compileall -q marketradar tools
+          if ($LASTEXITCODE -ne 0) { throw "Compile failed" }
+      - name: Regression
+        run: |
+          & $env:MARKETRADAR_PYTHON_EXE -m pytest -q
+          if ($LASTEXITCODE -ne 0) { throw "Regression failed" }
+      - name: Product audit
+        run: |
+          & $env:MARKETRADAR_PYTHON_EXE -B tools/product_audit.py
+          if ($LASTEXITCODE -ne 0) { throw "Product audit failed" }
+      - name: Release audit
+        run: |
+          & $env:MARKETRADAR_PYTHON_EXE -B tools/release_audit.py
+          if ($LASTEXITCODE -ne 0) { throw "Release audit failed" }
