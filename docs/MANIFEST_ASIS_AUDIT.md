@@ -204,3 +204,11 @@ The remaining gaps above are now the implementation queue. No item will be repor
 - Current explicit PASS rows are 6, 22, 25, 36 and 40; governance/process rows 47 and 48 are marked PASS as process contracts.
 - Remaining rows are OPEN until their required implementation + regression + environment evidence + audit exposure are all proven.
 - This matrix is now the required operational register for every subsequent Manifest-driven implementation cycle.
+
+
+## 2026-09-23 — Atomic evidence decomposition v2
+- Replaced the previous high-level execution table with `docs/MANIFEST_EXECUTION_MATRIX_v1.0.md` v2 content.
+- All 49 Manifest contracts are decomposed into **196 atomic execution/evidence units**: implementation, deterministic regression, failure/adversarial qualification, and environment/evidence reconciliation.
+- Each atomic unit now records the **defect class** separately: code/implementation gap, missing/incomplete regression, missing adversarial coverage, failed qualification, missing environment/evidence, or external prerequisite.
+- The 196-unit denominator is explicitly an engineering execution denominator, not a claim that the normative Manifest literally contains 196 clauses.
+- This decomposition is now the required basis for identifying exactly where progress is blocked and for calculating future evidence-based PASS counts.
