@@ -91,8 +91,8 @@ jobs:
           }
           if (-not $python) {
             $root = Join-Path $env:RUNNER_TEMP "marketradar-python"
-            $pkg = Join-Path $env:RUNNER_TEMP "python-3.13.15.nupkg"
-            $url = "https://api.nuget.org/v3-flatcontainer/python/3.13.15/python.3.13.15.nupkg"
+            $pkg = Join-Path $env:RUNNER_TEMP "python-3.13.13-amd64.exe"
+            $url = "https://www.python.org/ftp/python/3.13.13/python-3.13.13-amd64.exe"
             New-Item -ItemType Directory -Force -Path $root | Out-Null
             try {
               Invoke-WebRequest -Uri $url -OutFile $pkg -UseBasicParsing -TimeoutSec 240
@@ -100,11 +100,12 @@ jobs:
               & curl.exe --fail --location --retry 3 --retry-all-errors --connect-timeout 20 --max-time 240 -o $pkg $url
               if ($LASTEXITCODE -ne 0) { throw "Python bootstrap download failed; curl exit=$LASTEXITCODE" }
             }
-            if ((Get-Item $pkg).Length -lt 1000000) { throw "Python bootstrap package is unexpectedly small." }
-            Expand-Archive -LiteralPath $pkg -DestinationPath $root -Force
-            $python = Get-ChildItem -LiteralPath $root -Filter "python.exe" -Recurse -File |
-              Select-Object -First 1 -ExpandProperty FullName
-            $python = Test-PythonCandidate $python
+            if ((Get-Item $pkg).Length -lt 20000000) { throw "Python bootstrap installer is unexpectedly small." }
+            New-Item -ItemType Directory -Force -Path $root | Out-Null
+            $args = '/quiet InstallAllUsers=0 PrependPath=0 Include_test=0 Include_tcltk=1 Include_pip=1 TargetDir="' + $root + '"'
+            $installer = Start-Process -FilePath $pkg -ArgumentList $args -Wait -PassThru
+            if ($installer.ExitCode -ne 0) { throw "Python bootstrap installer failed: $($installer.ExitCode)" }
+            $python = Test-PythonCandidate (Join-Path $root "python.exe")
           }
           if (-not $python) { throw "PYTHON_3_12_PLUS_NOT_FOUND" }
           $shim = Join-Path $env:RUNNER_TEMP "python-shim"
