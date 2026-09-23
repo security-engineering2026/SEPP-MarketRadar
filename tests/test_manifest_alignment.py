@@ -428,15 +428,17 @@ def test_manifest_evidence_graph_links_source_observation_evidence_claim_and_dom
             cdb.commit()
 
         opportunity = cdb.execute("SELECT id,source FROM opportunities WHERE url=?", ("https://example.test/op/graph",)).fetchone()
-        observation = cdb.execute("SELECT id,source,payload_sha256 FROM raw_observations WHERE payload_sha256=?", (digest,)).fetchone()
+        observations = cdb.execute("SELECT id,source,payload_sha256 FROM raw_observations WHERE payload_sha256 IN (?,?) ORDER BY id", (digests[0], digests[1])).fetchall()
         evidence_rows = cdb.execute("SELECT id,opportunity_id,observation_id,source,finding FROM evidence WHERE opportunity_id=? ORDER BY id", (opportunity["id"],)).fetchall()
         claim = cdb.execute("SELECT id,opportunity_id,claim_type FROM claims WHERE opportunity_id=? ORDER BY id LIMIT 1", (opportunity["id"],)).fetchone()
         claim_links = cdb.execute("SELECT claim_id,evidence_id FROM claim_evidence WHERE claim_id=?", (claim["id"],)).fetchall()
         conflicts = cdb.execute("SELECT relation FROM claim_conflicts WHERE opportunity_id=? AND claim_type='iran_access'", (opportunity["id"],)).fetchall()
 
-        assert opportunity["source"] == observation["source"] == "GRAPH_TEST"
+        assert len(observations) == 2
+        assert all(row["source"] == "GRAPH_TEST" for row in observations)
+        assert opportunity["source"] == "GRAPH_TEST"
         assert len(evidence_rows) == 2
-        assert {row["observation_id"] for row in evidence_rows} == {observation["id"], cdb.execute("SELECT id FROM raw_observations WHERE payload_sha256=?", (digests[1],)).fetchone()["id"]}
+        assert {row["observation_id"] for row in evidence_rows} == {row["id"] for row in observations}
         assert all(row["opportunity_id"] == opportunity["id"] and row["source"] == "GRAPH_TEST" for row in evidence_rows)
         assert {row["finding"] for row in evidence_rows} == {"observed-0", "observed-1"}
         assert claim["opportunity_id"] == opportunity["id"]
