@@ -186,3 +186,12 @@ Retrieve execution evidence for commit a90b881be167a4f9a66cb65b9278479d27835ac4 
 - Historical 16.1.1 release documents remain intentionally historical and are not treated as runtime defects.
 - These are repository fixes only. Runtime PASS remains NOT EXECUTED until fresh GitHub Actions evidence runs against the patched main.
 
+
+
+## 2026-09-23 — Qualification execution trigger
+
+- Current main HEAD: `536d806a17a144787ab681ac43b48b98da731d38`.
+- Post-audit workflow evidence for this HEAD is currently empty/not retrievable; no PASS is inferred from source inspection.
+- Manifest contract regression coverage is present for temporal contradiction, capability ladder, acquisition fallback, and consequential decision trace.
+- Triggering a fresh main workflow cycle is the next evidence step; Windows is routed to `[self-hosted, Windows, X64, marketradar]` and Android remains on GitHub-hosted Ubuntu.
+- No product FAIL is declared until the fresh execution produces a concrete failure.
