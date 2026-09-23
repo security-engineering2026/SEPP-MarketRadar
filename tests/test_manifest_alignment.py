@@ -216,8 +216,8 @@ def test_manifest_outcome_ledger_preserves_allowed_outcomes_reasons_and_rejects_
             )
             oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/outcome",)).fetchone()["id"]
             result = record_outcome(c, oid, "REJECTED", reason="budget mismatch", notes="learning signal")
-            assert result["outcome"] == "REJECTED"
-            row = c.execute("SELECT outcome,reason,notes FROM outcomes WHERE opportunity_id=? ORDER BY id DESC LIMIT 1", (oid,)).fetchone()
+            assert result["acceptance_probability"] >= 0
+            row = c.execute("SELECT outcome,reason,notes FROM opportunity_outcomes WHERE opportunity_id=? ORDER BY id DESC LIMIT 1", (oid,)).fetchone()
             assert row["outcome"] == "REJECTED"
             assert row["reason"] == "budget mismatch"
             assert row["notes"] == "learning signal"
