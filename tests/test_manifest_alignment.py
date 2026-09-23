@@ -202,3 +202,44 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_manifest_action_model_records_failure_attempt_result_and_immutable_execution_trace():
+    from marketradar.goal_completion import authorize_action, execute_authorized
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "action.db")
+        try:
+            c.execute(
+                "INSERT INTO opportunities(source,title,url,state,eligibility) VALUES(?,?,?,?,?)",
+                ("test", "Action", "https://example.test/action", "APPROVAL_PENDING", "EXECUTE"),
+            )
+            oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/action",)).fetchone()["id"]
+            c.execute(
+                "INSERT INTO evidence(opportunity_id,kind,source,url,finding,confidence,provenance_root,observed_at,evidence_hash) VALUES(?,?,?,?,?,?,?,?,?)",
+                (oid, "policy", "test", "https://example.test/e", "action evidence", 0.95, "test", "2026-09-23T00:00:00+00:00", "a" * 64),
+            )
+            eid = c.execute("SELECT id FROM evidence WHERE evidence_hash=?", ("a" * 64,)).fetchone()["id"]
+            c.commit()
+            aid = authorize_action(c, "TEST_ACTION", str(oid), {"opportunity_id": oid}, [eid], POLICY_VERSION, "test", ttl_seconds=60)
+
+            def failing_executor():
+                raise RuntimeError("external failure")
+
+            with pytest.raises(RuntimeError, match="external failure"):
+                execute_authorized(c, aid, "TEST_ACTION", str(oid), {"opportunity_id": oid}, [eid], failing_executor)
+
+            attempt = c.execute("SELECT * FROM action_attempts WHERE approval_id=?", (aid,)).fetchone()
+            auth = c.execute("SELECT status FROM action_authorizations WHERE approval_id=?", (aid,)).fetchone()
+            trace = c.execute(
+                "SELECT * FROM decision_traces WHERE decision_type='ACTION_EXECUTION' AND approval_ref=? ORDER BY id DESC LIMIT 1",
+                (aid,),
+            ).fetchone()
+            assert attempt["status"] == "FAILED"
+            assert "RuntimeError: external failure" in attempt["error"]
+            assert auth["status"] == "FAILED"
+            assert trace["outcome"] == "FAILED"
+            assert trace["approval_ref"] == aid
+            assert '"authorization_status": "FAILED"' in trace["state_snapshot_json"]
+        finally:
+            c.close()
