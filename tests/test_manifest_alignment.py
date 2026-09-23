@@ -202,3 +202,30 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_manifest_revenue_payment_requires_explicit_verification_and_rejects_duplicate_reference():
+    from marketradar.operational_completion import record_payment
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "payment.db")
+        try:
+            c.execute(
+                "INSERT INTO opportunities(source,title,url,state) VALUES(?,?,?,?)",
+                ("test", "Payment", "https://example.test/payment", "DELIVERED"),
+            )
+            oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/payment",)).fetchone()["id"]
+            result = record_payment(c, oid, 100, "USDT", "tx-ref-1", network="TRC20", txid="tx-1", actor="test")
+            assert result["status"] == "RECORDED_UNVERIFIED"
+            revenue = c.execute("SELECT payment_ref,verification_state FROM revenue WHERE opportunity_id=?", (oid,)).fetchone()
+            assert revenue["payment_ref"] == "tx-ref-1"
+            assert revenue["verification_state"] == "RECORDED_UNVERIFIED"
+            pv = c.execute("SELECT status,network,txid FROM payment_verification WHERE opportunity_id=?", (oid,)).fetchone()
+            assert pv["status"] == "PENDING"
+            assert pv["network"] == "TRC20"
+            assert pv["txid"] == "tx-1"
+            with pytest.raises(Exception):
+                record_payment(c, oid, 100, "USDT", "tx-ref-1", network="TRC20", txid="tx-1", actor="test")
+            assert c.execute("SELECT state FROM opportunities WHERE id=?", (oid,)).fetchone()["state"] == "DELIVERED"
+        finally:
+            c.close()
