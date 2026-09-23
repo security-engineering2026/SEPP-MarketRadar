@@ -195,3 +195,12 @@ The remaining gaps above are now the implementation queue. No item will be repor
 - Added required Goal/Evidence/Environment/Reuse tracking fields and explicit routing for Windows product evidence, Android evidence, live Internet, external endpoints, and release artifacts.
 - Added a reuse hierarchy across MarketRadar, CDR Core, Software Forge, official tooling, and mature open source before new implementation.
 - Added parallel-execution and status-discipline rules; queue state is not product failure.
+
+
+## 2026-09-23 — Atomic Manifest execution matrix registered
+- Added `docs/MANIFEST_EXECUTION_MATRIX_v1.0.md`.
+- The matrix decomposes all **49 normative Manifest sections** into explicit implementation, test/acceptance, status, existing-solution/reuse, external-reference, priority and environment fields.
+- The matrix deliberately does not treat source inspection as runtime PASS.
+- Current explicit PASS rows are 6, 22, 25, 36 and 40; governance/process rows 47 and 48 are marked PASS as process contracts.
+- Remaining rows are OPEN until their required implementation + regression + environment evidence + audit exposure are all proven.
+- This matrix is now the required operational register for every subsequent Manifest-driven implementation cycle.
