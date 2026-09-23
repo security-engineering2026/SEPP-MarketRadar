@@ -301,4 +301,4 @@ def test_manifest_outcomes_are_immutable_learning_inputs():
             assert "immutable" in str(exc).lower()
 
         cdb.close()
-\n
+
