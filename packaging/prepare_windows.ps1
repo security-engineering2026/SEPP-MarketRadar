@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$ArchivePath,[string]$Destination="$env:TEMP\SEPP-MarketRadar-16.1.1")
+param([Parameter(Mandatory=$true)][string]$ArchivePath,[string]$Destination="$env:TEMP\SEPP-MarketRadar")
 $ErrorActionPreference="Stop"
 if (!(Test-Path $ArchivePath)) { throw "Archive not found: $ArchivePath" }
 if (Test-Path $Destination) { Remove-Item $Destination -Recurse -Force }
