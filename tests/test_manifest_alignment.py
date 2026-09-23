@@ -202,3 +202,37 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_manifest_decision_model_is_reproducible_from_snapshot_evidence_policy_and_ranking_context():
+    from marketradar.goal_completion import decision_center
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "decision.db")
+        try:
+            c.execute(
+                "INSERT INTO opportunities(source,title,url,state,eligibility,application_ready,rank_score,score) VALUES(?,?,?,?,?,?,?,?)",
+                ("test", "Decision", "https://example.test/decision", "DISCOVERED", "REVIEW", 1, 0.88, 0.88),
+            )
+            oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/decision",)).fetchone()["id"]
+            c.execute(
+                "INSERT INTO evidence(opportunity_id,kind,source,url,finding,confidence,provenance_root,observed_at,evidence_hash) VALUES(?,?,?,?,?,?,?,?,?)",
+                (oid, "policy", "test", "https://example.test/e", "review evidence", 0.92, "test", "2026-09-23T00:00:00+00:00", "e" * 64),
+            )
+            c.commit()
+            payload = decision_center(c)
+            snapshot = c.execute("SELECT * FROM decision_snapshots ORDER BY id DESC LIMIT 1").fetchone()
+            trace = c.execute(
+                "SELECT * FROM decision_traces WHERE decision_type='DAILY_RECOMMENDATION' AND target_id=? ORDER BY id DESC LIMIT 1",
+                (str(oid),),
+            ).fetchone()
+            assert snapshot is not None
+            assert trace is not None
+            assert trace["policy_version"] == "policy.v1"
+            assert trace["evidence_digest"]
+            assert str(oid) in trace["evidence_ids_json"]
+            assert '"rank_score": 0.88' in trace["ranking_context_json"]
+            assert '"eligibility": "REVIEW"' in trace["state_snapshot_json"]
+            assert any(x["id"] == oid for x in payload["top7"])
+        finally:
+            c.close()
