@@ -367,3 +367,23 @@ def test_manifest_entity_resolution_exposes_match_possible_and_no_match_with_evi
             assert row["confidence"] is not None
             assert row["evidence_json"] is not None
         cdb.close()
+
+    
+def test_manifest_party_resolution_keeps_party_roles_distinct():
+    from marketradar.goal_completion import party_from_opportunity
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        base = {"name": "Same Organization", "domain": "same.example"}
+        client_id = party_from_opportunity(cdb, {"party_type": "Client", "client": base, "url": "https://example.test/client"}, 1)
+        employer_id = party_from_opportunity(cdb, {"party_type": "Employer", "employer": base, "url": "https://example.test/employer"}, 2)
+        agency_id = party_from_opportunity(cdb, {"party_type": "Agency", "agency": base, "url": "https://example.test/agency"}, 3)
+
+        assert len({client_id, employer_id, agency_id}) == 3
+        rows = cdb.execute(
+            "SELECT entity_id,party_type FROM parties WHERE entity_id IN (?,?,?) ORDER BY party_type",
+            (client_id, employer_id, agency_id),
+        ).fetchall()
+        assert {row["party_type"] for row in rows} == {"Agency", "Client", "Employer"}
+        assert all(row["entity_id"] != rows[(i + 1) % len(rows)]["entity_id"] for i, row in enumerate(rows))
+        cdb.close()
