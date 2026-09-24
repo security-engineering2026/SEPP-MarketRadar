@@ -19,7 +19,7 @@ These rows are concrete and ordered. They remove the ambiguity between individua
 
 | Row | Work unit | Depends on | Acceptance / evidence | Status |
 |---|---|---|---|---|
-| R050 | Final-qualification regression contract | R049 | Direct regression proves unconfigured external gates are explicitly SKIPPED and Full Qualification blocks on OPEN or FAIL. | NOT EXECUTED |
+| R050 | Final-qualification regression contract | R049 | Direct regression proves unconfigured external gates are explicitly SKIPPED and Full Qualification blocks on OPEN or FAIL. | PASS | Windows CI run 35974142391, job 107550508738, commit b48628eafee324d8826181d1557a4fe0c8cb1a26; test-windows completed success. |
 | R051 | Full Qualification — Windows qualification job | R050 | Windows compile + full pytest + qualification gates + product/release audits + EXE/installer build/smoke/install/UI/uninstall + final qualification decision. | NOT EXECUTED |
 | R052 | Full Qualification — Android qualification job | R050 | Android assemble + emulator E2E + artifact capture. | NOT EXECUTED |
 | R053 | Live global discovery provider | R051 | A real configured SearXNG endpoint executes the discovery gate and returns a successful qualification result. If no authorized endpoint is configured, this gate is SKIPPED by contract and is not falsely reported as PASS. | NOT EXECUTED |
@@ -49,7 +49,7 @@ External-provider/sandbox gates are environment-owned. A missing credential/endp
 
 ## 4. Execution control
 
-ACTIVE is reserved for the single current row. The sequence is:
+Current active work: R051 — Full Qualification Windows job. R050 is CLOSED/PASS.\n\nACTIVE is reserved for the single current row. The sequence is:
 
 R050 → R051/R052 → R053…R063 → R064 → R065 → R066 → R067 → R068
 
@@ -65,4 +65,4 @@ Only R068 = PASS authorizes the statement:
 
 > The current candidate has completed the defined final qualification path and there is no remaining mandatory product-closure work in this ledger.
 
-Until then, the release is not called final merely because R001–R049 are PASS.
+Until then, the release is not called final merely because R001–R049 are PASS.\n\n**Current cursor:** R051 ACTIVE / R052 pending the same qualification run / later rows LOCKED.
