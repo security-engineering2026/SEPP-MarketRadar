@@ -95,7 +95,7 @@ class ScanScheduler:
         now = now or datetime.now().astimezone()
         stamp = cls._iso(now)
         rows = c.execute(
-            """SELECT id,attempt,max_attempts,timeout_seconds
+            """SELECT id,attempt,max_attempts,timeout_seconds,heartbeat_at
                FROM scheduler_runs
                WHERE status='RUNNING' AND heartbeat_at IS NOT NULL"""
         ).fetchall()
