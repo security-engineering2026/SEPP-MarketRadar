@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
+import hashlib
 
 from marketradar.db import connect
 from marketradar.goal_completion import authorize_action, execute_authorized
@@ -29,6 +30,13 @@ def test_r049_final_architecture_preserves_end_to_end_truth_chain():
             }
             payload = b'{"items":[{"title":"R049 opportunity","url":"https://example.test/op/r049","iran_access":"ALLOW"}]}'
 
+            digest = hashlib.sha256(payload).hexdigest()
+            db.execute(
+                "INSERT INTO raw_observations(source,url,observed_at,payload,payload_sha256,http_status,content_type,observation_kind) VALUES(?,?,?,?,?,?,?,?)",
+                (source["name"], source["base_url"], "2026-09-24T07:00:00+00:00", payload, digest, 200, "application/json", "source_response"),
+            )
+            db.commit()
+
             result = Pipeline(db).ingest(
                 source,
                 {
@@ -48,7 +56,7 @@ def test_r049_final_architecture_preserves_end_to_end_truth_chain():
                 AcquisitionAttestation(
                     source["name"],
                     source["base_url"],
-                    __import__("hashlib").sha256(payload).hexdigest(),
+                    digest,
                     200,
                 ),
             )
