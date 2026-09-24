@@ -142,7 +142,7 @@ def resilience_gate():
 
 def live_discovery_gate():
     if not os.environ.get("SEARXNG_URL"):
-        return gate("LIVE_GLOBAL_DISCOVERY", "OPEN", {"reason": "SEARXNG_URL is not configured."})
+        return gate("LIVE_GLOBAL_DISCOVERY", "SKIPPED", {"reason": "SEARXNG_URL is not configured; live provider requires an explicit endpoint."})
     with tempfile.TemporaryDirectory(prefix="mr-discovery-") as td:
         env = dict(os.environ)
         env["MARKETRADAR_DATA_ROOT"] = td
@@ -295,7 +295,7 @@ def family_surface_gate(family):
 def dynamic_browser_gate():
     url = os.environ.get("QUALIFY_DYNAMIC_URL")
     if not url:
-        return gate("DYNAMIC_JS_BROWSER", "OPEN", {"reason": "QUALIFY_DYNAMIC_URL is not configured."})
+        return gate("DYNAMIC_JS_BROWSER", "SKIPPED", {"reason": "QUALIFY_DYNAMIC_URL is not configured; no external browser target was supplied."})
     try:
         from playwright.sync_api import sync_playwright
     except Exception as exc:
@@ -335,7 +335,7 @@ def engine_contract_gate():
 def sandbox_endpoint_gate(name, env_name):
     url = os.environ.get(env_name)
     if not url:
-        return gate(name, "OPEN", {"reason": env_name + " is not configured; no production side effect attempted."})
+        return gate(name, "SKIPPED", {"reason": env_name + " is not configured; no external side effect attempted."})
     payload = json.dumps({"market_radar_qualification": True, "mode": "sandbox", "timestamp": now()}).encode()
     probe = http_probe(url, timeout=20, method="POST", payload=payload)
     status = "PASS" if probe.get("reachable") and int(probe.get("status_code") or 0) < 300 else "FAIL"

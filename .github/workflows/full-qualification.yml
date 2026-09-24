@@ -62,8 +62,32 @@ jobs:
             } catch {}
           }
           if (-not $python) {
-            if ($tooOld) { throw 'PYTHON_VERSION_TOO_OLD' }
-            throw 'PYTHON_3_12_PLUS_NOT_FOUND'
+            # The qualification runner is self-hosted by design. Bootstrap Python when
+            # the runner image does not provide a usable 3.12+ interpreter.
+            $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
+            if ($winget) {
+              try {
+                winget install --id Python.Python.3.12 --scope user --silent --accept-source-agreements --accept-package-agreements
+              } catch {}
+            }
+            $choco = Get-Command choco.exe -ErrorAction SilentlyContinue
+            if (-not $python -and $choco) {
+              try { choco install python --version=3.12.10 -y --no-progress } catch {}
+            }
+            $refresh = @(
+              (Get-Command python.exe -ErrorAction SilentlyContinue).Source,
+              (Get-Command py.exe -ErrorAction SilentlyContinue).Source
+            ) + @(where.exe python.exe 2>$null) + @(where.exe py.exe 2>$null) + @(Get-ChildItem 'C:\Program Files\Python*\python.exe','C:\Program Files\Python*\*\python.exe','C:\Users\*\AppData\Local\Programs\Python\Python*\python.exe' -ErrorAction SilentlyContinue | ForEach-Object FullName)
+            foreach ($candidate in ($refresh | Where-Object { $_ } | Select-Object -Unique)) {
+              try {
+                $v = (& $candidate -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')").Trim()
+                if ([version]$v -ge [version]'3.12') { $python = $candidate; break }
+              } catch {}
+            }
+            if (-not $python) {
+              if ($tooOld) { throw 'PYTHON_VERSION_TOO_OLD' }
+              throw 'PYTHON_3_12_PLUS_NOT_FOUND'
+            }
           }
           $shim = Join-Path $env:RUNNER_TEMP 'python-shim'
           New-Item -ItemType Directory -Force -Path $shim | Out-Null
