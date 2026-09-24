@@ -442,3 +442,45 @@ def test_manifest_android_companion_is_non_authoritative_and_core_bound():
     assert calls[1][2].policy_version == "v1"
     assert calls[1][3] == "android_operator"
     assert calls[1][4] == "v1"
+
+
+
+def test_manifest_source_federation_fallback_preserves_provenance_and_host_boundary():
+    from marketradar.federation import AcquisitionFallback, Source, Federation
+
+    source = Source(
+        name="federation-test",
+        base_url="https://example.test/feed",
+        allow_hosts=("example.test",),
+        access_scope="public",
+    )
+
+    calls = []
+
+    def first(_source, _url):
+        calls.append("first")
+        return {"status": 503, "body": None}
+
+    def second(_source, _url):
+        calls.append("second")
+        return {"status": 200, "body": b'{"items": []}'}
+
+    result = AcquisitionFallback([
+        {"name": "primary", "fetch": first, "confidence_multiplier": 1.0},
+        {"name": "fallback", "fetch": second, "confidence_multiplier": 0.7},
+    ]).fetch(source, source.base_url)
+
+    assert calls == ["first", "second"]
+    assert result["acquisition_provider"] == "fallback"
+    assert result["fallback_used"] is True
+    assert result["confidence_multiplier"] == 0.7
+    assert result["provider_chain_index"] == 1
+    assert result["attempts_meta"][0]["provider"] == "primary"
+    assert result["attempts_meta"][0]["status"] == "NO_SUCCESS"
+
+    federation = Federation([source])
+    try:
+        federation._validate_target(source, "https://evil.example/feed")
+        assert False, "host boundary allowed an unregistered target"
+    except ValueError as exc:
+        assert str(exc) == "HOST_BOUNDARY_BLOCK"
