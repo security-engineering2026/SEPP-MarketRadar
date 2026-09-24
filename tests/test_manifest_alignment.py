@@ -761,7 +761,7 @@ def test_manifest_temporal_change_tracks_observation_window_freshness_expiry_rev
             ).fetchone()
             assert conflict["relation"] == "CONTRADICTS"
             assert '"changed":true' in conflict["details_json"]
-
+        finally:
             c.close()
 
 def test_manifest_intelligence_builds_demand_competition_ttm_and_market_signals_without_changing_policy_state():
