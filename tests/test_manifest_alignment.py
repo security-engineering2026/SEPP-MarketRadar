@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 import tempfile
 from pathlib import Path
 
@@ -201,6 +202,419 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "Prepare self-hosted Python" in workflow
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
+
+
+def test_manifest_policy_engine_is_deterministic_versioned_and_fail_closed():
+    from marketradar.policy import eligibility, POLICY_VERSION
+
+    assert POLICY_VERSION == "policy.v1"
+    base = {"iran_status": "ALLOW", "kyc_status": "ALLOW", "payment_status": "USDT", "terms_status": "reviewed"}
+    assert eligibility(base, evidence_ok=True)[0] == "EXECUTE"
+    for source in ({**base, "iran_status": "BLOCK"}, {**base, "kyc_status": "BLOCK"}, {**base, "terms_status": "blocked"}):
+        assert eligibility(source, evidence_ok=True)[0] == "BLOCK"
+    assert eligibility({**base, "iran_status": "UNKNOWN"}, evidence_ok=True)[0] == "UNKNOWN"
+    assert eligibility({**base, "kyc_status": "UNKNOWN"}, evidence_ok=True)[0] == "REVIEW"
+    assert eligibility({**base, "payment_status": "UNKNOWN"}, evidence_ok=True)[0] == "REVIEW"
+    assert eligibility({**base, "terms_status": "needs_review"}, evidence_ok=True)[0] == "REVIEW"
+    assert eligibility(base, evidence_ok=False)[0] == "UNKNOWN"
+    assert eligibility(base, evidence_ok=True, opportunity={"country": "Israel"})[0] == "BLOCK"
+
+def test_manifest_temporal_change_tracks_observation_window_freshness_expiry_revalidation_and_change():
+    from datetime import datetime, timedelta, timezone
+    from marketradar.opportunity_ranker import freshness_score
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "temporal.db")
+        now = datetime.now(timezone.utc)
+        first = (now - timedelta(days=10)).isoformat()
+        last = (now - timedelta(hours=2)).isoformat()
+        c.execute(
+            "INSERT INTO opportunities(source,title,url,state,first_seen,last_seen) VALUES(?,?,?,?,?,?)",
+            ("temporal", "Temporal", "https://example.test/temporal", "DISCOVERED", first, last),
+        )
+        oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/temporal",)).fetchone()["id"]
+        c.execute(
+            "INSERT INTO opportunity_sources(opportunity_id,source,first_seen,last_seen) VALUES(?,?,?,?)",
+            (oid, "temporal", first, last),
+        )
+
+        row = c.execute(
+            "SELECT first_seen,last_seen FROM opportunities WHERE id=?", (oid,)
+        ).fetchone()
+        assert row["first_seen"] == first
+        assert row["last_seen"] == last
+        assert freshness_score(dict(row)) > 0.05
+        assert freshness_score({"last_seen": first}) < freshness_score({"last_seen": last})
+
+        expires = (now + timedelta(hours=1)).isoformat()
+        c.execute(
+            "INSERT INTO claims(entity_type,entity_id,opportunity_id,claim_type,claim_value,confidence,observed_at,expires_at) VALUES(?,?,?,?,?,?,?,?)",
+            ("Opportunity", oid, oid, "payment", "USDT", 0.9, last, expires),
+        )
+        claim = c.execute(
+            "SELECT observed_at,expires_at FROM claims WHERE opportunity_id=? AND claim_type='payment'",
+            (oid,),
+        ).fetchone()
+        assert claim["expires_at"] > claim["observed_at"]
+
+        stale_at = (now + timedelta(days=7)).isoformat()
+        c.execute(
+            "INSERT INTO sources(name,base_url,status,stale_at,last_verified_at) VALUES(?,?,?,?,?)",
+            ("temporal-source", "https://example.test", "active", stale_at, last),
+        )
+        source = c.execute(
+            "SELECT stale_at,last_verified_at FROM sources WHERE name=?",
+            ("temporal-source",),
+        ).fetchone()
+        assert source["last_verified_at"] < source["stale_at"]
+        assert freshness_score({"first_seen": first, "last_seen": last}) == freshness_score({"last_seen": last})
+
+        c.execute(
+            "INSERT INTO claims(entity_type,entity_id,opportunity_id,claim_type,claim_value,confidence,observed_at,expires_at) VALUES(?,?,?,?,?,?,?,?)",
+            ("Opportunity", oid, oid, "payment", "FIAT", 0.95, now.isoformat(), (now + timedelta(days=2)).isoformat()),
+        )
+        claims = c.execute(
+            "SELECT id,claim_value FROM claims WHERE opportunity_id=? AND claim_type='payment' ORDER BY id",
+            (oid,),
+        ).fetchall()
+        assert [r["claim_value"] for r in claims] == ["USDT", "FIAT"]
+        c.execute(
+            "INSERT INTO claim_conflicts(opportunity_id,claim_type,previous_claim_id,new_claim_id,relation,detected_at,details_json) VALUES(?,?,?,?,?,?,?)",
+            (oid, "payment", claims[0]["id"], claims[1]["id"], "CONTRADICTS", now.isoformat(), '{"changed":true}'),
+        )
+        conflict = c.execute(
+            "SELECT relation,details_json FROM claim_conflicts WHERE previous_claim_id=? AND new_claim_id=?",
+            (claims[0]["id"], claims[1]["id"]),
+        ).fetchone()
+        assert conflict["relation"] == "CONTRADICTS"
+        assert '"changed":true' in conflict["details_json"]
+
+        c.close()
+
+def test_manifest_intelligence_builds_demand_competition_ttm_and_market_signals_without_changing_policy_state():
+    from marketradar.goal_completion import build_demand_clusters, calculate_ttm, ingest_market_signals
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "intelligence.db")
+        try:
+            rows = [
+                ("s1", "Python automation", "https://example.test/i1", "Python automation API dashboard", "software", 1000, "USD", "EXECUTE", "DISCOVERED", "2026-09-23T00:00:00+00:00", "2026-09-23T01:00:00+00:00"),
+                ("s2", "Python automation", "https://example.test/i2", "Python automation API dashboard", "software", 2000, "USD", "BLOCK", "DISCOVERED", "2026-09-23T00:00:00+00:00", "2026-09-23T02:00:00+00:00"),
+            ]
+            for row in rows:
+                c.execute(
+                    "INSERT INTO opportunities(source,title,url,description,category,budget,currency,eligibility,state,first_seen,last_seen,competition_score,time_to_money) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    row + (0.4, 24),
+                )
+            ids = [r["id"] for r in c.execute("SELECT id FROM opportunities ORDER BY id").fetchall()]
+            c.execute("UPDATE opportunities SET time_to_money=48 WHERE id=?", (ids[1],))
+            c.execute(
+                "INSERT INTO ttm_observations(opportunity_id,stage,duration_hours,probability) VALUES(?,?,?,?)",
+                (ids[0], "PROPOSAL", 24, 0.8),
+            )
+            c.execute(
+                "INSERT INTO ttm_observations(opportunity_id,stage,duration_hours,probability) VALUES(?,?,?,?)",
+                (ids[0], "PAYMENT", 12, 0.9),
+            )
+            c.commit()
+
+            source_rows = [dict(r) for r in c.execute("SELECT * FROM opportunities ORDER BY id").fetchall()]
+            clusters = build_demand_clusters(c, source_rows)
+            assert clusters
+            cluster = clusters[0]
+            assert cluster["count"] == 2
+            assert cluster["median_budget"] == 2000
+            assert cluster["median_ttm"] == 48
+            assert cluster["trend_score"] == 0.1
+            assert cluster["label"]
+
+            prediction = calculate_ttm(c, ids[0])
+            assert prediction["expected_hours"] == 36
+            assert prediction["p_paid"] == 0.72
+            assert prediction["expected_value"] == 720
+            assert prediction["confidence"] > 0
+
+            ingest_market_signals(c, source_rows)
+            signal = c.execute(
+                "SELECT * FROM market_signals WHERE signal_type='DEMAND_SKILL' AND signal_key='python'"
+            ).fetchone()
+            assert signal is not None
+            assert signal["confidence"] == 0.65
+
+            policy_states = {
+                r["id"]: r["eligibility"]
+                for r in c.execute("SELECT id,eligibility FROM opportunities ORDER BY id").fetchall()
+            }
+            assert policy_states == {ids[0]: "EXECUTE", ids[1]: "BLOCK"}
+        finally:
+            c.close()
+
+def test_manifest_ranking_is_separate_from_policy_and_exposes_scoring_factors():
+    from marketradar.opportunity_ranker import rank_opportunity
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "ranking.db")
+        try:
+            base = {
+                "title": "Python automation",
+                "description": "Python API automation dashboard",
+                "category": "software",
+                "eligibility": "BLOCK",
+                "evidence_confidence": 0.95,
+                "quality_score": 0.95,
+                "budget": 1500,
+                "last_seen": "2026-09-23T00:00:00+00:00",
+                "skill_fit": 0.95,
+                "difficulty_fit": 0.9,
+            }
+            ranked = rank_opportunity(base, {"skills": ["Python", "API"], "learning": {"level": 3, "tracks": ["software_engineering"], "stretch": True}})
+            assert 0 <= ranked["rank_score"] <= 1
+            for key in {"skill_fit", "difficulty_fit", "learning_value", "competition_score", "application_speed_score", "freshness_score"}:
+                assert key in ranked
+
+            c.execute(
+                "INSERT INTO opportunities(source,title,url,state,eligibility,application_ready,rank_score,score) VALUES(?,?,?,?,?,?,?,?)",
+                ("test", "Blocked", "https://example.test/blocked", "DISCOVERED", "BLOCK", 1, ranked["rank_score"], ranked["rank_score"]),
+            )
+            c.execute(
+                "INSERT INTO opportunities(source,title,url,state,eligibility,application_ready,rank_score,score) VALUES(?,?,?,?,?,?,?,?)",
+                ("test", "Unknown", "https://example.test/unknown", "DISCOVERED", "UNKNOWN", 1, ranked["rank_score"], ranked["rank_score"]),
+            )
+            c.commit()
+            from marketradar.goal_completion import decision_center
+            payload = decision_center(c)
+            assert all(x["eligibility"] != "BLOCK" for x in payload["do_now"])
+            assert all(x["eligibility"] != "UNKNOWN" for x in payload["do_now"])
+            assert any(x["eligibility"] == "BLOCK" for x in payload["blocked"])
+            assert any(x["eligibility"] == "UNKNOWN" for x in payload["unknown"])
+            assert payload["top7"]
+        finally:
+            c.close()
+
+def test_manifest_decision_model_is_reproducible_from_snapshot_evidence_policy_and_ranking_context():
+    from marketradar.goal_completion import decision_center
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "decision.db")
+        try:
+            c.execute(
+                "INSERT INTO opportunities(source,title,url,state,eligibility,application_ready,rank_score,score) VALUES(?,?,?,?,?,?,?,?)",
+                ("test", "Decision", "https://example.test/decision", "DISCOVERED", "REVIEW", 1, 0.88, 0.88),
+            )
+            oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/decision",)).fetchone()["id"]
+            c.execute(
+                "INSERT INTO evidence(opportunity_id,kind,source,url,finding,confidence,provenance_root,observed_at,evidence_hash) VALUES(?,?,?,?,?,?,?,?,?)",
+                (oid, "policy", "test", "https://example.test/e", "review evidence", 0.92, "test", "2026-09-23T00:00:00+00:00", "e" * 64),
+            )
+            c.commit()
+            payload = decision_center(c)
+            snapshot = c.execute("SELECT * FROM decision_snapshots ORDER BY id DESC LIMIT 1").fetchone()
+            trace = c.execute(
+                "SELECT * FROM decision_traces WHERE decision_type='DAILY_RECOMMENDATION' AND target_id=? ORDER BY id DESC LIMIT 1",
+                (str(oid),),
+            ).fetchone()
+            assert snapshot is not None
+            assert trace is not None
+            assert trace["policy_version"] == "policy.v1"
+            assert trace["evidence_digest"]
+            assert str(oid) in trace["evidence_ids_json"]
+            assert '"rank_score": 0.88' in trace["ranking_context_json"]
+            assert '"eligibility": "REVIEW"' in trace["state_snapshot_json"]
+            assert any(x["id"] == oid for x in payload["top7"])
+        finally:
+            c.close()
+
+def test_manifest_daily_intelligence_center_preserves_top7_do_now_monitor_blocked_and_unknown_views():
+    from marketradar.goal_completion import decision_center
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "daily-center.db")
+        try:
+            for i in range(10):
+                eligibility = "EXECUTE" if i < 5 else "REVIEW"
+                application_ready = 1 if i < 3 else 0
+                c.execute(
+                    "INSERT INTO opportunities(source,title,url,state,eligibility,application_ready,rank_score,score) VALUES(?,?,?,?,?,?,?,?)",
+                    ("test", f"Top {i}", f"https://example.test/{i}", "DISCOVERED", eligibility, application_ready, 1.0 - i / 20, 1.0 - i / 20),
+                )
+            for kind in ("BLOCK", "UNKNOWN"):
+                c.execute(
+                    "INSERT INTO opportunities(source,title,url,state,eligibility,application_ready,rank_score,score) VALUES(?,?,?,?,?,?,?,?)",
+                    ("test", kind, f"https://example.test/{kind.lower()}", "DISCOVERED", kind, 0, 0.1, 0.1),
+                )
+            c.commit()
+            payload = decision_center(c)
+            assert len(payload["top7"]) == 7
+            assert len(payload["do_now"]) <= 3
+            assert len(payload["approval_required"]) <= 2
+            assert len(payload["monitor"]) <= 2
+            assert all(x["eligibility"] == "BLOCK" for x in payload["blocked"])
+            assert all(x["eligibility"] == "UNKNOWN" for x in payload["unknown"])
+            snapshot = c.execute("SELECT * FROM decision_snapshots ORDER BY id DESC LIMIT 1").fetchone()
+            trace = c.execute("SELECT * FROM decision_traces WHERE decision_type='DAILY_SNAPSHOT' ORDER BY id DESC LIMIT 1").fetchone()
+            assert snapshot is not None
+            assert trace is not None
+            assert trace["target_type"] == "DECISION_SNAPSHOT"
+            assert '"blocked"' in trace["claims_json"]
+            assert '"unknown"' in trace["claims_json"]
+        finally:
+            c.close()
+
+def test_manifest_human_approval_is_explicit_exact_action_bound_and_one_time():
+    from marketradar.security import ApprovalBroker
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "approval.db")
+        try:
+            broker = ApprovalBroker(c)
+            now = 1_700_000_000
+            approval = broker.issue(
+                "SUBMIT",
+                "opportunity:42",
+                {"opportunity_id": 42, "fields": {"title": "approved"}},
+                {"evidence_id": 7},
+                POLICY_VERSION,
+                now,
+                ttl=300,
+            )
+            ok, reason = broker.authorize(
+                approval,
+                "SUBMIT",
+                "opportunity:42",
+                {"opportunity_id": 42, "fields": {"title": "approved"}},
+                {"evidence_id": 7},
+                POLICY_VERSION,
+                now + 1,
+            )
+            assert (ok, reason) == (True, "OK")
+
+            replay = broker.authorize(
+                approval,
+                "SUBMIT",
+                "opportunity:42",
+                {"opportunity_id": 42, "fields": {"title": "approved"}},
+                {"evidence_id": 7},
+                POLICY_VERSION,
+                now + 2,
+            )
+            assert replay == (False, "REPLAY")
+
+            mismatch = broker.issue("SUBMIT", "opportunity:43", {"opportunity_id": 43}, {"evidence_id": 7}, POLICY_VERSION, now, ttl=300)
+            assert broker.authorize(mismatch, "SUBMIT", "opportunity:42", {"opportunity_id": 43}, {"evidence_id": 7}, POLICY_VERSION, now + 1) == (False, "BINDING_MISMATCH")
+            expired = broker.issue("SUBMIT", "opportunity:44", {"opportunity_id": 44}, {"evidence_id": 7}, POLICY_VERSION, now, ttl=1)
+            assert broker.authorize(expired, "SUBMIT", "opportunity:44", {"opportunity_id": 44}, {"evidence_id": 7}, POLICY_VERSION, now + 1) == (False, "EXPIRED")
+        finally:
+            c.close()
+
+def test_manifest_authorization_broker_is_evidence_bound_expiring_and_replay_protected():
+    from marketradar.goal_completion import authorize_action, execute_authorized
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "authorization.db")
+        try:
+            c.execute(
+                "INSERT INTO opportunities(source,title,url,state,eligibility) VALUES(?,?,?,?,?)",
+                ("test", "Authorized", "https://example.test/auth", "APPROVAL_PENDING", "EXECUTE"),
+            )
+            oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/auth",)).fetchone()["id"]
+            c.execute(
+                "INSERT INTO evidence(opportunity_id,kind,source,url,finding,confidence,provenance_root,observed_at,evidence_hash) VALUES(?,?,?,?,?,?,?,?,?)",
+                (oid, "policy", "test", "https://example.test/e", "authorized evidence", 0.95, "test", "2026-09-23T00:00:00+00:00", "f" * 64),
+            )
+            eid = c.execute("SELECT id FROM evidence WHERE evidence_hash=?", ("f" * 64,)).fetchone()["id"]
+            c.commit()
+
+            aid = authorize_action(c, "SUBMIT", str(oid), {"opportunity_id": oid, "x": 1}, [eid], POLICY_VERSION, "test", ttl_seconds=60)
+            auth = c.execute("SELECT * FROM action_authorizations WHERE approval_id=?", (aid,)).fetchone()
+            assert auth is not None
+            assert auth["evidence_digest"]
+            assert auth["parameters_digest"]
+            assert auth["policy_version"] == POLICY_VERSION
+            assert auth["nonce"]
+
+            execute_authorized(c, aid, "SUBMIT", str(oid), {"opportunity_id": oid, "x": 1}, [eid], lambda: {"ok": True})
+            replay = c.execute("SELECT status FROM action_authorizations WHERE approval_id=?", (aid,)).fetchone()
+            assert replay["status"] == "USED"
+
+            try:
+                execute_authorized(c, aid, "SUBMIT", str(oid), {"opportunity_id": oid, "x": 1}, [eid], lambda: {"ok": True})
+                assert False, "authorization replay was accepted"
+            except Exception as exc:
+                assert "replay" in str(exc).lower() or "used" in str(exc).lower()
+
+            with pytest.raises(ValueError, match="AUTH_EVIDENCE_TARGET_MISMATCH"):
+                authorize_action(c, "SUBMIT", str(oid + 1), {"opportunity_id": oid + 1}, [eid], POLICY_VERSION, "test", ttl_seconds=60)
+        finally:
+            c.close()
+
+def test_manifest_action_model_records_failure_attempt_result_and_immutable_execution_trace():
+    from marketradar.goal_completion import authorize_action, execute_authorized
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "action.db")
+        try:
+            c.execute(
+                "INSERT INTO opportunities(source,title,url,state,eligibility) VALUES(?,?,?,?,?)",
+                ("test", "Action", "https://example.test/action", "APPROVAL_PENDING", "EXECUTE"),
+            )
+            oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/action",)).fetchone()["id"]
+            c.execute(
+                "INSERT INTO evidence(opportunity_id,kind,source,url,finding,confidence,provenance_root,observed_at,evidence_hash) VALUES(?,?,?,?,?,?,?,?,?)",
+                (oid, "policy", "test", "https://example.test/e", "action evidence", 0.95, "test", "2026-09-23T00:00:00+00:00", "a" * 64),
+            )
+            eid = c.execute("SELECT id FROM evidence WHERE evidence_hash=?", ("a" * 64,)).fetchone()["id"]
+            c.commit()
+            aid = authorize_action(c, "TEST_ACTION", str(oid), {"opportunity_id": oid}, [eid], POLICY_VERSION, "test", ttl_seconds=60)
+
+            def failing_executor():
+                raise RuntimeError("external failure")
+
+            with pytest.raises(RuntimeError, match="external failure"):
+                execute_authorized(c, aid, "TEST_ACTION", str(oid), {"opportunity_id": oid}, [eid], failing_executor)
+
+            attempt = c.execute("SELECT * FROM action_attempts WHERE approval_id=?", (aid,)).fetchone()
+            auth = c.execute("SELECT status FROM action_authorizations WHERE approval_id=?", (aid,)).fetchone()
+            trace = c.execute(
+                "SELECT * FROM decision_traces WHERE decision_type='ACTION_EXECUTION' AND approval_ref=? ORDER BY id DESC LIMIT 1",
+                (aid,),
+            ).fetchone()
+            assert attempt["status"] == "FAILED"
+            assert "RuntimeError: external failure" in attempt["error"]
+            assert auth["status"] == "FAILED"
+            assert trace["outcome"] == "FAILED"
+            assert trace["approval_ref"] == aid
+            assert '"authorization_status": "FAILED"' in trace["state_snapshot_json"]
+        finally:
+            c.close()
+
+def test_manifest_application_lifecycle_enforces_valid_transitions_and_rejects_invalid_state_changes():
+    from marketradar.application import transition
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "lifecycle.db")
+        try:
+            c.execute(
+                "INSERT INTO opportunities(source,title,url,state) VALUES(?,?,?,?)",
+                ("test", "Lifecycle", "https://example.test/lifecycle", "DISCOVERED"),
+            )
+            oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/lifecycle",)).fetchone()["id"]
+            transition(c, oid, "ELIGIBILITY_CHECK", actor="test")
+            transition(c, oid, "RECOMMENDED", actor="test")
+            transition(c, oid, "APPROVAL_PENDING", actor="test")
+            transition(c, oid, "SUBMITTED", actor="test")
+            row = c.execute("SELECT state FROM opportunities WHERE id=?", (oid,)).fetchone()
+            assert row["state"] == "SUBMITTED"
+            with pytest.raises(ValueError):
+                transition(c, oid, "PAID", actor="test")
+            events = c.execute("SELECT from_state,to_state,actor FROM application_events WHERE opportunity_id=? ORDER BY id", (oid,)).fetchall()
+            assert [(r["from_state"], r["to_state"]) for r in events] == [
+                ("DISCOVERED", "ELIGIBILITY_CHECK"),
+                ("ELIGIBILITY_CHECK", "RECOMMENDED"),
+                ("RECOMMENDED", "APPROVAL_PENDING"),
+                ("APPROVAL_PENDING", "SUBMITTED"),
+            ]
+        finally:
+            c.close()
 
 
 
