@@ -293,3 +293,45 @@ def test_manifest_market_to_product_preserves_repeated_demand_and_build_evidence
             assert all(row["status"] == "PROPOSED" for row in persisted)
         finally:
             c.close()
+
+
+def test_manifest_skill_intelligence_builds_gap_and_portfolio_actions_from_demand():
+    from marketradar.goal_completion import ensure_schema, skill_portfolio_engine
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "test.db")
+        try:
+            ensure_schema(c)
+            rows = [
+                ("python,automation", 12),
+                ("python,api", 8),
+                ("python", 5),
+                ("security", 3),
+            ]
+            for signature, count in rows:
+                c.execute(
+                    """INSERT INTO demand_clusters(
+                        cluster_key,label,category,skill_signature,opportunity_count,trend_score,updated_at
+                    ) VALUES(?,?,?,?,?,?,?)""",
+                    (f"cluster-{count}", signature, "software", signature, count, min(1.0, count / 20), "2026-09-24T00:00:00+00:00"),
+                )
+
+            result = skill_portfolio_engine(c, {"skills": {"python": 0.20, "automation": 0.0, "api": 0.50, "security": 0.80}})
+            by_skill = {item["skill"]: item for item in result}
+
+            assert by_skill["python"]["demand_score"] == 1.0
+            assert by_skill["python"]["gap_score"] == 0.8
+            assert by_skill["python"]["action"] == "BUILD_EVIDENCE"
+            assert by_skill["automation"]["demand_score"] == 0.6
+            assert by_skill["automation"]["gap_score"] == 0.6
+            assert by_skill["api"]["demand_score"] == 0.4
+            assert by_skill["api"]["gap_score"] == 0
+            assert by_skill["api"]["action"] == "MAINTAIN"
+            assert by_skill["security"]["action"] == "MAINTAIN"
+
+            gaps = c.execute("SELECT skill,demand_score,current_capability,gap_score FROM skill_gaps ORDER BY skill").fetchall()
+            portfolio = c.execute("SELECT skill,action FROM portfolio_recommendations ORDER BY skill").fetchall()
+            assert len(gaps) == len(by_skill)
+            assert len(portfolio) == len(by_skill)
+        finally:
+            c.close()
