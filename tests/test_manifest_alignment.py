@@ -202,3 +202,34 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+
+
+def test_manifest_market_learning_updates_acceptance_prior_expected_value_and_reason_counts():
+    from marketradar.outcome_learning import estimate_acceptance_prior, learning_summary, record_outcome
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "learning.db")
+        try:
+            for title, source, category, budget in [
+                ("Accepted", "source-a", "python", 1000),
+                ("Rejected", "source-a", "python", 2000),
+            ]:
+                c.execute(
+                    "INSERT INTO opportunities(source,title,url,state,category,budget) VALUES(?,?,?,?,?,?)",
+                    (source, title, f"https://example.test/{title.lower()}", "SUBMITTED", category, budget),
+                )
+            ids = [r["id"] for r in c.execute("SELECT id FROM opportunities ORDER BY id").fetchall()]
+            record_outcome(c, ids[0], "ACCEPTED", reason="strong fit")
+            record_outcome(c, ids[1], "REJECTED", reason="budget mismatch")
+            prior = estimate_acceptance_prior(c, "source-a", "python")
+            assert 0 < prior < 1
+            summary = learning_summary(c)
+            assert summary["reasons"]
+            assert any(x["reason"] == "strong fit" and x["outcome"] == "ACCEPTED" for x in summary["reasons"])
+            assert any(x["reason"] == "budget mismatch" and x["outcome"] == "REJECTED" for x in summary["reasons"])
+            snap = c.execute("SELECT acceptance_probability,expected_value,observed_revenue FROM opportunity_learning ORDER BY id LIMIT 1").fetchone()
+            assert 0 < snap["acceptance_probability"] < 1
+            assert snap["expected_value"] > 0
+            assert snap["observed_revenue"] == 0
+        finally:
+            c.close()
