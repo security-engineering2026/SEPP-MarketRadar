@@ -227,7 +227,7 @@ def test_manifest_market_learning_updates_acceptance_prior_expected_value_and_re
             assert summary["reasons"]
             assert any(x["reason"] == "strong fit" and x["outcome"] == "ACCEPTED" for x in summary["reasons"])
             assert any(x["reason"] == "budget mismatch" and x["outcome"] == "REJECTED" for x in summary["reasons"])
-            snap = c.execute("SELECT acceptance_probability,expected_value,observed_revenue FROM opportunity_learning ORDER BY id LIMIT 1").fetchone()
+            snap = c.execute("SELECT acceptance_probability,expected_value,observed_revenue FROM opportunity_learning LIMIT 1").fetchone()
             assert 0 < snap["acceptance_probability"] < 1
             assert snap["expected_value"] > 0
             assert snap["observed_revenue"] == 0
