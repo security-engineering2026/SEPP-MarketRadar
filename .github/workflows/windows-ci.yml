@@ -146,11 +146,11 @@ jobs:
       - name: Android emulator E2E
         uses: ReactiveCircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: 34
           arch: x86_64
           target: google_apis
-          profile: pixel_6
-          emulator-boot-timeout: 900
+          profile: pixel_2
+          emulator-boot-timeout: 600
           disable-animations: true
           emulator-options: -no-snapshot -no-window -no-boot-anim -gpu swiftshader_indirect
           script: bash tools/android_e2e.sh
