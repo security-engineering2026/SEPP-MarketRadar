@@ -254,3 +254,51 @@ def test_manifest_observation_layer_preserves_acquisition_metadata_and_provenanc
         assert run["snapshot_sha256"] == health["snapshot_sha256"] == digest
         assert health["parse_ok"] == 1 and health["parsed_count"] == 1
         cdb.close()
+
+    
+def test_manifest_canonical_opportunity_preserves_observation_and_conflicting_evidence():
+    from marketradar.pipeline import AcquisitionAttestation, Pipeline
+    import hashlib
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        source = {
+            "name": "CANONICAL_TEST", "base_url": "https://example.test/feed",
+            "adapter": "json", "status": "active", "source_kind": "website",
+            "acquisition": "http", "access_scope": "public", "iran_status": "ALLOW",
+            "kyc_status": "ALLOW", "payment_status": "USDT", "terms_status": "allowed",
+        }
+        url = "https://example.test/op/1"
+        payloads = [
+            b'{"items":[{"title":"First observation","url":"https://example.test/op/1"}]}',
+            b'{"items":[{"title":"Second observation","url":"https://example.test/op/1"}]}',
+        ]
+        digests = [hashlib.sha256(p).hexdigest() for p in payloads]
+        for i, (payload, digest) in enumerate(zip(payloads, digests), 1):
+            cdb.execute(
+                "INSERT INTO raw_observations(source,url,observed_at,payload,payload_sha256,http_status,content_type,observation_kind) VALUES(?,?,?,?,?,?,?,?)",
+                ("CANONICAL_TEST", source["base_url"], f"2026-09-23T18:0{i}:00+00:00", payload, digest, 200, "application/json", "source_response"),
+            )
+        cdb.commit()
+        p = Pipeline(cdb)
+        for i, digest in enumerate(digests):
+            item = {
+                "title": f"Observation {i}", "url": url,
+                "description": "same opportunity observed with different policy evidence",
+                "iran_access": "ALLOW" if i == 0 else "BLOCK",
+                "evidence": [{"kind": "listing", "url": url, "finding": f"observation-{i}", "confidence": 0.95}],
+            }
+            p.ingest(source, item, AcquisitionAttestation("CANONICAL_TEST", source["base_url"], digest, 200))
+            cdb.commit()
+        opportunity = cdb.execute("SELECT id FROM opportunities WHERE url=?", (url,)).fetchone()
+        assert opportunity is not None
+        evidence_rows = cdb.execute("SELECT observation_id,finding FROM evidence WHERE opportunity_id=? ORDER BY id", (opportunity["id"],)).fetchall()
+        assert len(evidence_rows) == 2
+        assert all(row["observation_id"] is not None for row in evidence_rows)
+        assert len({row["observation_id"] for row in evidence_rows}) == 2
+        assert {row["finding"] for row in evidence_rows} == {"observation-0", "observation-1"}
+        claim_conflicts = cdb.execute("SELECT relation FROM claim_conflicts WHERE opportunity_id=? AND claim_type='iran_access'", (opportunity["id"],)).fetchall()
+        assert any(row["relation"] == "CONTRADICTS" for row in claim_conflicts)
+        raw_count = cdb.execute("SELECT COUNT(*) AS n FROM raw_observations WHERE source='CANONICAL_TEST'").fetchone()["n"]
+        assert raw_count == 2
+        cdb.close()
