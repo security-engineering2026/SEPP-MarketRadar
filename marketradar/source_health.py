@@ -13,7 +13,32 @@ def health_score(result):
 
 def persist_health(connection, source, result):
     now=datetime.now(timezone.utc); stamp=now.isoformat(); score=health_score(result)
-    previous=connection.execute('SELECT failure_count,iran_status,kyc_status,payment_status,execution_mode,proposal_limit FROM sources WHERE name=?',(source['name'],)).fetchone()
+    previous=connection.execute('SELECT failure_count,iran_status,kyc_status,payment_status,execution_mode,proposal_limit,access_scope,terms_status FROM sources WHERE name=?',(source['name'],)).fetchone()
+    policy_fields=('iran_status','kyc_status','payment_status','execution_mode','proposal_limit','access_scope','terms_status')
+    policy_changes=[]
+    if previous:
+        for field in policy_fields:
+            new_value=source.get(field)
+            if new_value is None: new_value=previous[field]
+            if str(new_value) != str(previous[field]):
+                policy_changes.append((field,previous[field],new_value))
+    connection.execute('''CREATE TABLE IF NOT EXISTS source_policy_changes(
+      id INTEGER PRIMARY KEY, source TEXT NOT NULL, changed_at TEXT NOT NULL, field TEXT NOT NULL,
+      previous_value TEXT, new_value TEXT, status TEXT NOT NULL DEFAULT 'OPEN'
+    )''')
+    connection.execute('''CREATE UNIQUE INDEX IF NOT EXISTS uq_source_policy_change
+      ON source_policy_changes(source,field,previous_value,new_value)''')
+    connection.execute('''CREATE TABLE IF NOT EXISTS notifications(
+      id INTEGER PRIMARY KEY, channel TEXT NOT NULL DEFAULT 'APP', kind TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL,
+      opportunity_id INTEGER, priority TEXT NOT NULL DEFAULT 'INFO', due_at TEXT, status TEXT NOT NULL DEFAULT 'UNREAD',
+      created_at TEXT NOT NULL, read_at TEXT
+    )''')
+    for field,old_value,new_value in policy_changes:
+        connection.execute('INSERT OR IGNORE INTO source_policy_changes(source,changed_at,field,previous_value,new_value) VALUES(?,?,?,?,?)',(source['name'],stamp,field,str(old_value) if old_value is not None else None,str(new_value) if new_value is not None else None))
+        connection.execute('''INSERT INTO notifications(channel,kind,title,body,priority,due_at,status,created_at)
+          SELECT 'APP','SOURCE_POLICY_CHANGE',?,?,'HIGH',?, 'UNREAD',?
+          WHERE NOT EXISTS(SELECT 1 FROM notifications WHERE kind='SOURCE_POLICY_CHANGE' AND title=? AND body=? AND status='UNREAD')''',
+          (f"Source policy changed: {source['name']}",f"{field}: {old_value} -> {new_value}",stamp,stamp,f"Source policy changed: {source['name']}",f"{field}: {old_value} -> {new_value}"))
     failures=(int(previous['failure_count']) if previous else 0)
     failures=0 if result.get('status')=='OK' and result.get('parse_ok') is not False else failures+1
     if result.get('status')=='OK' and result.get('parse_ok') is True and result.get('parsed_count',0)>0: verification='verified'
