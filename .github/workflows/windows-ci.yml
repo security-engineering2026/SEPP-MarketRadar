@@ -125,3 +125,40 @@ jobs:
           path: |
             release/portable/**
             release/installer/**
+
+
+  android-companion:
+    name: Android companion build and E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10'
+      - name: Assemble Android companion
+        shell: bash
+        run: gradle -p android-companion assembleDebug
+      - name: Android emulator E2E
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          emulator-boot-timeout: 600
+          disable-animations: true
+          emulator-options: -no-snapshot -no-window -no-boot-anim -gpu swiftshader_indirect
+          script: bash tools/android_e2e.sh
+      - name: Upload Android companion artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketradar-android-companion
+          path: |
+            android-companion/app/build/outputs/apk/debug/*.apk
+            android-qualification/**
