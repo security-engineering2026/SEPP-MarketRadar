@@ -1563,7 +1563,7 @@ def test_manifest_followup_and_deadline_reminders_are_durable_idempotent_and_non
             assert {row["kind"] for row in notifications} == {"DEADLINE", "PAYMENT_DUE", "FOLLOWUP_DUE"}
 
             second = operation_tick(c)
-            assert len(second) == len(first), [dict(row) for row in second]
+            assert len(second) == len(first)
             assert c.execute(
                 "SELECT COUNT(*) FROM operation_reminders WHERE opportunity_id=?", (oid,)
             ).fetchone()[0] == 3
