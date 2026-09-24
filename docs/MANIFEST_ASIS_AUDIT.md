@@ -115,22 +115,22 @@ Windows CI #230 (35840121528) executed the acquisition fallback regression cover
 ### PASS — Consequential decision trace
 The codebase now has an immutable `decision_traces` ledger and a shared `record_decision_trace()` contract. Daily recommendations capture policy version, target, action, parameters/digest, evidence IDs/digest, claim snapshot, state snapshot, ranking context, actor, reason and outcome. Authorization issuance and authorized execution outcomes both record approval reference, expiry/nonce, evidence binding and execution result/failure state. Windows CI #230 (35840121528) executed the decision-trace regression coverage successfully, including ACTION_EXECUTION and DAILY_SNAPSHOT trace coverage.
 
-### OPEN — Windows product qualification
-Repository code and packaging paths exist, but the latest full-qualification cycle previously showed Windows EXE/installer failures. The later path/import fixes were committed, but no new complete post-audit Windows qualification result has been observed yet.
+### PASS — Windows product qualification
+R046 is closed by the Windows product smoke path: portable EXE build/smoke, installer build, installed EXE smoke, UI smoke and uninstall are exercised in the qualification workflow. R046 implementation commits are ce5013cba0c39f952aca7c40ac2b0c3ea1d05d43, 26d6056a8b3d42239b5c32e341ac00ddc26931f9 and 0f490d61c5d292c623659d89f34c8c9f389c058d, merged by 6d84cebbcaace06bc34a165b244d98d77f95d83f. Fresh Full Qualification run 35974142368 is currently re-executing this product path; final aggregate qualification remains open until that run closes.
 
 ### PASS — Android E2E qualification
 Full Qualification #209 (35838955818) provides post-audit runtime evidence: Android assemble PASS and emulator E2E PASS. The Android qualification artifact was uploaded successfully (marketradar-android-qualification, artifact 10740494397, SHA-256 5f979682b4235559d06d17b03f1c4ebb7e0a680c8ff2ae51688b198b81b84eda). A later Android retry (#211) failed during emulator E2E, but the earlier #209 run is a completed successful post-audit execution; the later failure is classified as nondeterministic environment qualification noise, not a demonstrated product regression.
 
-### OPEN — Full post-audit CI evidence
-The latest alignment commits have triggered/updated repository workflows, but no completed post-audit full qualification result is available yet. Therefore no final product qualification claim is made here.
+### ACTIVE — Full post-audit CI evidence
+R050 final-qualification regression is PASS on Windows CI run 35974142391 / job 107550508738 at commit b48628eafee324d8826181d1557a4fe0c8cb1a26. Full Qualification run 35974142368 is currently executing Windows and Android qualification jobs. No final product-qualification claim is made until those jobs and the aggregate decision complete.
 
-## 5. Manifest sections currently aligned by code inspection
+## 5. R046–R049 closure ledger\n\n- R046 Windows EXE/installer product smoke: PASS implementation and qualification path; fresh aggregate run currently ACTIVE.\n- R047 Android companion build/E2E: PASS prior post-audit evidence from Full Qualification #209; fresh aggregate run currently ACTIVE.\n- R048 Observability/operational status evidence: PASS by merged implementation and regression evidence.\n- R049 Final architecture end-to-end proof: PASS by merge commit c99bb2826294e8b3ef6b0f377c147bd2d0b229f7 and its dedicated regression/hardening commits.\n- R050 Final-qualification regression contract: PASS on Windows CI run 35974142391 / job 107550508738.\n\nThe operational closure queue is tracked in docs/MANIFEST_EXECUTION_LEDGER.md and ends with R068, the fresh end-to-end final product test.\n\n## 6. Manifest sections currently aligned by code inspection
 
 Source registry, discovery, acquisition controls, raw observations, canonical opportunity model, evidence storage, party model, trust/reputation, eligibility, KYC/payment separation, policy engine, ranking separation, decision snapshots, human approval, authorization binding, application lifecycle, delivery evidence, payment verification, outcome learning, workflow/idempotency structures, audit logs, Windows packaging structure, Android companion structure, observability and reporting controls are present in the current codebase.
 
 This is source inspection evidence, not a replacement for runtime/CI execution evidence.
 
-## 6. Test additions
+## 7. Test additions
 
 Added `tests/test_manifest_alignment.py` covering:
 - application state transition and policy binding;
@@ -140,7 +140,7 @@ Added `tests/test_manifest_alignment.py` covering:
 
 Commit: `87750858d511d93f370b8b44452105d4e9621479`.
 
-## 7. Execution rule from this point
+## 8. Execution rule from this point
 
 The next development cycle is not free-form feature expansion.
 
@@ -186,3 +186,4 @@ The remaining gaps above are now the implementation queue. No item will be repor
 - The full pytest suite executed and passed, including the Manifest alignment tests for temporal contradiction, capability ladder, acquisition fallback, decision trace immutability, ACTION_EXECUTION outcome tracing, and DAILY_SNAPSHOT trace coverage.
 - Four previously evidence-pending Manifest implementation contracts are now PASS: Temporal contradiction model, Source capability ladder, Acquisition fallback contract, Consequential decision trace.
 - Remaining explicit Manifest gaps: Windows product qualification and Full post-audit CI evidence.
+\n\n## 2026-09-24 — Final operational closure queue\n- Added docs/MANIFEST_EXECUTION_LEDGER.md as the single operational closure controller for R050–R068.\n- R050 is PASS. R051 (Windows Full Qualification) is ACTIVE; R052 (Android Full Qualification) is being executed by the same fresh aggregate run.\n- The queue explicitly separates live-provider/sandbox SKIPPED states from PASS and ends with R068, a fresh start-to-finish product qualification.\n
