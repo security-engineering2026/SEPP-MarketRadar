@@ -1518,3 +1518,62 @@ def test_manifest_kyc_intelligence_is_separate_and_unknown_never_becomes_allowed
     })
     assert result.execution_ready is False
     assert result.lane == MARKET_INTELLIGENCE_ONLY
+
+
+
+def test_manifest_followup_and_deadline_reminders_are_durable_idempotent_and_non_sending():
+    from datetime import datetime, timedelta, timezone
+    from marketradar.operations import due_followups, operation_dashboard, operation_tick, record_contract, schedule_followup
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "operations.db")
+        try:
+            now = datetime.now(timezone.utc)
+            past = (now - timedelta(minutes=5)).isoformat()
+            deadline = (now + timedelta(hours=2)).isoformat()
+            payment_due = (now - timedelta(minutes=1)).isoformat()
+            c.execute(
+                "INSERT INTO opportunities(source,title,url,state,deadline_at,eligibility) VALUES(?,?,?,?,?,?)",
+                ("ops-test", "Follow-up target", "https://example.test/ops", "IN_PROGRESS", deadline, "EXECUTE"),
+            )
+            oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/ops",)).fetchone()["id"]
+            record_contract(c, oid, started_at=past, deadline_at=deadline, payment_due_at=payment_due)
+            followup_id = schedule_followup(
+                c, oid, past, "Check application status", channel="MANUAL", subject="Status check", requires_approval=1
+            )
+
+            assert due_followups(c, past)
+            dashboard = operation_dashboard(c)
+            assert dashboard["due_followups"] == 1
+
+            first = operation_tick(c)
+            types = {row["reminder_type"] for row in first}
+            assert {"DEADLINE", "PAYMENT_DUE", "FOLLOWUP_DUE"}.issubset(types)
+            reminders = c.execute(
+                "SELECT reminder_type,severity,status,due_at FROM operation_reminders WHERE opportunity_id=? ORDER BY reminder_type",
+                (oid,),
+            ).fetchall()
+            assert {row["reminder_type"] for row in reminders} == {"DEADLINE", "PAYMENT_DUE", "FOLLOWUP_DUE"}
+            assert all(row["status"] == "OPEN" for row in reminders)
+
+            notifications = c.execute(
+                "SELECT kind,opportunity_id,due_at FROM notifications WHERE opportunity_id=? ORDER BY kind,due_at",
+                (oid,),
+            ).fetchall()
+            assert {row["kind"] for row in notifications} == {"DEADLINE", "PAYMENT_DUE", "FOLLOWUP_DUE"}
+
+            second = operation_tick(c)
+            assert len(second) == len(first)
+            assert c.execute(
+                "SELECT COUNT(*) FROM operation_reminders WHERE opportunity_id=?", (oid,)
+            ).fetchone()[0] == 3
+            assert c.execute(
+                "SELECT COUNT(*) FROM notifications WHERE opportunity_id=?", (oid,)
+            ).fetchone()[0] == 3
+
+            followup = c.execute("SELECT status,requires_approval,sent_at FROM followup_schedule WHERE id=?", (followup_id,)).fetchone()
+            assert followup["status"] == "SCHEDULED"
+            assert followup["requires_approval"] == 1
+            assert followup["sent_at"] is None
+        finally:
+            c.close()
