@@ -41,3 +41,27 @@ def update_learning_snapshot(c, opportunity_id):
 def learning_summary(c):
     rows=c.execute('SELECT reason,outcome,count FROM outcome_reason_learning ORDER BY count DESC,reason').fetchall()
     return {'reasons':[dict(r) for r in rows],'opportunities':[_row for _row in map(dict,c.execute('SELECT * FROM opportunity_learning ORDER BY expected_value DESC LIMIT 50').fetchall())]}
+
+def negative_outcome_summary(c):
+    """Summarize negative operational signals without rewriting historical outcomes."""
+    rows = c.execute(
+        "SELECT outcome, COUNT(*) AS count FROM opportunity_outcomes "
+        "WHERE outcome IN ('REJECTED','EXPIRED','CANCELLED') GROUP BY outcome ORDER BY outcome"
+    ).fetchall()
+    by_outcome = {row["outcome"]: int(row["count"]) for row in rows}
+    blocked = int(c.execute("SELECT COUNT(*) FROM opportunities WHERE eligibility='BLOCK'").fetchone()[0])
+    failed_actions = int(c.execute("SELECT COUNT(*) FROM action_attempts WHERE status='FAILED'").fetchone()[0])
+    reasons = [
+        dict(row)
+        for row in c.execute(
+            "SELECT reason,outcome,count,last_seen FROM outcome_reason_learning "
+            "WHERE outcome IN ('REJECTED','EXPIRED','CANCELLED') "
+            "ORDER BY count DESC,reason"
+        ).fetchall()
+    ]
+    return {
+        "by_outcome": by_outcome,
+        "blocked_opportunities": blocked,
+        "failed_action_attempts": failed_actions,
+        "reasons": reasons,
+    }
