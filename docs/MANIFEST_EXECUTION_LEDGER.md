@@ -22,17 +22,17 @@ These rows are concrete and ordered. They remove the ambiguity between individua
 | R050 | Final-qualification regression contract | R049 | Direct regression proves unconfigured external gates are explicitly SKIPPED and Full Qualification blocks on OPEN or FAIL. | PASS | Windows CI run 35974142391, job 107550508738, commit b48628eafee324d8826181d1557a4fe0c8cb1a26; test-windows completed success. |
 | R051 | Full Qualification — Windows qualification job | R050 | Windows compile + full pytest + qualification gates + product/release audits + EXE/installer build/smoke/install/UI/uninstall + final qualification decision. | NOT EXECUTED |
 | R052 | Full Qualification — Android qualification job | R050 | Android assemble + emulator E2E + artifact capture. | NOT EXECUTED |
-| R053 | Live global discovery provider | R051 | A real configured SearXNG endpoint executes the discovery gate and returns a successful qualification result. If no authorized endpoint is configured, this gate is SKIPPED by contract and is not falsely reported as PASS. | NOT EXECUTED |
+| R053 | Live global discovery provider | R051 | A real configured SearXNG endpoint executes the discovery gate and returns a successful qualification result. If no authorized endpoint is configured, this mandatory final gate remains NOT EXECUTED; it is not converted to PASS. | NOT EXECUTED |
 | R054 | Live source reachability scale | R051 | Current registry candidates are actually probed; acceptance requires 500 live-reachable endpoints. | NOT EXECUTED |
 | R055 | Live acquisition sample | R054 | Real source acquisition produces at least one observed opportunity/event and preserves provenance. | NOT EXECUTED |
 | R056 | Social source surface | R054 | Configured registry candidates in the social family are reachable under the qualification probe. | NOT EXECUTED |
 | R057 | Procurement source surface | R054 | Configured registry candidates in the procurement family are reachable under the qualification probe. | NOT EXECUTED |
-| R058 | Dynamic JS browser surface | R051 | Real configured dynamic target is rendered by Playwright and produces title/body/screenshot evidence. If no authorized target exists, SKIPPED by contract. | NOT EXECUTED |
+| R058 | Dynamic JS browser surface | R051 | Real configured dynamic target is rendered by Playwright and produces title/body/screenshot evidence. If no authorized target exists, this remains NOT EXECUTED when the dynamic surface is mandatory. | NOT EXECUTED |
 | R059 | Local engine contract | R051 | Engine manifest/job/result contract executes locally and validates. | NOT EXECUTED |
-| R060 | External engine sandbox | R051 | Configured sandbox endpoint accepts qualification payload without production side effects. If no sandbox endpoint is configured, SKIPPED by contract. | NOT EXECUTED |
-| R061 | Application sandbox | R051 | Configured application sandbox accepts qualification payload without production side effects. If unconfigured, SKIPPED by contract. | NOT EXECUTED |
-| R062 | Payment sandbox | R051 | Configured payment sandbox accepts qualification payload without production side effects. If unconfigured, SKIPPED by contract. | NOT EXECUTED |
-| R063 | Push notification sandbox | R051 | Configured push sandbox accepts qualification payload without production side effects. If unconfigured, SKIPPED by contract. | NOT EXECUTED |
+| R060 | External engine sandbox | R051 | Configured sandbox endpoint accepts qualification payload without production side effects. If no sandbox endpoint is configured, this remains NOT EXECUTED when the external engine is mandatory. | NOT EXECUTED |
+| R061 | Application sandbox | R051 | Configured application sandbox accepts qualification payload without production side effects. If unconfigured, this remains NOT EXECUTED when the application integration is mandatory. | NOT EXECUTED |
+| R062 | Payment sandbox | R051 | Configured payment sandbox accepts qualification payload without production side effects. If unconfigured, this remains NOT EXECUTED when the payment integration is mandatory. | NOT EXECUTED |
+| R063 | Push notification sandbox | R051 | Configured push sandbox accepts qualification payload without production side effects. If unconfigured, this remains NOT EXECUTED when push delivery is mandatory. | NOT EXECUTED |
 | R064 | Manifest AS-IS audit refresh | R051–R063 | docs/MANIFEST_ASIS_AUDIT.md reflects R046/R047/R048/R049 and the actual final-qualification evidence, with no stale OPEN claim contradicting fresh evidence. | NOT EXECUTED |
 | R065 | Release artifact identity | R051 | Portable EXE, installer and source archive are present; version/path/size/SHA-256 are recorded from actual CI artifacts. | NOT EXECUTED |
 | R066 | Clean Windows install qualification | R065 | Authoritative clean Windows path: install -> EXE smoke -> UI smoke -> uninstall; no leftover product executable. | NOT EXECUTED |
@@ -49,7 +49,7 @@ External-provider/sandbox gates are environment-owned. A missing credential/endp
 
 ## 4. Execution control
 
-Current active work: R051 — Full Qualification Windows job. R050 is CLOSED/PASS.\n\nACTIVE is reserved for the single current row. The sequence is:
+Current active work: R051/R052 — Full Qualification Windows/Android branches of the same aggregate candidate qualification. R050 is PASS.\n\nACTIVE is reserved for the single current row. The sequence is:
 
 R050 → R051/R052 → R053…R063 → R064 → R065 → R066 → R067 → R068
 
