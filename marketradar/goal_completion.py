@@ -73,7 +73,8 @@ def resolve_entity(c, entity_type, name, *, domain=None, country=None, external_
     d=str(domain or '').lower().strip() or None
     row=c.execute("SELECT * FROM entities WHERE entity_type=? AND normalized_name=? AND COALESCE(domain,'')=COALESCE(?, '')",(entity_type,n,d)).fetchone()
     if row: return row['id']
-    candidates=c.execute("SELECT * FROM entities WHERE entity_type=? AND (normalized_name=? OR domain=?)",(entity_type,n,d)).fetchall()
+    # Candidate retrieval must not make POSSIBLE_MATCH unreachable: exact name/domain are fast paths above, while ambiguous similarity requires broader same-type candidates.
+    candidates=c.execute("SELECT * FROM entities WHERE entity_type=?",(entity_type,)).fetchall()
     best=None; best_score=0
     nt=_tokens(n)
     for x in candidates:
