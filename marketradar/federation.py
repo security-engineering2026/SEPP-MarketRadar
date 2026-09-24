@@ -1,7 +1,7 @@
 from __future__ import annotations
 import hashlib, ipaddress, json, random, socket, ssl, time, http.client
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse, urljoin
 
@@ -13,7 +13,7 @@ class Source:
     status: str = "active"
     allow_hosts: tuple = ()
     access_scope: str = "public"
-    headers: tuple = ()
+    headers: tuple = field(default=(), repr=False)
 
     def __post_init__(self):
         if self.access_scope not in {"public", "local", "authorized", "private"}:
