@@ -484,3 +484,93 @@ def test_manifest_source_federation_fallback_preserves_provenance_and_host_bound
         assert False, "host boundary allowed an unregistered target"
     except ValueError as exc:
         assert str(exc) == "HOST_BOUNDARY_BLOCK"
+
+
+
+def test_manifest_application_tracking_is_pollable_evidence_bound_and_payment_separate():
+    from marketradar.economic_loop import poll_due_tracking, register_tracking, record_status_observation
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "tracking.db")
+        try:
+            c.execute(
+                "INSERT INTO sources(name,base_url,status) VALUES(?,?,?)",
+                ("tracking-test", "https://example.test", "active"),
+            )
+            c.execute(
+                "INSERT INTO opportunities(source,title,url,state,eligibility) VALUES(?,?,?,?,?)",
+                ("tracking-test", "Tracked", "https://example.test/op/1", "SUBMITTED", "EXECUTE"),
+            )
+            oid = c.execute("SELECT id FROM opportunities WHERE url=?", ("https://example.test/op/1",)).fetchone()["id"]
+
+            register_tracking(
+                c,
+                oid,
+                "tracking-test",
+                external_ref="EXT-R041",
+                status_url="https://example.test/status",
+                mode="AUTHORIZED_API",
+                poll_interval_minutes=30,
+                credential_env="MR_R041_TOKEN",
+            )
+            tracking = c.execute("SELECT * FROM application_tracking WHERE opportunity_id=?", (oid,)).fetchone()
+            assert tracking["tracking_mode"] == "AUTHORIZED_API"
+            assert tracking["external_ref"] == "EXT-R041"
+            assert tracking["status_url"] == "https://example.test/status"
+            assert tracking["credential_env"] == "MR_R041_TOKEN"
+            assert tracking["next_poll_at"] is not None
+
+            observed = record_status_observation(
+                c,
+                oid,
+                "tracking-test",
+                "viewed",
+                confidence=0.95,
+                evidence_url="https://example.test/status",
+                evidence_text="application viewed",
+                external_ref="EXT-R041",
+                actor="authorized_tracker",
+            )
+            assert observed["accepted"] is True
+            assert observed["normalized_status"] == "VIEWED"
+            row = c.execute(
+                "SELECT normalized_status,confidence,evidence_url,external_ref,accepted,actor,payload_sha256 "
+                "FROM application_status_observations WHERE opportunity_id=? ORDER BY id DESC LIMIT 1",
+                (oid,),
+            ).fetchone()
+            assert row["normalized_status"] == "VIEWED"
+            assert row["confidence"] == 0.95
+            assert row["evidence_url"] == "https://example.test/status"
+            assert row["external_ref"] == "EXT-R041"
+            assert row["accepted"] == 1
+            assert row["actor"] == "authorized_tracker"
+            assert len(row["payload_sha256"]) == 64
+            assert c.execute("SELECT state FROM opportunities WHERE id=?", (oid,)).fetchone()["state"] == "VIEWED"
+
+            payment = record_status_observation(c, oid, "tracking-test", "paid", 0.99, "https://example.test/status", "paid", "EXT-R041")
+            assert payment["accepted"] is False
+            assert payment["reason"] == "PAYMENT_STATUS_REQUIRES_PAYMENT_VERIFICATION"
+            assert c.execute("SELECT state FROM opportunities WHERE id=?", (oid,)).fetchone()["state"] == "VIEWED"
+
+            tracking = c.execute("SELECT next_poll_at FROM application_tracking WHERE opportunity_id=?", (oid,)).fetchone()
+            c.execute("UPDATE application_tracking SET next_poll_at=? WHERE opportunity_id=?", ("2000-01-01T00:00:00+00:00", oid))
+            c.commit()
+
+            import marketradar.economic_loop as economic_loop
+            original_fetch = economic_loop._fetch_json
+            economic_loop._fetch_json = lambda *args, **kwargs: ({"status": "negotiation", "confidence": 0.91, "evidence_url": "https://example.test/status"}, 200)
+            try:
+                result = poll_due_tracking(c, timeout=1)
+            finally:
+                economic_loop._fetch_json = original_fetch
+
+            assert result[0]["status"] == "OK"
+            assert result[0]["detail"]["normalized_status"] == "NEGOTIATION"
+            assert c.execute("SELECT state FROM opportunities WHERE id=?", (oid,)).fetchone()["state"] == "NEGOTIATION"
+            updated = c.execute("SELECT last_status,last_confidence,last_polled_at,next_poll_at FROM application_tracking WHERE opportunity_id=?", (oid,)).fetchone()
+            assert updated["last_status"] == "NEGOTIATION"
+            assert updated["last_confidence"] == 0.91
+            assert updated["last_polled_at"] is not None
+            assert updated["next_poll_at"] > "2000-01-01T00:00:00+00:00"
+        finally:
+            c.close()
