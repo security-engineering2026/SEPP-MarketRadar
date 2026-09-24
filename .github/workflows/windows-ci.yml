@@ -74,3 +74,54 @@ jobs:
         env:
           MARKETRADAR_SEARCH_PROVIDER: searxng
         run: python -B -m marketradar.cli autonomous-discovery --max-cycles 1
+
+
+  windows-product:
+    name: Windows product EXE and installer smoke
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install development dependencies
+        shell: pwsh
+        run: python -m pip install -r requirements-dev.txt
+      - name: Build portable EXE and smoke test
+        shell: pwsh
+        run: ./packaging/build_windows.ps1
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $version = (python -c "from marketradar import __version__; print(__version__)").Trim()
+          & iscc "/DMyAppVersion=$version" packaging/installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed: $LASTEXITCODE" }
+      - name: Installer install EXE and uninstall smoke
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem release/installer/*Setup-*.exe | Select-Object -First 1
+          if (-not $installer) { throw "Installer artifact missing" }
+          $target = Join-Path $env:RUNNER_TEMP "MarketRadarInstalled"
+          if (Test-Path $target) { Remove-Item $target -Recurse -Force -ErrorAction SilentlyContinue }
+          Start-Process -FilePath $installer.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$target" -Wait | Out-Null
+          if (-not (Test-Path "$target/MarketRadar.exe")) { throw "Installed EXE missing" }
+          $smoke = Start-Process -FilePath "$target/MarketRadar.exe" -ArgumentList "--smoke-test" -Wait -PassThru
+          if ($smoke.ExitCode -ne 0) { throw "Installed EXE smoke test failed: $($smoke.ExitCode)" }
+          $uiSmoke = Start-Process -FilePath "$target/MarketRadar.exe" -ArgumentList "--ui-smoke-test" -Wait -PassThru
+          if ($uiSmoke.ExitCode -ne 0) { throw "Installed EXE UI smoke test failed: $($uiSmoke.ExitCode)" }
+          $uninstaller = Join-Path $target "unins000.exe"
+          if (-not (Test-Path $uninstaller)) { throw "Uninstaller missing" }
+          Start-Process -FilePath $uninstaller -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait | Out-Null
+          if (Test-Path "$target/MarketRadar.exe") { throw "Uninstall did not remove MarketRadar.exe" }
+      - name: Upload Windows product artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketradar-windows-product
+          path: |
+            release/portable/**
+            release/installer/**
