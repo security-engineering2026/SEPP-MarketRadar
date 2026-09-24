@@ -26,7 +26,7 @@ def advance_capability(current: str | None, evidence: CapabilityEvidence) -> str
     current = str(current or "REGISTERED").upper()
     if current not in _STAGE_INDEX:
         current = "REGISTERED"
-    target = str(evidence.stage or current).upper()
+    target = str(evidence.stage).upper()
     if target not in _STAGE_INDEX:
         raise ValueError(f"UNKNOWN_CAPABILITY_STAGE:{target}")
     return CAPABILITY_STAGES[max(_STAGE_INDEX[current], _STAGE_INDEX[target])]

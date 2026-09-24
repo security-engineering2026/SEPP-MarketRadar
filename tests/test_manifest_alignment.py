@@ -504,3 +504,39 @@ def test_manifest_trust_reputation_separates_confidence_from_reputation_and_surf
             assert "NO_REVIEWS" in unknown["flags"]
         finally:
             cdb.close()
+
+
+def test_manifest_capability_evidence_maps_every_stage_and_never_promotes_without_evidence():
+    from marketradar.capability import CAPABILITY_STAGES, CapabilityEvidence, advance_capability, capability_evidence_for_verification
+
+    expected = {
+        (False, False, False, False, False): "REGISTERED",
+        (True, False, False, False, False): "REACHABLE",
+        (True, True, False, False, False): "PARSEABLE",
+        (True, True, True, False, False): "VALIDATED",
+        (True, True, True, True, False): "POLICY_VERIFIED",
+        (True, True, True, True, True): "EXECUTION_READY",
+    }
+    for flags, stage in expected.items():
+        evidence = capability_evidence_for_verification(
+            reachable=flags[0], parseable=flags[1], validated=flags[2],
+            policy_verified=flags[3], execution_ready=flags[4],
+        )
+        assert evidence.stage == stage
+        assert evidence.reasons
+
+    assert advance_capability("EXECUTION_READY", CapabilityEvidence("REGISTERED")) == "EXECUTION_READY"
+    assert advance_capability("POLICY_VERIFIED", CapabilityEvidence("REACHABLE")) == "POLICY_VERIFIED"
+    assert advance_capability("REGISTERED", CapabilityEvidence("EXECUTION_READY")) == "EXECUTION_READY"
+
+    for invalid in ("", "UNKNOWN", "NOT_READY"):
+        try:
+            advance_capability("REGISTERED", CapabilityEvidence(invalid))
+            assert False, f"invalid capability stage accepted: {invalid!r}"
+        except ValueError as exc:
+            assert "UNKNOWN_CAPABILITY_STAGE" in str(exc)
+
+    assert tuple(CAPABILITY_STAGES) == (
+        "REGISTERED", "DISCOVERED", "DOCUMENTED", "REACHABLE",
+        "PARSEABLE", "VALIDATED", "POLICY_VERIFIED", "EXECUTION_READY",
+    )
