@@ -161,6 +161,7 @@ from .economic_loop import ensure_schema as ensure_economic_schema, ensure_payme
 from .finance import ensure_schema as ensure_finance_schema
 from .notifications import ensure_schema as ensure_notifications_schema
 from .email_service import ensure_schema as ensure_email_schema
+from .observability import ensure_schema as ensure_observability_schema
 
 def connect(path):
     Path(path).parent.mkdir(parents=True,exist_ok=True)
@@ -218,6 +219,7 @@ def connect(path):
         ensure_operations_schema(c)
         ensure_economic_schema(c)
         ensure_payment_poll_schema(c)
+        ensure_observability_schema(c)
         ensure_finance_schema(c)
         ensure_notifications_schema(c)
         ensure_email_schema(c)
