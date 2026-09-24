@@ -540,3 +540,51 @@ def test_manifest_capability_evidence_maps_every_stage_and_never_promotes_withou
         "REGISTERED", "DISCOVERED", "DOCUMENTED", "REACHABLE",
         "PARSEABLE", "VALIDATED", "POLICY_VERIFIED", "EXECUTION_READY",
     )
+
+
+
+def test_manifest_payment_intelligence_separates_claimed_documented_observed_and_verified():
+    from marketradar.payment import classify_payment_evidence, detect_payment
+    from marketradar.pipeline import Pipeline
+
+    detected = detect_payment("Payouts available in USDT on TRC20")
+    assert detected["asset"] == "USDT"
+    assert detected["verified"] is False
+    assert classify_payment_evidence(detected, []) == "CLAIMED"
+    assert classify_payment_evidence(detected, [{"kind": "payout_policy", "finding": "USDT payout terms"}]) == "DOCUMENTED"
+    assert classify_payment_evidence(detected, [{"kind": "payment_observation", "finding": "withdrawal observed"}]) == "OBSERVED"
+    assert classify_payment_evidence(detected, [{"kind": "payment_observation", "finding": "verified settlement"}], payment_verified=True, verification_evidence=True) == "VERIFIED"
+    assert classify_payment_evidence(detected, [{"kind": "payment_observation", "finding": "verified settlement"}], payment_verified=True, verification_evidence=False) == "OBSERVED"
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        try:
+            source = {
+                "name": "PAYMENT_INTEL_TEST",
+                "base_url": "https://example.test/feed",
+                "adapter": "json",
+                "status": "active",
+                "source_kind": "website",
+                "acquisition": "http",
+                "access_scope": "public",
+                "iran_status": "ALLOW",
+                "kyc_status": "ALLOW",
+                "payment_status": "USDT",
+                "terms_status": "allowed",
+            }
+            Pipeline(cdb).ingest(source, {
+                "title": "USDT payout opportunity",
+                "url": "https://example.test/payment-op",
+                "description": "Payouts available in USDT on TRC20.",
+                "evidence": [{"kind": "payout_policy", "url": "https://example.test/payout", "finding": "USDT payout terms", "confidence": 0.95}],
+            })
+            cdb.commit()
+            row = cdb.execute("SELECT payment,payment_verified FROM opportunities WHERE url=?", ("https://example.test/payment-op",)).fetchone()
+            assert row["payment"] == "USDT"
+            assert row["payment_verified"] == 0
+            claims = cdb.execute("SELECT claim_type,claim_value FROM claims WHERE opportunity_id=(SELECT id FROM opportunities WHERE url=?) AND claim_type IN ('payment','payment_evidence_state') ORDER BY claim_type", ("https://example.test/payment-op",)).fetchall()
+            values = {r["claim_type"]: r["claim_value"] for r in claims}
+            assert values["payment"] == "USDT"
+            assert values["payment_evidence_state"] == "DOCUMENTED"
+        finally:
+            cdb.close()
