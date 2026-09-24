@@ -18,7 +18,7 @@ jobs:
   windows-qualification:
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     name: Windows qualification
-    runs-on: [self-hosted, Windows, X64, marketradar]
+    runs-on: windows-latest
     timeout-minutes: 45
     env:
       SEARXNG_URL: ${{ secrets.SEARXNG_URL }}
@@ -31,69 +31,9 @@ jobs:
       QUALIFICATION_ARTIFACT_DIR: qualification-artifacts
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - name: Prepare self-hosted Python
-        shell: pwsh
-        run: |
-          $registry = @()
-          foreach ($base in @(
-            'HKLM:\SOFTWARE\Python\PythonCore',
-            'HKLM:\SOFTWARE\WOW6432Node\Python\PythonCore'
-          )) {
-            if (Test-Path $base) {
-              $registry += Get-ChildItem $base -ErrorAction SilentlyContinue | ForEach-Object {
-                $install = (Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue).InstallPath
-                if ($install) { Join-Path $install 'python.exe' }
-              }
-            }
-          }
-          $wherePython = @(where.exe python.exe 2>$null)
-          $wherePy = @(where.exe py.exe 2>$null)
-          $candidates = @(
-            (Get-Command python.exe -ErrorAction SilentlyContinue).Source,
-            (Get-Command py.exe -ErrorAction SilentlyContinue).Source
-          ) + $wherePython + $wherePy + $registry + @(Get-ChildItem 'C:\Program Files\Python*\python.exe','C:\Program Files\Python*\*\python.exe','C:\Users\*\AppData\Local\Programs\Python\Python*\python.exe' -ErrorAction SilentlyContinue | ForEach-Object FullName)
-          $python = $null
-          $tooOld = $false
-          foreach ($candidate in ($candidates | Where-Object { $_ } | Select-Object -Unique)) {
-            try {
-              $v = (& $candidate -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')").Trim()
-              if ([version]$v -ge [version]'3.12') { $python = $candidate; break }
-              $tooOld = $true
-            } catch {}
-          }
-          if (-not $python) {
-            # The qualification runner is self-hosted by design. Bootstrap Python when
-            # the runner image does not provide a usable 3.12+ interpreter.
-            $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
-            if ($winget) {
-              try {
-                winget install --id Python.Python.3.12 --scope user --silent --accept-source-agreements --accept-package-agreements
-              } catch {}
-            }
-            $choco = Get-Command choco.exe -ErrorAction SilentlyContinue
-            if (-not $python -and $choco) {
-              try { choco install python --version=3.12.10 -y --no-progress } catch {}
-            }
-            $refresh = @(
-              (Get-Command python.exe -ErrorAction SilentlyContinue).Source,
-              (Get-Command py.exe -ErrorAction SilentlyContinue).Source
-            ) + @(where.exe python.exe 2>$null) + @(where.exe py.exe 2>$null) + @(Get-ChildItem 'C:\Program Files\Python*\python.exe','C:\Program Files\Python*\*\python.exe','C:\Users\*\AppData\Local\Programs\Python\Python*\python.exe' -ErrorAction SilentlyContinue | ForEach-Object FullName)
-            foreach ($candidate in ($refresh | Where-Object { $_ } | Select-Object -Unique)) {
-              try {
-                $v = (& $candidate -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')").Trim()
-                if ([version]$v -ge [version]'3.12') { $python = $candidate; break }
-              } catch {}
-            }
-            if (-not $python) {
-              if ($tooOld) { throw 'PYTHON_VERSION_TOO_OLD' }
-              throw 'PYTHON_3_12_PLUS_NOT_FOUND'
-            }
-          }
-          $shim = Join-Path $env:RUNNER_TEMP 'python-shim'
-          New-Item -ItemType Directory -Force -Path $shim | Out-Null
-          ('@echo off' + [Environment]::NewLine + '"' + $python + '" %*') | Set-Content -Path (Join-Path $shim 'python.cmd') -Encoding ascii
-          $shim | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          & $python --version
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Install dependencies
         shell: pwsh
         run: python -m pip install -r requirements-dev.txt pillow
