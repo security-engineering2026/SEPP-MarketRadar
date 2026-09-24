@@ -1578,3 +1578,27 @@ def test_manifest_followup_and_deadline_reminders_are_durable_idempotent_and_non
             assert followup["sent_at"] is None
         finally:
             c.close()
+
+
+
+def test_manifest_source_policy_changes_are_persisted_and_alerted_without_auto_authorization():
+    from marketradar.source_health import persist_health
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "policy-alerts.db")
+        try:
+            source = {"name":"policy-source","base_url":"https://policy.example","adapter":"json","status":"active","source_kind":"job_source","acquisition":"http","access_scope":"public","terms_status":"allowed","iran_status":"ALLOW","kyc_status":"ALLOW","payment_status":"USDT","execution_mode":"MANUAL","proposal_limit":"10"}
+            persist_health(c, source, {"status":"OK","http_status":200,"parse_ok":True,"parsed_count":1,"sha256":"a"*64}); c.commit()
+            changed = dict(source); changed["iran_status"]="BLOCK"; changed["payment_status"]="UNKNOWN"; changed["terms_status"]="needs_review"
+            persist_health(c, changed, {"status":"OK","http_status":200,"parse_ok":True,"parsed_count":1,"sha256":"b"*64}); c.commit()
+            rows = c.execute("SELECT field,previous_value,new_value,status FROM source_policy_changes WHERE source=? ORDER BY field", ("policy-source",)).fetchall()
+            assert {(r["field"],r["previous_value"],r["new_value"]) for r in rows} == {("iran_status","ALLOW","BLOCK"),("payment_status","USDT","UNKNOWN"),("terms_status","allowed","needs_review")}
+            notices = c.execute("SELECT kind,priority,status,title,body FROM notifications WHERE kind='SOURCE_POLICY_CHANGE' ORDER BY body").fetchall()
+            assert len(notices) == 3
+            assert all(r["priority"] == "HIGH" and r["status"] == "UNREAD" for r in notices)
+            assert all("->" in r["body"] for r in notices)
+            assert c.execute("SELECT COUNT(*) FROM action_authorizations").fetchone()[0] == 0
+            persist_health(c, changed, {"status":"OK","http_status":200,"parse_ok":True,"parsed_count":1,"sha256":"c"*64}); c.commit()
+            assert c.execute("SELECT COUNT(*) FROM source_policy_changes WHERE source='policy-source'").fetchone()[0] == 3
+            assert c.execute("SELECT COUNT(*) FROM notifications WHERE kind='SOURCE_POLICY_CHANGE'").fetchone()[0] == 3
+        finally:
+            c.close()
