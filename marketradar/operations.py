@@ -225,8 +225,9 @@ def operation_tick(c):
             except Exception: pass
     due=c.execute("SELECT * FROM followup_schedule WHERE status='SCHEDULED' AND scheduled_at<=? ORDER BY scheduled_at",(ts,)).fetchall()
     for f in due:
-        exists=c.execute("SELECT 1 FROM operation_reminders WHERE opportunity_id=? AND reminder_type='FOLLOWUP_DUE' AND message=? AND status='OPEN'",(f['opportunity_id'],f['message'])).fetchone()
-        if not exists: c.execute("INSERT INTO operation_reminders(opportunity_id,reminder_type,due_at,severity,message,created_at) VALUES(?,?,?,?,?,?)",(f['opportunity_id'],'FOLLOWUP_DUE',f['scheduled_at'],'INFO',f"Follow-up due: {f['message']}",ts))
+        reminder_message=f"Follow-up due: {f['message']}"
+        exists=c.execute("SELECT 1 FROM operation_reminders WHERE opportunity_id=? AND reminder_type='FOLLOWUP_DUE' AND message=? AND status='OPEN'",(f['opportunity_id'],reminder_message)).fetchone()
+        if not exists: c.execute("INSERT INTO operation_reminders(opportunity_id,reminder_type,due_at,severity,message,created_at) VALUES(?,?,?,?,?,?)",(f['opportunity_id'],'FOLLOWUP_DUE',f['scheduled_at'],'INFO',reminder_message,ts))
     rows=c.execute("SELECT * FROM operation_reminders WHERE status='OPEN' ORDER BY CASE severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'WARN' THEN 2 ELSE 3 END,due_at").fetchall()
     for r in rows:
         exists=c.execute("SELECT 1 FROM notifications WHERE opportunity_id=? AND kind=? AND due_at=?",(r['opportunity_id'],r['reminder_type'],r['due_at'])).fetchone()
