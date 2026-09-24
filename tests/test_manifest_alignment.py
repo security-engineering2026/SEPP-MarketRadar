@@ -398,3 +398,47 @@ def test_manifest_security_fabric_detects_prompt_injection_and_never_grants_evid
             assert stored[0]["target"] == "1"
         finally:
             c.close()
+
+
+
+def test_manifest_android_companion_is_non_authoritative_and_core_bound():
+    from types import SimpleNamespace
+    from marketradar.android_gateway import AndroidGateway
+
+    calls = []
+
+    class FakeRuntime:
+        def issue_submission_approval(self, oid, policy, ttl):
+            calls.append(("issue", oid, policy, ttl))
+            return SimpleNamespace(
+                approval_id="approval-1",
+                action="SUBMIT_APPLICATION",
+                target="opportunity:42",
+                parameters_digest="param-digest",
+                evidence_digest="evidence-digest",
+                policy_version=policy,
+                expires_at=1999999999,
+            )
+
+        def approve_and_submit(self, oid, approval, actor, policy_version):
+            calls.append(("execute", oid, approval, actor, policy_version))
+            return {"status": "SUBMITTED", "opportunity_id": oid}
+
+    gateway = AndroidGateway(None, FakeRuntime(), secret="core-secret")
+    assert gateway.token_ok("core-secret") is True
+    assert gateway.token_ok("wrong-secret") is False
+
+    issued = gateway.approve_submission(42)
+    assert issued["status"] == "APPROVAL_ISSUED"
+    assert issued["opportunity_id"] == 42
+    assert calls[0] == ("issue", 42, "v1", 300)
+
+    result = gateway.execute_submission(42, issued["approval"])
+    assert result == {"status": "SUBMITTED", "opportunity_id": 42}
+    assert calls[1][0] == "execute"
+    assert calls[1][1] == 42
+    assert calls[1][2].action == "SUBMIT_APPLICATION"
+    assert calls[1][2].evidence_digest == "evidence-digest"
+    assert calls[1][2].policy_version == "v1"
+    assert calls[1][3] == "android_operator"
+    assert calls[1][4] == "v1"
