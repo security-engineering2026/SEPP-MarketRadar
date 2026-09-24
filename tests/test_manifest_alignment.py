@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 from pathlib import Path
 
@@ -239,5 +240,56 @@ def test_manifest_negative_rejection_intelligence_preserves_negative_signals_and
             assert summary["blocked_opportunities"] == 1
             assert summary["failed_action_attempts"] == 1
             assert {item["reason"] for item in summary["reasons"]} == {"budget mismatch", "deadline passed", "client cancelled"}
+        finally:
+            c.close()
+
+
+def test_manifest_market_to_product_preserves_repeated_demand_and_build_evidence():
+    from marketradar.recommendation_engine import generate_product_build_specs
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "test.db")
+        try:
+            c.execute("INSERT INTO sources(name,source_lane) VALUES(?,?)", ("market-intel", "MARKET_INTELLIGENCE_ONLY"))
+            rows = [
+                ("Python automation A", "python_automation", ["json"], ["API access"]),
+                ("Python automation B", "python_automation", ["csv"], ["API access", "scheduler"]),
+                ("Python debugging", "python_debugging", ["patch"], ["repository"]),
+                ("Student document service", "pdf_to_word", ["docx"], ["PDF"]),
+            ]
+            for idx, (title, task_type, outputs, requirements) in enumerate(rows, 1):
+                c.execute(
+                    """INSERT INTO opportunities(source,title,url,state,task_type,work_domain,output_formats_json,requirements_json)
+                       VALUES(?,?,?,?,?,?,?,?)""",
+                    (
+                        "market-intel", title, f"https://example.test/product/{idx}", "DISCOVERED",
+                        task_type,
+                        "document_processing" if task_type == "pdf_to_word" else "software",
+                        json.dumps(outputs), json.dumps(requirements),
+                    ),
+                )
+
+            specs = generate_product_build_specs(c)
+            by_key = {item["product_key"]: item for item in specs}
+
+            assert "python_automation_engine" in by_key
+            python_spec = by_key["python_automation_engine"]
+            assert python_spec["opportunity_count"] == 3
+            assert python_spec["task_count"] == 2
+            assert python_spec["demand_score"] == 0.15
+            assert python_spec["suggested_capabilities"] == ["python_automation", "python_debugging"]
+            assert set(python_spec["requirements"]) == {"API access", "scheduler", "repository"}
+            assert set(python_spec["source_evidence"]["sample_opportunities"]) == {1, 2, 3}
+            assert python_spec["status"] == "PROPOSED"
+            assert set(python_spec["business_models"]) == {"LICENSE", "SUBSCRIPTION", "API", "SERVICE"}
+
+            assert "student_services_engine" in by_key
+            assert by_key["student_services_engine"]["opportunity_count"] == 1
+
+            persisted = c.execute(
+                "SELECT product_key, opportunity_count, suggested_capabilities_json, source_evidence_json, status FROM product_build_specs ORDER BY product_key"
+            ).fetchall()
+            assert len(persisted) == len(specs)
+            assert all(row["status"] == "PROPOSED" for row in persisted)
         finally:
             c.close()
