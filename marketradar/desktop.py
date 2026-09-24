@@ -1282,7 +1282,17 @@ def smoke_test():
         assert __version__
         target = json.loads((root / "config" / "source_targets.json").read_text(encoding="utf-8"))["target_registered_sources"]
         assert target >= 500 and len(sources) >= 5 and runtime is not None
-        assert conn.execute("SELECT COUNT(*) FROM source_contracts").fetchone()[0] == len(sources)
+        # Persistent installations may legitimately retain dynamic/discovered contracts
+        # that are no longer part of the shipped baseline registry. Qualification must
+        # prove every shipped source has a contract, not require the database to contain
+        # exactly the baseline count.
+        placeholders = ",".join("?" for _ in sources)
+        current = [s["name"] for s in sources]
+        matched = conn.execute(
+            f"SELECT COUNT(*) FROM source_contracts WHERE source IN ({placeholders})",
+            current,
+        ).fetchone()[0]
+        assert matched == len(sources)
         return 0
     finally:
         conn.close()
