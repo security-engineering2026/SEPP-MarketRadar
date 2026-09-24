@@ -32,8 +32,7 @@ def test_unconfigured_external_qualification_gates_are_explicitly_skipped(monkey
     assert fq.sandbox_endpoint_gate("PUSH_NOTIFICATION_E2E", "QUALIFY_PUSH_URL")["status"] == "SKIPPED"
 
 
-def test_full_qualification_acceptance_blocks_only_on_failures():
+def test_full_qualification_acceptance_blocks_on_open_or_failure():
     root = Path(__file__).resolve().parents[1]
     workflow = (root / ".github" / "workflows" / "full-qualification.yml").read_text(encoding="utf-8")
-    assert 'if ([int]$r.summary.fail -gt 0) {' in workflow
-    assert 'or [int]$r.summary.open -gt 0' not in workflow
+    assert 'if ([int]$r.summary.open -gt 0 -or [int]$r.summary.fail -gt 0) {' in workflow
