@@ -447,3 +447,60 @@ def test_manifest_evidence_graph_links_source_observation_evidence_claim_and_dom
         assert all(row["claim_id"] in {c["id"] for c in claims} for row in claim_links)
         assert any(row["relation"] == "CONTRADICTS" for row in conflicts)
         cdb.close()
+
+
+def test_manifest_trust_reputation_separates_confidence_from_reputation_and_surfaces_provenance_manipulation_unknown():
+    from marketradar.goal_completion import analyze_reviews
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        try:
+            party = cdb.execute(
+                "INSERT INTO entities(entity_type,canonical_name,normalized_name,domain,created_at,updated_at) VALUES(?,?,?,?,?,?)",
+                (
+                    "Party", "Trust Test Party", "trust test party", "trust.example",
+                    "2026-09-23T20:00:00+00:00", "2026-09-23T20:00:00+00:00",
+                ),
+            ).lastrowid
+
+            for i in range(4):
+                cdb.execute(
+                    "INSERT INTO reviews(party_entity_id,source,author_key,text,rating,observed_at,provenance_root,verified) VALUES(?,?,?,?,?,?,?,?)",
+                    (
+                        party, "review-source", f"author-{i}", f"Useful service review {i}", 5,
+                        f"2026-09-{20+i:02d}T20:00:00+00:00", "same-root", 1,
+                    ),
+                )
+            cdb.commit()
+
+            result = analyze_reviews(cdb, party)
+            assert result["independent_provenance_count"] == 1
+            assert "PROVENANCE_CONCENTRATION" in result["flags"]
+            assert result["state"] == "MIXED"
+            assert result["confidence"] > 0
+
+            stored = cdb.execute(
+                "SELECT state,confidence,independent_provenance_count,flags_json "
+                "FROM trust_assessments WHERE entity_id=? AND target_type='REPUTATION' AND target_id=?",
+                (party, str(party)),
+            ).fetchone()
+            assert stored is not None
+            assert stored["state"] == result["state"]
+            assert round(stored["confidence"], 3) == result["confidence"]
+            assert stored["independent_provenance_count"] == 1
+            assert "PROVENANCE_CONCENTRATION" in stored["flags_json"]
+
+            unknown_party = cdb.execute(
+                "INSERT INTO entities(entity_type,canonical_name,normalized_name,domain,created_at,updated_at) VALUES(?,?,?,?,?,?)",
+                (
+                    "Party", "Unknown Party", "unknown party", "unknown.example",
+                    "2026-09-23T20:00:00+00:00", "2026-09-23T20:00:00+00:00",
+                ),
+            ).lastrowid
+            unknown = analyze_reviews(cdb, unknown_party)
+            assert unknown["state"] == "UNKNOWN"
+            assert unknown["confidence"] == 0
+            assert unknown["independent_provenance_count"] == 0
+            assert "NO_REVIEWS" in unknown["flags"]
+        finally:
+            cdb.close()
