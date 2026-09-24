@@ -387,3 +387,63 @@ def test_manifest_party_resolution_keeps_party_roles_distinct():
         assert {row["party_type"] for row in rows} == {"Agency", "Client", "Employer"}
         assert all(row["entity_id"] != rows[(i + 1) % len(rows)]["entity_id"] for i, row in enumerate(rows))
         cdb.close()
+
+    
+def test_manifest_evidence_graph_links_source_observation_evidence_claim_and_domain_object():
+    from marketradar.pipeline import AcquisitionAttestation, Pipeline
+    import hashlib
+
+    with tempfile.TemporaryDirectory() as td:
+        cdb = connect(Path(td) / "test.db")
+        source = {
+            "name": "GRAPH_TEST", "base_url": "https://example.test/feed",
+            "adapter": "json", "status": "active", "source_kind": "website",
+            "acquisition": "http", "access_scope": "public", "iran_status": "ALLOW",
+            "kyc_status": "ALLOW", "payment_status": "USDT", "terms_status": "allowed",
+        }
+        payloads = [
+            b'{"items":[{"title":"Graph opportunity","url":"https://example.test/op/graph","iran_access":"ALLOW"}]}',
+            b'{"items":[{"title":"Graph opportunity","url":"https://example.test/op/graph","iran_access":"BLOCK"}]}',
+        ]
+        digests = [hashlib.sha256(p).hexdigest() for p in payloads]
+        for i, (payload, digest) in enumerate(zip(payloads, digests), 1):
+            cdb.execute(
+                "INSERT INTO raw_observations(source,url,observed_at,payload,payload_sha256,http_status,content_type,observation_kind) VALUES(?,?,?,?,?,?,?,?)",
+                ("GRAPH_TEST", source["base_url"], f"2026-09-23T20:0{i}:00+00:00", payload, digest, 200, "application/json", "source_response"),
+            )
+        cdb.commit()
+
+        for i, digest in enumerate(digests):
+            Pipeline(cdb).ingest(
+                source,
+                {
+                    "title": "Graph opportunity",
+                    "url": "https://example.test/op/graph",
+                    "description": "graph evidence",
+                    "iran_access": "ALLOW" if i == 0 else "BLOCK",
+                    "evidence": [{"kind": "listing", "url": "https://example.test/op/graph", "finding": f"observed-{i}", "confidence": 0.95}],
+                },
+                AcquisitionAttestation("GRAPH_TEST", source["base_url"], digest, 200),
+            )
+            cdb.commit()
+
+        opportunity = cdb.execute("SELECT id,source FROM opportunities WHERE url=?", ("https://example.test/op/graph",)).fetchone()
+        observations = cdb.execute("SELECT id,source,payload_sha256 FROM raw_observations WHERE payload_sha256 IN (?,?) ORDER BY id", (digests[0], digests[1])).fetchall()
+        evidence_rows = cdb.execute("SELECT id,opportunity_id,observation_id,source,finding FROM evidence WHERE opportunity_id=? ORDER BY id", (opportunity["id"],)).fetchall()
+        claims = cdb.execute("SELECT id,opportunity_id,claim_type,claim_value FROM claims WHERE opportunity_id=? ORDER BY id", (opportunity["id"],)).fetchall()
+        claim_links = cdb.execute("SELECT claim_id,evidence_id FROM claim_evidence WHERE claim_id IN (SELECT id FROM claims WHERE opportunity_id=?)", (opportunity["id"],)).fetchall()
+        conflicts = cdb.execute("SELECT relation FROM claim_conflicts WHERE opportunity_id=? AND claim_type='iran_access'", (opportunity["id"],)).fetchall()
+
+        assert len(observations) == 2
+        assert all(row["source"] == "GRAPH_TEST" for row in observations)
+        assert opportunity["source"] == "GRAPH_TEST"
+        assert len(evidence_rows) == 2
+        assert {row["observation_id"] for row in evidence_rows} == {row["id"] for row in observations}
+        assert all(row["opportunity_id"] == opportunity["id"] and row["source"] == "GRAPH_TEST" for row in evidence_rows)
+        assert {row["finding"] for row in evidence_rows} == {"observed-0", "observed-1"}
+        assert len(claims) >= 1
+        assert all(row["opportunity_id"] == opportunity["id"] for row in claims)
+        assert {row["evidence_id"] for row in claim_links} == {row["id"] for row in evidence_rows}
+        assert all(row["claim_id"] in {c["id"] for c in claims} for row in claim_links)
+        assert any(row["relation"] == "CONTRADICTS" for row in conflicts)
+        cdb.close()
