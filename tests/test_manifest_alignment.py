@@ -202,3 +202,42 @@ def test_self_hosted_full_qualification_uses_local_python():
     assert "PYTHON_3_12_PLUS_NOT_FOUND" in workflow
     assert "PYTHON_VERSION_TOO_OLD" in workflow
 
+def test_manifest_negative_rejection_intelligence_preserves_negative_signals_and_reasons():
+    from marketradar.outcome_learning import negative_outcome_summary, record_outcome
+
+    with tempfile.TemporaryDirectory() as td:
+        c = connect(Path(td) / "negative.db")
+        try:
+            rows = [
+                ("Rejected", "https://example.test/rejected", "REVIEW"),
+                ("Expired", "https://example.test/expired", "REVIEW"),
+                ("Cancelled", "https://example.test/cancelled", "REVIEW"),
+                ("Blocked", "https://example.test/blocked", "BLOCK"),
+            ]
+            ids = []
+            for title, url, eligibility in rows:
+                c.execute(
+                    "INSERT INTO opportunities(source,title,url,state,eligibility,budget) VALUES(?,?,?,?,?,?)",
+                    ("negative-source", title, url, "DISCOVERED", eligibility, 100),
+                )
+                ids.append(c.execute("SELECT id FROM opportunities WHERE url=?", (url,)).fetchone()["id"])
+
+            record_outcome(c, ids[0], "REJECTED", reason="budget mismatch")
+            record_outcome(c, ids[1], "EXPIRED", reason="deadline passed")
+            record_outcome(c, ids[2], "CANCELLED", reason="client cancelled")
+            c.execute(
+                "INSERT INTO action_authorizations(approval_id,action,target,parameters_digest,evidence_digest,policy_version,actor,issued_at,expires_at,nonce,status) "
+                "VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+                ("r035", "TEST", str(ids[0]), "p", "e", POLICY_VERSION, "test", 1, 9999999999, "n-r035", "USED"),
+            )
+            c.execute(
+                "INSERT INTO action_attempts(approval_id,attempt_no,started_at,status,error) VALUES(?,?,?,?,?)",
+                ("r035", 1, "2026-09-24T00:00:00+00:00", "FAILED", "provider rejected action"),
+            )
+            summary = negative_outcome_summary(c)
+            assert summary["by_outcome"] == {"CANCELLED": 1, "EXPIRED": 1, "REJECTED": 1}
+            assert summary["blocked_opportunities"] == 1
+            assert summary["failed_action_attempts"] == 1
+            assert {item["reason"] for item in summary["reasons"]} == {"budget mismatch", "deadline passed", "client cancelled"}
+        finally:
+            c.close()
