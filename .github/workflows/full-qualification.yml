@@ -124,11 +124,49 @@ jobs:
       - name: Product audit
         if: always()
         shell: pwsh
-        run: python -B tools/product_audit.py
+        run: |
+          $version = (python -c "from marketradar import __version__; print(__version__)").Trim()
+          $output = & python -B tools/product_audit.py 2>&1
+          $code = $LASTEXITCODE
+          $text = $output -join [Environment]::NewLine
+          Write-Host $text
+          $parsed = $null
+          try { $parsed = $text | ConvertFrom-Json } catch { $parsed = @{ parse_error = $_.Exception.Message; raw_output = $text } }
+          $report = [ordered]@{
+            schema = "qualification-audit-result.v1"
+            audit = "product_audit"
+            product_version = $version
+            generated_at = (Get-Date).ToUniversalTime().ToString("o")
+            exit_code = [int]$code
+            status = if ($code -eq 0) { "PASS" } else { "FAIL" }
+            result = $parsed
+          }
+          New-Item -ItemType Directory -Force -Path qualification-artifacts | Out-Null
+          $report | ConvertTo-Json -Depth 10 | Set-Content -Path qualification-artifacts/product_audit.json -Encoding utf8
+          if ($code -ne 0) { throw "PRODUCT_AUDIT_FAILED:$code" }
       - name: Release audit
         if: always()
         shell: pwsh
-        run: python -B tools/release_audit.py
+        run: |
+          $version = (python -c "from marketradar import __version__; print(__version__)").Trim()
+          $output = & python -B tools/release_audit.py 2>&1
+          $code = $LASTEXITCODE
+          $text = $output -join [Environment]::NewLine
+          Write-Host $text
+          $parsed = $null
+          try { $parsed = $text | ConvertFrom-Json } catch { $parsed = @{ parse_error = $_.Exception.Message; raw_output = $text } }
+          $report = [ordered]@{
+            schema = "qualification-audit-result.v1"
+            audit = "release_audit"
+            product_version = $version
+            generated_at = (Get-Date).ToUniversalTime().ToString("o")
+            exit_code = [int]$code
+            status = if ($code -eq 0) { "PASS" } else { "FAIL" }
+            result = $parsed
+          }
+          New-Item -ItemType Directory -Force -Path qualification-artifacts | Out-Null
+          $report | ConvertTo-Json -Depth 10 | Set-Content -Path qualification-artifacts/release_audit.json -Encoding utf8
+          if ($code -ne 0) { throw "RELEASE_AUDIT_FAILED:$code" }
       - name: Build portable EXE and smoke test
         if: always()
         shell: pwsh
@@ -234,7 +272,21 @@ jobs:
             throw "Full qualification report missing"
           }
           $r = Get-Content qualification-artifacts/full_qualification.json -Raw | ConvertFrom-Json
+          foreach ($auditName in @("product_audit","release_audit")) {
+            $auditPath = "qualification-artifacts/$auditName.json"
+            if (-not (Test-Path $auditPath)) {
+              throw "QUALIFICATION_AUDIT_REPORT_MISSING:$auditName"
+            }
+            $audit = Get-Content $auditPath -Raw | ConvertFrom-Json
+            if ([int]$audit.exit_code -ne 0 -or $audit.status -ne "PASS") {
+              throw "QUALIFICATION_AUDIT_NOT_PASS:$auditName"
+            }
+            if ($audit.product_version -ne $r.product_version) {
+              throw "QUALIFICATION_AUDIT_VERSION_MISMATCH:$auditName"
+            }
+          }
           Write-Host ("PASS=" + $r.summary.pass + " OPEN=" + $r.summary.open + " FAIL=" + $r.summary.fail)
+          Write-Host "PRODUCT_AUDIT=PASS RELEASE_AUDIT=PASS VERSION=$($r.product_version)"
           if ([int]$r.summary.open -gt 0 -or [int]$r.summary.fail -gt 0) {
             throw "FULL_QUALIFICATION_NOT_FINAL"
           }
