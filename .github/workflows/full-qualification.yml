@@ -125,7 +125,7 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          $version = (python -c "from marketradar import __version__; print(__version__)").Trim()
+          $version = (python -B -c "from marketradar import __version__; print(__version__)").Trim()
           $output = & python -B tools/product_audit.py 2>&1
           $code = $LASTEXITCODE
           $text = $output -join [Environment]::NewLine
