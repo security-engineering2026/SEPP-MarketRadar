@@ -1294,6 +1294,9 @@ def smoke_test():
         ).fetchone()[0]
         assert matched == len(sources)
         return 0
+    except Exception:
+        logger.exception("SMOKE_TEST_FAILED")
+        raise
     finally:
         conn.close()
 
