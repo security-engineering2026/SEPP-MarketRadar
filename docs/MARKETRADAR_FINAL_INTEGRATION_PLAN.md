@@ -124,3 +124,18 @@ Status: **PATCHED / EVIDENCE_PENDING**. This corrects the qualification evidence
 
 ## R065 focused reconciliation
 R065 was inspected after the R059/R056/R057 work. The existing packaging path builds the portable EXE, installer and source archive, but the qualification workflow did not previously record actual artifact size/SHA-256. Minimal evidence-contract patch: the Windows Full Qualification workflow now creates `qualification-artifacts/release_artifact_identity.json` containing schema, version, actual artifact path, size_bytes and SHA-256 for all three required release artifacts, and fails if any is missing. Commit `e4e87e7dca5633aa1a986d5ec2f4d67aa6271454`. Status: **PATCHED / EVIDENCE_PENDING**. No CI/runner execution was performed.
+
+
+## R067 trace — audit/qualification decision consistency
+R067 was inspected after the R065 packaging-evidence hardening.
+
+The qualification workflow previously executed product_audit.py and release_audit.py, but the final qualification decision only consumed qualification-artifacts/full_qualification.json. Because the audit steps were marked if: always(), an audit failure could be recorded as a failed workflow step while the later final-decision step still evaluated only the Full Qualification summary. That left a real evidence-consistency gap: the final decision was not mechanically bound to the product/release audit results.
+
+Minimal workflow patch:
+- capture Product Audit and Release Audit exit codes and JSON output into qualification-artifacts/product_audit.json and qualification-artifacts/release_audit.json;
+- record the product version in both audit evidence files;
+- require both audit reports to exist, have exit_code == 0, have status PASS, and match the Full Qualification report's product version before the final decision can pass.
+
+Patch commit: af895bda3bd2a16576ff7222c465c342bbb6cedd.
+
+Status: PATCHED / EVIDENCE_PENDING. This closes the consistency/integration defect in the qualification harness; it does not claim runtime PASS until an actual qualification execution produces and validates the three aligned reports. No CI/runner/Full Qualification execution was performed.
