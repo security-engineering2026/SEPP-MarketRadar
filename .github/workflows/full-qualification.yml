@@ -192,6 +192,40 @@ jobs:
           New-Item -ItemType Directory -Force -Path release/source | Out-Null
           git archive --format=zip --output="release/source/SEPP-MarketRadar-v$version-SOURCE.zip" "HEAD"
 
+      - name: Record release artifact identity
+        if: always()
+        shell: pwsh
+        run: |
+          $version = (python -c "from marketradar import __version__; print(__version__)").Trim()
+          $artifacts = @(
+            (Join-Path $PWD "release/portable/MarketRadar/MarketRadar.exe"),
+            (Join-Path $PWD "release/installer/SEPP-MarketRadar-Setup-$version.exe"),
+            (Join-Path $PWD "release/source/SEPP-MarketRadar-v$version-SOURCE.zip")
+          )
+          $records = @()
+          foreach ($path in $artifacts) {
+            if (-not (Test-Path $path -PathType Leaf)) {
+              throw "RELEASE_ARTIFACT_MISSING:$path"
+            }
+            $item = Get-Item $path
+            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash.ToLowerInvariant()
+            $records += [ordered]@{
+              name = $item.Name
+              path = $item.FullName
+              size_bytes = [int64]$item.Length
+              sha256 = $hash
+            }
+          }
+          $identity = [ordered]@{
+            schema = "release-artifact-identity.v1"
+            version = $version
+            generated_at = (Get-Date).ToUniversalTime().ToString("o")
+            artifacts = $records
+          }
+          New-Item -ItemType Directory -Force -Path qualification-artifacts | Out-Null
+          $identity | ConvertTo-Json -Depth 5 | Set-Content -Path qualification-artifacts/release_artifact_identity.json -Encoding utf8
+          Get-Content qualification-artifacts/release_artifact_identity.json
+
       - name: Final qualification decision
         if: always()
         shell: pwsh
