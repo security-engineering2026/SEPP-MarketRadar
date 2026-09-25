@@ -140,3 +140,25 @@ R067 exposed a qualification-harness consistency gap. The workflow ran Product A
 Patch commit: af895bda3bd2a16576ff7222c465c342bbb6cedd.
 
 Current status: PATCHED / EVIDENCE_PENDING. No CI/runner/Full Qualification execution was performed.
+
+
+## R068 final integration trace
+R068 was statically traced without executing the product or qualification environment.
+
+Real Windows entry point:
+marketradar.desktop.main() -> Tk() -> MarketRadarDesktop -> open_runtime() -> MarketRadarRuntime.
+
+Fresh-workspace path:
+MarketRadarDesktop.__init__ -> refresh_all/operation_tick -> _maybe_bootstrap_live_data -> _federate_worker -> MarketRadarRuntime.federate -> Federation.fetch -> raw_observations -> Pipeline.ingest -> canonical opportunity.
+
+The downstream product path is also present in the real Desktop controller:
+- Daily Center consumes runtime.daily_center();
+- Action Center can analyze opportunities, build application materials, create submission plans and open the next application;
+- Operations exposes lifecycle state, payment verification, follow-up and final project reporting;
+- Runtime owns authorization/action, financial observation, outcome and learning methods rather than moving those responsibilities into the UI.
+
+The Windows qualification workflow separately builds and smoke-tests the portable EXE, builds and installs the installer, runs installed EXE/UI smoke, verifies uninstall, records release artifact identity, and gates the final decision on Full Qualification plus Product Audit and Release Audit evidence.
+
+Android qualification remains a separate companion job with assemble, emulator E2E and artifact capture. Historical Android PASS is preserved, but current R068 remains execution-controlled.
+
+Conclusion: no additional code patch is justified from static inspection. The remaining R068 condition is evidence, not an identified missing integration edge: one fresh authoritative execution must demonstrate the real candidate through the required Windows/product, Android, artifact and final-decision path. No CI/runner/Full Qualification execution was performed.
