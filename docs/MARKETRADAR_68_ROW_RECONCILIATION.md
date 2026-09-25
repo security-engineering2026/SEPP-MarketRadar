@@ -99,3 +99,18 @@ Trace the existing CLI/runtime discovery orchestration and determine the smalles
 **First concrete reconciliation target: G-001 Desktop global Search integration boundary.**
 
 No code patch is authorized by this document until the remaining discovery/runtime call-sites are traced and the smallest existing responsibility boundary is identified.
+
+## G-001 trace closure
+**Result:** No code patch required.
+
+The trace confirmed that discovery is already integrated at the correct system boundary:
+- explicit CLI discovery executes `SourceDiscoveryEngine` and `WebSearchProvider`;
+- discovery persists candidate/provenance state;
+- applied/autonomous discovery synchronizes new source contracts;
+- `MarketRadar` reloads dynamic source records;
+- scheduled `scan()` consumes the source registry and calls `MarketRadarRuntime.federate()`;
+- `federate()` feeds the existing `Pipeline.ingest()` path.
+
+The Desktop Search box only filters existing opportunities. The locked Manifest does not state that a UI search query must launch live discovery. Consequently G-001 is reclassified from `BUILT_NOT_INTEGRATED` to **NON-BLOCKING UX ENHANCEMENT / NOT A MANIFEST GAP**. It is not added to R051–R068 closure work.
+
+No runner/CI/qualification execution was performed during this trace.
