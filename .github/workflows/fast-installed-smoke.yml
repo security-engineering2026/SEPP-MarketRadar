@@ -1,0 +1,105 @@
+name: Fast Windows Install Smoke
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - 'process/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  installed-smoke:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    name: Fast installed EXE smoke
+    runs-on: [self-hosted, Windows, X64, marketradar]
+    timeout-minutes: 20
+    env:
+      PYTHONUNBUFFERED: '1'
+      MARKETRADAR_DATA_ROOT: ${{ runner.temp }}\\MarketRadar-FastSmoke-data
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Prepare Python
+        shell: pwsh
+        run: |
+          $python = (Get-Command python.exe -ErrorAction SilentlyContinue).Source
+          if (-not $python) { throw "PYTHON_NOT_FOUND" }
+          & $python --version
+          $shim = Join-Path $env:RUNNER_TEMP 'python-shim-fast'
+          New-Item -ItemType Directory -Force -Path $shim | Out-Null
+          ('@echo off' + [Environment]::NewLine + '"' + $python + '" %*') | Set-Content (Join-Path $shim 'python.cmd') -Encoding ascii
+          $shim | Out-File $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Install runtime build dependencies
+        shell: pwsh
+        run: |
+          python -m pip install -r requirements.txt pyinstaller
+
+      - name: Build portable candidate
+        shell: pwsh
+        run: ./packaging/build_windows.ps1
+
+      - name: Ensure Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Get-Command iscc.exe -ErrorAction SilentlyContinue)) {
+            choco install innosetup -y --no-progress
+          }
+          if (-not (Get-Command iscc.exe -ErrorAction SilentlyContinue)) {
+            $candidates = @(
+              "$env:ProgramFiles\\Inno Setup 6\\ISCC.exe",
+              "$env:ProgramFiles(x86)\\Inno Setup 6\\ISCC.exe"
+            )
+            $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+            if (-not $iscc) { throw "INNO_SETUP_NOT_FOUND" }
+            $dir = Split-Path $iscc
+            $dir | Out-File $env:GITHUB_PATH -Encoding utf8 -Append
+          }
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $version = (python -c "from marketradar import __version__; print(__version__)").Trim()
+          & iscc "/DMyAppVersion=$version" packaging/installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "INNO_SETUP_FAILED:$LASTEXITCODE" }
+
+      - name: Install and diagnose EXE
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem release/installer/*Setup-*.exe | Select-Object -First 1
+          if (-not $installer) { throw "INSTALLER_MISSING" }
+          $target = Join-Path $env:RUNNER_TEMP "MarketRadarFastInstalled"
+          if (Test-Path $target) { Remove-Item $target -Recurse -Force -ErrorAction SilentlyContinue }
+          Start-Process -FilePath $installer.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$target" -Wait | Out-Null
+          if (-not (Test-Path "$target/MarketRadar.exe")) { throw "INSTALLED_EXE_MISSING" }
+
+          $env:MARKETRADAR_DATA_ROOT = Join-Path $target "qualification-data"
+          & "$target/MarketRadar.exe" --smoke-test
+          $smokeExit = $LASTEXITCODE
+          Write-Host "INSTALLED_SMOKE_EXIT=$smokeExit"
+
+          $logDir = Join-Path $env:MARKETRADAR_DATA_ROOT "logs"
+          if (Test-Path $logDir) {
+            Write-Host "=== INSTALLED MARKETRADAR LOG ==="
+            Get-ChildItem $logDir -Recurse -File -ErrorAction SilentlyContinue |
+              ForEach-Object {
+                Write-Host "--- $($_.FullName) ---"
+                Get-Content $_.FullName -ErrorAction SilentlyContinue
+              }
+          }
+
+          if ($smokeExit -ne 0) { throw "INSTALLED_SMOKE_FAILED:$smokeExit" }
+
+      - name: Upload diagnostic artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: marketradar-fast-installed-smoke
+          path: |
+            release/installer/**
+            release/portable/**
+            ${{ runner.temp }}/MarketRadar-FastSmoke-data/**
