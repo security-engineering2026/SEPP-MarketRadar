@@ -65,6 +65,15 @@ jobs:
         if: always()
         shell: pwsh
         run: python -B tools/product_audit.py
+      - name: Clean generated audit artifacts
+        if: always()
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path . -Recurse -Directory -Force |
+            Where-Object { $_.Name -eq '__pycache__' -or $_.Name -eq '.pytest_cache' } |
+            Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+          Get-ChildItem -Path . -Recurse -File -Filter '*.pyc' -Force |
+            Remove-Item -Force -ErrorAction SilentlyContinue
       - name: Release audit
         if: always()
         shell: pwsh
@@ -101,10 +110,12 @@ jobs:
           if (Test-Path $target) { Remove-Item $target -Recurse -Force -ErrorAction SilentlyContinue }
           Start-Process -FilePath $installer.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$target" -Wait -PassThru | Out-Null
           if (-not (Test-Path "$target/MarketRadar.exe")) { throw "Installed EXE missing" }
-          & "$target/MarketRadar.exe" --smoke-test
-          if ($LASTEXITCODE -ne 0) { throw "Installed EXE smoke test failed: $LASTEXITCODE" }
-          & "$target/MarketRadar.exe" --ui-smoke-test
-          if ($LASTEXITCODE -ne 0) { throw "Installed EXE UI smoke test failed: $LASTEXITCODE" }
+          $smoke = Start-Process -FilePath "$target/MarketRadar.exe" -ArgumentList "--smoke-test" -Wait -PassThru
+          Write-Host "INSTALLED_SMOKE_EXIT=$($smoke.ExitCode)"
+          if ($smoke.ExitCode -ne 0) { throw "Installed EXE smoke test failed: $($smoke.ExitCode)" }
+          $uiSmoke = Start-Process -FilePath "$target/MarketRadar.exe" -ArgumentList "--ui-smoke-test" -Wait -PassThru
+          Write-Host "INSTALLED_UI_SMOKE_EXIT=$($uiSmoke.ExitCode)"
+          if ($uiSmoke.ExitCode -ne 0) { throw "Installed EXE UI smoke test failed: $($uiSmoke.ExitCode)" }
           $uninstaller = Join-Path $target "unins000.exe"
           if (-not (Test-Path $uninstaller)) { throw "Uninstaller missing" }
           Start-Process -FilePath $uninstaller -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait | Out-Null
