@@ -82,3 +82,18 @@ R068 remains the final ledger truth condition. This document does not convert R0
 - No duplicate implementation when an existing component already owns the responsibility.
 - No CI/runner trigger as part of repository reconciliation.
 - No merge of PR #63 without explicit authorization.
+
+## Trace result — G-001
+The discovery/runtime call-site trace is complete for the current baseline.
+
+Observed orchestration:
+- `tools/scheduled_cycle.py` calls `MarketRadar.verify_due_sources()`, then `MarketRadar.scan(mode='project')`, optionally `scan(mode='intelligence')`, and `daily_center()`.
+- `MarketRadar.scan()` consumes the registered/dynamic source set and calls `MarketRadarRuntime.federate()`; it does not invoke `SourceDiscoveryEngine`.
+- `marketradar/cli.py` owns the explicit `discover-sources` and `autonomous-discovery` orchestration. Those paths persist discovery evidence/candidates, optionally merge candidates through `sync_source_contracts()`, and autonomous discovery verifies newly imported candidates.
+- `MarketRadar.__init__()` reloads dynamic source records and syncs them into the runtime source set, so discovery can feed later federation without duplicating acquisition logic.
+
+Conclusion: there is no missing internal edge in the existing discovery -> registry -> federation chain. Discovery is intentionally a separate acquisition-of-sources operation; scheduled scanning consumes the resulting registry. The Manifest says discovery may use catalogs/search/public pages and that discovery creates candidates/provenance; it does not require the Desktop search box to execute live discovery.
+
+Therefore G-001 is **not a Manifest closure blocker** and no Desktop-to-discovery patch is justified by the locked contract. The Desktop behavior remains a local opportunity-set filter, which may be a future UX enhancement but is not evidence of a missing Manifest requirement.
+
+No code patch was made. No CI, runner, Full Qualification, or remote execution was triggered.
