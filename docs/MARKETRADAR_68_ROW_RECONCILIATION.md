@@ -121,3 +121,10 @@ R059 exposed a qualification-evidence weakness: the prior gate constructed contr
 Patch: `fdfdf707eb7c0131d854a3b251ce58dc9a88102c`.
 
 Current status: **PATCHED / EVIDENCE_PENDING**. This is not marked PASS until the focused gate executes successfully. No runner or CI execution was performed.
+
+## R056/R057 focused reconciliation
+Trace found a qualification-harness defect rather than a missing product component: `family_surface_gate("social")` and `family_surface_gate("procurement")` compared literal family names that are absent from the registry taxonomy. Existing registry families include social-platform variants and `market_intelligence` for procurement/tender surfaces.
+
+The gate was patched to use an explicit taxonomy mapping, and a regression test was added. Commits: `6dbd2b220c4b981380671ee15ddd7cf449098250`, `40cc64055b0f8cdc06ed512f003575c28b7a8ec7`.
+
+Current status: **R056/R057 PATCHED / EVIDENCE_PENDING**. No reachability PASS is asserted without execution.
