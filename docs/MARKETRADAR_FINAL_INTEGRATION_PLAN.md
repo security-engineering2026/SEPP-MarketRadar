@@ -97,3 +97,19 @@ Conclusion: there is no missing internal edge in the existing discovery -> regis
 Therefore G-001 is **not a Manifest closure blocker** and no Desktop-to-discovery patch is justified by the locked contract. The Desktop behavior remains a local opportunity-set filter, which may be a future UX enhancement but is not evidence of a missing Manifest requirement.
 
 No code patch was made. No CI, runner, Full Qualification, or remote execution was triggered.
+
+## R059 trace — local engine contract
+R059 was inspected as the next executable closure item. The previous `engine_contract_gate()` only instantiated an `EngineManifest`, `EngineJob`, and `EngineResult` in memory, so it did not exercise the persisted job/result contract.
+
+Minimal patch applied in `tools/full_qualification.py`:
+- validate the real `EngineManifest` contract;
+- persist an engine manifest into the real SQLite schema;
+- build a real `EngineJob` using `build_job()`;
+- persist the job as RUNNING;
+- create the real `EngineResult`/`EngineQA` contract;
+- persist the result/QA and transition the job to SUCCEEDED;
+- reload the persisted JSON and assert job/result/QA identity and status.
+
+Patch commit: `fdfdf707eb7c0131d854a3b251ce58dc9a88102c`.
+
+Status: **PATCHED — focused execution evidence still required**. No CI/runner/Full Qualification was launched.
