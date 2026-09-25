@@ -49,7 +49,9 @@ External-provider/sandbox gates are environment-owned. A missing credential/endp
 
 ## 4. Execution control
 
-Current repository-reconciliation state: R050 is PASS; R051–R068 have not been freshly executed. Repository-side hardening is complete for the identified gaps, with focused/authoritative evidence still pending. No CI, Windows runner, Android runner or Full Qualification execution was performed during this reconciliation.\n\nThe execution sequence remains:
+Current repository-reconciliation state: R050 is PASS; R051–R068 have not been freshly executed. Repository-side hardening is complete for the identified gaps, with focused/authoritative evidence still pending. No CI, Windows runner, Android runner or Full Qualification execution was performed during this reconciliation.
+
+The execution sequence remains:
 
 R050 → R051/R052 → R053…R063 → R064 → R065 → R066 → R067 → R068
 
@@ -65,4 +67,6 @@ Only R068 = PASS authorizes the statement:
 
 > The current candidate has completed the defined final qualification path and there is no remaining mandatory product-closure work in this ledger.
 
-Until then, the release is not called final merely because R001–R049 are PASS.\n\n**Current cursor:** R051/R052 are the next authoritative execution boundary; later rows remain evidence-controlled and must not be reported PASS without their required evidence.
+Until then, the release is not called final merely because R001–R049 are PASS.
+
+**Current cursor:** R051/R052 are the next authoritative execution boundary; later rows remain evidence-controlled and must not be reported PASS without their required evidence.
