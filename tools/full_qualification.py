@@ -273,9 +273,29 @@ def live_acquisition_sample_gate(sample_size=20):
 def family_surface_gate(family):
     from marketradar.source_registry import load_source_records
     records = load_source_records(ROOT / "config" / "sources.json")
+
+    # Qualification surface names are capability groups, while the registry
+    # stores the concrete source taxonomy. Keep the mapping here so the gate
+    # verifies the actual registry instead of requiring a nonexistent literal
+    # family value such as "social" or "procurement".
+    family_aliases = {
+        "social": {
+            "social_platform",
+            "telegram",
+            "instagram",
+            "x",
+            "linkedin",
+            "reddit",
+            "bale",
+            "eitaa",
+            "soroush",
+        },
+        "procurement": {"market_intelligence"},
+    }
+    allowed_families = family_aliases.get(family, {family})
     candidates = [
         x for x in records
-        if str(x.get("source_family", "")).lower() == family
+        if str(x.get("source_family", "")).lower() in allowed_families
         and x.get("base_url")
         and x.get("status") != "disabled"
     ][:3]
