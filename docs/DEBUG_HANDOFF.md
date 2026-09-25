@@ -53,7 +53,7 @@
 - Fresh Full Qualification #112/#113 and Windows CI #133/#134 are now queued. No final PASS is claimed.
 
 ## Next continuation
-Use the newest main commit as the source of truth. Inspect the next push-triggered Windows CI and Full Qualification runs, extract every remaining FAIL/OPEN, patch only concrete defects, and commit each logical fix to main. Repeat automatically. After the debug cycle is exhausted, perform and record the final test pass with real output.
+Use the newest main commit as the source of truth. Inspect the next GitHub Actions Windows/Full Qualification runs, extract every remaining FAIL/OPEN, patch only concrete defects, and commit each logical fix. Live execution evidence comes from GitHub Actions or the existing Windows runner; no autonomous coding loop is used.
 
 
 ## 2026-09-22 — Temporal/Contradiction Patch
@@ -106,141 +106,10 @@ Use the newest main commit as the source of truth. Inspect the next push-trigger
 - Next execution target: obtain fresh CI run evidence, then fix concrete Windows/Android/full-qualification failures rather than expanding features without evidence.
 
 
-## 2026-09-22 — Autonomous Cycle 001 blocker
+## 2026-09-26 — Autonomous engineering removal
 
-- Workflow run `35715756666` reached the agent step after successful checkout and Copilot CLI installation.
-- Agent invocation was rejected by GitHub with `Access denied by policy settings`.
-- This is an execution-plane policy/licensing blocker, not a MarketRadar code defect.
-- Cycle 001 is NOT EXECUTED. No PASS claim is made.
-- The current workflow already requests `copilot-requests: write` and supplies the Actions `GITHUB_TOKEN`; changing branch selection is not the remedy.
-- Next action: resolve Copilot CLI policy/licensing at the GitHub owner level, then rerun Cycle 001.
-
-## 2026-09-23 — Qualification continuation checkpoint
-
-- Test strategy: continue Manifest qualification on GitHub-hosted Windows/Android runners.
-- Environment-only blockers are recorded and bypassed after repeated failure; they are not treated as product defects without code evidence.
-- Product gates with concrete evidence remain priority: regression, compile, packaging, UI, installer, lifecycle, acquisition, source reachability, and Manifest contract coverage.
-- External engine/application/payment/push and dynamic discovery remain OPEN when required endpoints/secrets are absent; no synthetic PASS is allowed.
-- Next cycle: execute fresh Windows qualification and use the resulting gate evidence to separate product defects from runner/environment limitations.
-
-## 2026-09-23 — Two-channel execution + new-chat handoff
-
-### What was done
-1. Inspected the Manifest AS-IS audit and confirmed: MANIFEST -> GAP -> PATCH -> TEST -> CI -> RE-AUDIT -> NEXT GAP.
-2. Inspected Full Qualification and confirmed the 15 Manifest qualification gates.
-3. Routed Windows qualification to the dedicated runner: runs-on: [self-hosted, Windows, X64, marketradar].
-4. Found a workflow pin typo in the runner-routing commit: actions/upload-artifact SHA had one extra trailing character.
-5. Corrected it in commit a90b881be167a4f9a66cb65b9278479d27835ac4.
-6. Verified the workflow still targets the MarketRadar runner.
-7. No runtime PASS claimed until completed execution evidence exists.
-
-### Two-channel policy
-- GitHub hosted: Android build/E2E and independent hosted checks.
-- Dedicated Windows runner: Windows regression, compile, 15 gates, audits, EXE, UI, installer, install/uninstall and source archive.
-- Product failure -> root cause -> minimal patch -> regression -> commit -> CI retest.
-- Environment-only failure -> classify -> record -> bypass -> continue independent gates.
-- OPEN and NOT EXECUTED are never PASS.
-
-### New-chat continuation protocol
-Do not restart or redesign the project. Read first:
-1. docs/MANIFEST.md
-2. docs/MANIFEST_ASIS_AUDIT.md
-3. docs/DEBUG_HANDOFF.md
-4. .github/workflows/full-qualification.yml
-
-Then inspect current main HEAD, retrieve newest GitHub Actions evidence, inspect the dedicated Windows runner result, map every result to the 15 Manifest gates plus packaging/audit gates, patch only concrete product defects, and update this handoff after each logical stage. Never merge a PR unless explicitly instructed.
-
-### First action in a new chat
-Retrieve execution evidence for commit a90b881be167a4f9a66cb65b9278479d27835ac4 and compare with b55fc2c0191f5e890a0f9d4078cdb31251864aa8. If the connector cannot retrieve the run, continue repository-side Manifest audit instead of inventing status.
-
-### Checkpoint
-- Manifest gates: 15.
-- Post-a90b881 runtime evidence: NOT EXECUTED / not yet retrievable.
-- New PASS: 0.
-- New FAIL: 0.
-- Dedicated Windows runner: automatic service and workflow-targeted.
-- Workflow pin defect: corrected; runtime proof required.
-- Final product qualification: OPEN.
-- PR merge: NOT AUTHORIZED.
-
-## 2026-09-23 — Manifest qualification contract correction
-
-- Re-audited `tools/full_qualification.py` against Manifest and current package version.
-- Found two concrete evidence-contract defects:
-  1. qualification artifact hard-coded product version `16.1.1` while current package/Manifest baseline is `16.1.2`;
-  2. the 500-source gate was emitted as `LIVE_SOURCE_SCALE_500` while the Manifest qualification contract names it `LIVE_SOURCE_REACHABILITY_500`.
-- Minimal patch committed in `0dea509a379cc043c3e0b0a235a8d066d64634a6`.
-- Added regression coverage in `b38048dbb7e5e4424379f10133cfb41f56942097` to prevent version/gate-name drift.
-- Qualification User-Agent now derives from the package version instead of a hard-coded version.
-- Runtime PASS is still NOT EXECUTED until GitHub Actions executes the patched commits.
-- Next step: inspect fresh Windows qualification evidence; then classify each gate as PASS/OPEN/FAIL/NOT EXECUTED and patch only concrete failures.
-
-## 2026-09-23 — Runtime version-truth sweep
-
-- Static repository search found additional stale `16.1.1` literals in production/runtime surfaces after the qualification-report fix.
-- Patched Android gateway dashboard/server version to use package `__version__`: `cea60f8f65df9c6234af4ab8e35b5c97a1ec9e6d`.
-- Patched CLI final-verification report filename to use package `__version__`: `d6c0175e198048f7654bc68011b90064e8be939c`.
-- Removed stale version assertion from the legacy Windows release builder so it follows the package version: `101f4a4a37709c57842c187b9cc59c6953cd030b`.
-- Added regression coverage for runtime version surfaces: `8c2190f5bb1393763ea7784eb6990a0f03c37cdd`.
-- Removed the stale 16.1.1 default destination from Windows preparation: `4928400744700059e103ca10ef413ecd93d049c0`.
-- Historical 16.1.1 release documents remain intentionally historical and are not treated as runtime defects.
-- These are repository fixes only. Runtime PASS remains NOT EXECUTED until fresh GitHub Actions evidence runs against the patched main.
-
-
-
-## 2026-09-23 — Qualification execution trigger
-
-- Current main HEAD: `536d806a17a144787ab681ac43b48b98da731d38`.
-- Post-audit workflow evidence for this HEAD is currently empty/not retrievable; no PASS is inferred from source inspection.
-- Manifest contract regression coverage is present for temporal contradiction, capability ladder, acquisition fallback, and consequential decision trace.
-- Triggering a fresh main workflow cycle is the next evidence step; Windows is routed to `[self-hosted, Windows, X64, marketradar]` and Android remains on GitHub-hosted Ubuntu.
-- No product FAIL is declared until the fresh execution produces a concrete failure.
-
-
-## 2026-09-23 — CI regression extracted and patched
-
-- Windows CI #224 on `536d806a17a144787ab681ac43b48b98da731d38` reached the full pytest suite: compile PASS, dependency install PASS, pytest FAIL with exactly one regression.
-- Root cause: `tests/test_manifest_alignment.py` asserted the old textual fragment `FullQualification/{__version__}`, while the production code correctly uses the full f-string User-Agent expression `SEPP-MarketRadar-FullQualification/{__version__}`.
-- This was a test-contract defect, not a product runtime defect.
-- Minimal regression patch: `da53c43590f5b6711f7893c703d4183ce9cb0a0d`.
-- Fresh Full Qualification #207 and Windows CI #226 were triggered on the patched commit; both are currently queued. No PASS is inferred until they complete.
-
-
-## 2026-09-23 — Android E2E environment blocker extracted
-
-- Full Qualification #207 (35836661861) completed the Android assemble step successfully, then Android emulator E2E failed at emulator boot with `Timeout waiting for emulator to boot.` after the action's 600-second boot window.
-- The failure occurred before tools/android_e2e.sh executed, so this run provides no evidence of an Android application/test failure.
-- Classification: OPEN / ENVIRONMENT-QUALIFICATION pending retry; do not count as product FAIL.
-- The ReactiveCircus action documents emulator-boot-timeout as a configurable seconds value; the workflow previously relied on its 600-second default.
-- Minimal mitigation committed: eb81423bb236bc153d7e117ec419abf4d55fd28b sets emulator-boot-timeout: 900 for API 35 Pixel 6 E2E.
-- Fresh push-triggered Full Qualification evidence is required. Windows qualification remains independently queued/routed to the dedicated MarketRadar runner.
-
-
-## 2026-09-23 — Android E2E PASS extracted
-- Full Qualification #209 (35838955818) completed the Android qualification job successfully.
-- Android assemble: PASS.
-- Android emulator E2E: PASS.
-- Artifact: marketradar-android-qualification, ID 10740494397.
-- Artifact SHA-256: 5f979682b4235559d06d17b03f1c4ebb7e0a680c8ff2ae51688b198b81b84eda.
-- Manifest Android E2E qualification is now PASS from completed CI evidence.
-- Full Qualification #211 later failed only at Android emulator E2E; this is retained as environment nondeterminism because #209 provides a completed successful post-audit E2E execution and no application failure was demonstrated.
-- Windows CI #230 (35840121528) is PASS for its Windows core regression/compile/audit path, but it is not a substitute for the dedicated Full Qualification Windows job.
-- Remaining Manifest queue after this evidence extraction: four runtime/CI evidence-pending implementation contracts, Windows product qualification, and full post-audit CI evidence.
-
-
-## 2026-09-23 — Manifest contract evidence closure
-- Windows CI #230 (35840121528) completed successfully; full pytest passed.
-- Manifest alignment regression coverage executed successfully for temporal contradiction immutability, source capability maturity/anti-downgrade, acquisition fallback outcomes/provenance, and immutable decision traces, including ACTION_EXECUTION and DAILY_SNAPSHOT coverage.
-- These four Manifest implementation contracts are now PASS on runtime/CI evidence.
-- Current explicit Manifest queue is reduced to 2 items: Windows product qualification and Full post-audit CI evidence.
-- Android E2E is independently PASS from Full Qualification #209 (35838955818).
-
-
-## 2026-09-26 — Local autonomous test-command alignment
-
-- Concrete defect found in the local autonomous coding path: `tools/run_local_autonomous_cycle.ps1` exports `AUTONOMOUS_TEST_COMMAND=py -m pytest -q`, but `tools/autonomous_coding_agent.py` ignored that setting during its initial audit and hard-coded `python -m pytest -q`.
-- Minimal fix: `test_snapshot()` now executes the configured `AUTONOMOUS_TEST_COMMAND`.
-- Regression coverage added: `tests/test_autonomous_coding_agent.py` verifies the configured command is tokenized and passed to the executor.
-- Commits: `f5e7838550f77a042545b6da1fc43596258dfcec`, `ac61c913d61ce74ca9178783fdfc71a7c640cb39`.
-- Runtime execution evidence for this patch is NOT EXECUTED in this session; no PASS is inferred from source changes alone.
-- Next concrete action: run the local autonomous cycle on Windows with the existing Ollama path; do not treat GitHub runner provisioning or hosted CI as the coding engine.
+- The repository-local autonomous coding/supervisor/overnight execution mechanism has been removed.
+- Removed local coding-agent runners, autonomous supervisor/install scripts, overnight agent scripts, the autonomous engineering workflow, and their dedicated regression test.
+- MarketRadar product functionality such as source discovery is unchanged; this removal is limited to autonomous software-engineering execution.
+- Live engineering validation is now performed through the existing GitHub Actions workflows or the existing dedicated Windows runner.
+- No PASS is inferred from repository edits; fresh live execution evidence remains required.
