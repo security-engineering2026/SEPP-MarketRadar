@@ -19,7 +19,8 @@ def read(path: Path, limit: int = 30000) -> str:
         return ""
 
 def test_snapshot() -> str:
-    rc, out = sh("python", "-m", "pytest", "-q", timeout=TEST_TIMEOUT)
+    test_cmd = os.getenv("AUTONOMOUS_TEST_COMMAND", "python -m pytest -q").split()
+    rc, out = sh(*test_cmd, timeout=TEST_TIMEOUT)
     return f"exit_code={rc}\n{out[-16000:]}"
 
 def candidate_context(test_output: str) -> str:
