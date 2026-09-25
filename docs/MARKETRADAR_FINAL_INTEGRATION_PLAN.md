@@ -120,3 +120,7 @@ The registry was inspected before changing the gates. Current `config/sources.js
 Minimal patch: `family_surface_gate()` now maps qualification capability groups to the existing registry taxonomy and probes the actual candidates. A focused regression test was added. Patch commits: `6dbd2b220c4b981380671ee15ddd7cf449098250`, `40cc64055b0f8cdc06ed512f003575c28b7a8ec7`.
 
 Status: **PATCHED / EVIDENCE_PENDING**. This corrects the qualification evidence harness; it does not claim that the external surfaces are reachable until the focused gate actually executes.
+
+
+## R065 focused reconciliation
+R065 was inspected after the R059/R056/R057 work. The existing packaging path builds the portable EXE, installer and source archive, but the qualification workflow did not previously record actual artifact size/SHA-256. Minimal evidence-contract patch: the Windows Full Qualification workflow now creates `qualification-artifacts/release_artifact_identity.json` containing schema, version, actual artifact path, size_bytes and SHA-256 for all three required release artifacts, and fails if any is missing. Commit `e4e87e7dca5633aa1a986d5ec2f4d67aa6271454`. Status: **PATCHED / EVIDENCE_PENDING**. No CI/runner execution was performed.
