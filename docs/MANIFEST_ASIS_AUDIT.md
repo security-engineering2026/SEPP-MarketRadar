@@ -124,7 +124,17 @@ Full Qualification #209 (35838955818) provides post-audit runtime evidence: Andr
 ### CURRENT — Full post-audit CI evidence
 R050 final-qualification regression is PASS on Windows CI run 35974142391 / job 107550508738 at commit b48628eafee324d8826181d1557a4fe0c8cb1a26. The historical Full Qualification run 35974142368 is not treated as currently executing. The current closure controller records R051–R068 as not freshly executed/evidence-pending, with R056/R057/R059/R065 having repository-side hardening patches awaiting focused or authoritative execution evidence. No final product-qualification claim is made.
 
-## 5. R046–R049 closure ledger\n\n- R046 Windows EXE/installer product smoke: PASS historical implementation/path evidence; current fresh aggregate qualification remains pending in R051/R066.\n- R047 Android companion build/E2E: PASS prior post-audit evidence from Full Qualification #209; current fresh aggregate qualification remains pending in R052.\n- R048 Observability/operational status evidence: PASS by merged implementation and regression evidence.\n- R049 Final architecture end-to-end proof: PASS by merge commit c99bb2826294e8b3ef6b0f377c147bd2d0b229f7 and its dedicated regression/hardening commits.\n- R050 Final-qualification regression contract: PASS on Windows CI run 35974142391 / job 107550508738.\n\nThe operational closure queue is tracked in docs/MANIFEST_EXECUTION_LEDGER.md and ends with R068, the fresh end-to-end final product test. Repository reconciliation has not executed that queue.\n\n## 6. Manifest sections currently aligned by code inspection
+## 5. R046–R049 closure ledger
+
+- R046 Windows EXE/installer product smoke: PASS historical implementation/path evidence; current fresh aggregate qualification remains pending in R051/R066.
+- R047 Android companion build/E2E: PASS prior post-audit evidence from Full Qualification #209; current fresh aggregate qualification remains pending in R052.
+- R048 Observability/operational status evidence: PASS by merged implementation and regression evidence.
+- R049 Final architecture end-to-end proof: PASS by merge commit c99bb2826294e8b3ef6b0f377c147bd2d0b229f7 and its dedicated regression/hardening commits.
+- R050 Final-qualification regression contract: PASS on Windows CI run 35974142391 / job 107550508738.
+
+The operational closure queue is tracked in docs/MANIFEST_EXECUTION_LEDGER.md and ends with R068, the fresh end-to-end final product test. Repository reconciliation has not executed that queue.
+
+## 6. Manifest sections currently aligned by code inspection
 
 Source registry, discovery, acquisition controls, raw observations, canonical opportunity model, evidence storage, party model, trust/reputation, eligibility, KYC/payment separation, policy engine, ranking separation, decision snapshots, human approval, authorization binding, application lifecycle, delivery evidence, payment verification, outcome learning, workflow/idempotency structures, audit logs, Windows packaging structure, Android companion structure, observability and reporting controls are present in the current codebase.
 
@@ -186,7 +196,13 @@ The remaining gaps above are now the implementation queue. No item will be repor
 - The full pytest suite executed and passed, including the Manifest alignment tests for temporal contradiction, capability ladder, acquisition fallback, decision trace immutability, ACTION_EXECUTION outcome tracing, and DAILY_SNAPSHOT trace coverage.
 - Four previously evidence-pending Manifest implementation contracts are now PASS: Temporal contradiction model, Source capability ladder, Acquisition fallback contract, Consequential decision trace.
 - Remaining explicit Manifest gaps: Windows product qualification and Full post-audit CI evidence.
-\n\n## 2026-09-24 — Final operational closure queue\n- Added docs/MANIFEST_EXECUTION_LEDGER.md as the single operational closure controller for R050–R068.\n- R050 is PASS. R051 (Windows Full Qualification) is ACTIVE; R052 (Android Full Qualification) is being executed by the same fresh aggregate run.\n- The queue explicitly separates live-provider/sandbox SKIPPED states from PASS and ends with R068, a fresh start-to-finish product qualification.\n
+
+
+## 2026-09-24 — Final operational closure queue
+- Added docs/MANIFEST_EXECUTION_LEDGER.md as the single operational closure controller for R050–R068.
+- R050 is PASS. R051–R068 are the current closure queue and have not been freshly executed during this reconciliation.
+- The queue explicitly separates live-provider/sandbox SKIPPED states from PASS and ends with R068, a fresh start-to-finish product qualification.
+
 
 ## 2026-09-26 — AS-IS audit state reconciliation
 - Removed stale wording that described Full Qualification run 35974142368 as currently executing.
