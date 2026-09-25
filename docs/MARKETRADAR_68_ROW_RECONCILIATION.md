@@ -114,3 +114,10 @@ The trace confirmed that discovery is already integrated at the correct system b
 The Desktop Search box only filters existing opportunities. The locked Manifest does not state that a UI search query must launch live discovery. Consequently G-001 is reclassified from `BUILT_NOT_INTEGRATED` to **NON-BLOCKING UX ENHANCEMENT / NOT A MANIFEST GAP**. It is not added to R051–R068 closure work.
 
 No runner/CI/qualification execution was performed during this trace.
+
+## R059 focused reconciliation
+R059 exposed a qualification-evidence weakness: the prior gate constructed contract objects but did not exercise their persistence path. The gate was minimally hardened to use the existing `engine_contract` and real SQLite `engine_manifests` / `engine_job_runs` schema, then reload and validate the persisted job/result/QA.
+
+Patch: `fdfdf707eb7c0131d854a3b251ce58dc9a88102c`.
+
+Current status: **PATCHED / EVIDENCE_PENDING**. This is not marked PASS until the focused gate executes successfully. No runner or CI execution was performed.
