@@ -130,3 +130,31 @@ A patch should connect these boundaries without moving responsibilities into Des
 
 ## Evidence rule
 A flow edge is not marked PASS merely because both endpoint functions exist. Evidence must show that the real runtime path invokes the edge and produces the expected downstream state.
+
+## Trace result — discovery and scheduled scanning
+The real call-sites confirm two separate but connected flows:
+
+```text
+Explicit discovery command
+    -> SourceDiscoveryEngine
+    -> candidates + provenance
+    -> persist candidates/evidence
+    -> sync_source_contracts (when applied/imported)
+    -> dynamic source records
+    -> MarketRadar reload
+    -> scan
+    -> MarketRadarRuntime.federate
+    -> Pipeline.ingest
+```
+
+and:
+
+```text
+Scheduled cycle
+    -> verify_due_sources
+    -> scan(project)
+    -> optional scan(intelligence)
+    -> daily_center
+```
+
+`scan()` does not rediscover sources on every scan. This is consistent with the Manifest boundary that discovery creates candidates/provenance while acquisition operates against source-bound integrations. The Desktop global Search remains a local opportunity-set filter and is not required by the Manifest to become a live discovery trigger.
