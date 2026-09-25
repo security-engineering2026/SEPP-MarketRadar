@@ -202,8 +202,8 @@ jobs:
           # Isolate clean-install qualification data from persistent self-hosted runner state.
           # This proves the installed candidate against its own shipped registry/config.
           $env:MARKETRADAR_DATA_ROOT = Join-Path $target "qualification-data"
-          & "$target/MarketRadar.exe" --smoke-test
-          $smokeExit = $LASTEXITCODE
+          $smokeProcess = Start-Process -FilePath "$target/MarketRadar.exe" -ArgumentList @("--smoke-test") -Wait -PassThru
+          $smokeExit = $smokeProcess.ExitCode
           Write-Host "INSTALLED_SMOKE_EXIT=$smokeExit"
           $logDir = Join-Path $env:MARKETRADAR_DATA_ROOT "logs"
           if (Test-Path $logDir) {
@@ -215,8 +215,10 @@ jobs:
               }
           }
           if ($smokeExit -ne 0) { throw "Installed EXE smoke test failed: $smokeExit" }
-          & "$target/MarketRadar.exe" --ui-smoke-test
-          if ($LASTEXITCODE -ne 0) { throw "Installed EXE UI smoke test failed: $LASTEXITCODE" }
+          $uiProcess = Start-Process -FilePath "$target/MarketRadar.exe" -ArgumentList @("--ui-smoke-test") -Wait -PassThru
+          $uiExit = $uiProcess.ExitCode
+          Write-Host "INSTALLED_UI_SMOKE_EXIT=$uiExit"
+          if ($uiExit -ne 0) { throw "Installed EXE UI smoke test failed: $uiExit" }
           $uninstaller = Join-Path $target "unins000.exe"
           if (-not (Test-Path $uninstaller)) { throw "Uninstaller missing" }
           Start-Process -FilePath $uninstaller -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait | Out-Null
