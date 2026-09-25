@@ -64,11 +64,49 @@ jobs:
       - name: Product audit
         if: always()
         shell: pwsh
-        run: python -B tools/product_audit.py
+        run: |
+          $version = (python -B -c "from marketradar import __version__; print(__version__)").Trim()
+          $output = & python -B tools/product_audit.py 2>&1
+          $code = $LASTEXITCODE
+          $text = $output -join [Environment]::NewLine
+          Write-Host $text
+          $parsed = $null
+          try { $parsed = $text | ConvertFrom-Json } catch { $parsed = @{ parse_error = $_.Exception.Message; raw_output = $text } }
+          $report = [ordered]@{
+            schema = "qualification-audit-result.v1"
+            audit = "product_audit"
+            product_version = $version
+            generated_at = (Get-Date).ToUniversalTime().ToString("o")
+            exit_code = [int]$code
+            status = if ($code -eq 0) { "PASS" } else { "FAIL" }
+            result = $parsed
+          }
+          New-Item -ItemType Directory -Force -Path qualification-artifacts | Out-Null
+          $report | ConvertTo-Json -Depth 10 | Set-Content -Path qualification-artifacts/product_audit.json -Encoding utf8
+          if ($code -ne 0) { throw "PRODUCT_AUDIT_FAILED:$code" }
       - name: Release audit
         if: always()
         shell: pwsh
-        run: python -B tools/release_audit.py
+        run: |
+          $version = (python -B -c "from marketradar import __version__; print(__version__)").Trim()
+          $output = & python -B tools/release_audit.py 2>&1
+          $code = $LASTEXITCODE
+          $text = $output -join [Environment]::NewLine
+          Write-Host $text
+          $parsed = $null
+          try { $parsed = $text | ConvertFrom-Json } catch { $parsed = @{ parse_error = $_.Exception.Message; raw_output = $text } }
+          $report = [ordered]@{
+            schema = "qualification-audit-result.v1"
+            audit = "release_audit"
+            product_version = $version
+            generated_at = (Get-Date).ToUniversalTime().ToString("o")
+            exit_code = [int]$code
+            status = if ($code -eq 0) { "PASS" } else { "FAIL" }
+            result = $parsed
+          }
+          New-Item -ItemType Directory -Force -Path qualification-artifacts | Out-Null
+          $report | ConvertTo-Json -Depth 10 | Set-Content -Path qualification-artifacts/release_audit.json -Encoding utf8
+          if ($code -ne 0) { throw "RELEASE_AUDIT_FAILED:$code" }
       - name: Build portable EXE and smoke test
         if: always()
         shell: pwsh
@@ -101,10 +139,26 @@ jobs:
           if (Test-Path $target) { Remove-Item $target -Recurse -Force -ErrorAction SilentlyContinue }
           Start-Process -FilePath $installer.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$target" -Wait -PassThru | Out-Null
           if (-not (Test-Path "$target/MarketRadar.exe")) { throw "Installed EXE missing" }
-          & "$target/MarketRadar.exe" --smoke-test
-          if ($LASTEXITCODE -ne 0) { throw "Installed EXE smoke test failed: $LASTEXITCODE" }
-          & "$target/MarketRadar.exe" --ui-smoke-test
-          if ($LASTEXITCODE -ne 0) { throw "Installed EXE UI smoke test failed: $LASTEXITCODE" }
+          # Isolate clean-install qualification data from persistent self-hosted runner state.
+          # This proves the installed candidate against its own shipped registry/config.
+          $env:MARKETRADAR_DATA_ROOT = Join-Path $target "qualification-data"
+          $smokeProcess = Start-Process -FilePath "$target/MarketRadar.exe" -ArgumentList @("--smoke-test") -Wait -PassThru
+          $smokeExit = $smokeProcess.ExitCode
+          Write-Host "INSTALLED_SMOKE_EXIT=$smokeExit"
+          $logDir = Join-Path $env:MARKETRADAR_DATA_ROOT "logs"
+          if (Test-Path $logDir) {
+            Write-Host "=== INSTALLED MARKETRADAR LOG ==="
+            Get-ChildItem $logDir -Recurse -File -ErrorAction SilentlyContinue |
+              ForEach-Object {
+                Write-Host "--- $($_.FullName) ---"
+                Get-Content $_.FullName -ErrorAction SilentlyContinue
+              }
+          }
+          if ($smokeExit -ne 0) { throw "Installed EXE smoke test failed: $smokeExit" }
+          $uiProcess = Start-Process -FilePath "$target/MarketRadar.exe" -ArgumentList @("--ui-smoke-test") -Wait -PassThru
+          $uiExit = $uiProcess.ExitCode
+          Write-Host "INSTALLED_UI_SMOKE_EXIT=$uiExit"
+          if ($uiExit -ne 0) { throw "Installed EXE UI smoke test failed: $uiExit" }
           $uninstaller = Join-Path $target "unins000.exe"
           if (-not (Test-Path $uninstaller)) { throw "Uninstaller missing" }
           Start-Process -FilePath $uninstaller -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait | Out-Null
@@ -118,6 +172,40 @@ jobs:
           New-Item -ItemType Directory -Force -Path release/source | Out-Null
           git archive --format=zip --output="release/source/SEPP-MarketRadar-v$version-SOURCE.zip" "HEAD"
 
+      - name: Record release artifact identity
+        if: always()
+        shell: pwsh
+        run: |
+          $version = (python -c "from marketradar import __version__; print(__version__)").Trim()
+          $artifacts = @(
+            (Join-Path $PWD "release/portable/MarketRadar/MarketRadar.exe"),
+            (Join-Path $PWD "release/installer/SEPP-MarketRadar-Setup-$version.exe"),
+            (Join-Path $PWD "release/source/SEPP-MarketRadar-v$version-SOURCE.zip")
+          )
+          $records = @()
+          foreach ($path in $artifacts) {
+            if (-not (Test-Path $path -PathType Leaf)) {
+              throw "RELEASE_ARTIFACT_MISSING:$path"
+            }
+            $item = Get-Item $path
+            $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash.ToLowerInvariant()
+            $records += [ordered]@{
+              name = $item.Name
+              path = $item.FullName
+              size_bytes = [int64]$item.Length
+              sha256 = $hash
+            }
+          }
+          $identity = [ordered]@{
+            schema = "release-artifact-identity.v1"
+            version = $version
+            generated_at = (Get-Date).ToUniversalTime().ToString("o")
+            artifacts = $records
+          }
+          New-Item -ItemType Directory -Force -Path qualification-artifacts | Out-Null
+          $identity | ConvertTo-Json -Depth 5 | Set-Content -Path qualification-artifacts/release_artifact_identity.json -Encoding utf8
+          Get-Content qualification-artifacts/release_artifact_identity.json
+
       - name: Final qualification decision
         if: always()
         shell: pwsh
@@ -126,7 +214,21 @@ jobs:
             throw "Full qualification report missing"
           }
           $r = Get-Content qualification-artifacts/full_qualification.json -Raw | ConvertFrom-Json
+          foreach ($auditName in @("product_audit","release_audit")) {
+            $auditPath = "qualification-artifacts/$auditName.json"
+            if (-not (Test-Path $auditPath)) {
+              throw "QUALIFICATION_AUDIT_REPORT_MISSING:$auditName"
+            }
+            $audit = Get-Content $auditPath -Raw | ConvertFrom-Json
+            if ([int]$audit.exit_code -ne 0 -or $audit.status -ne "PASS") {
+              throw "QUALIFICATION_AUDIT_NOT_PASS:$auditName"
+            }
+            if ($audit.product_version -ne $r.product_version) {
+              throw "QUALIFICATION_AUDIT_VERSION_MISMATCH:$auditName"
+            }
+          }
           Write-Host ("PASS=" + $r.summary.pass + " OPEN=" + $r.summary.open + " FAIL=" + $r.summary.fail)
+          Write-Host "PRODUCT_AUDIT=PASS RELEASE_AUDIT=PASS VERSION=$($r.product_version)"
           if ([int]$r.summary.open -gt 0 -or [int]$r.summary.fail -gt 0) {
             throw "FULL_QUALIFICATION_NOT_FINAL"
           }
@@ -165,11 +267,14 @@ jobs:
         with:
           api-level: 35
           arch: x86_64
-          target: google_apis
+          target: default
           profile: pixel_6
+          cores: 2
+          ram-size: 2048M
+          heap-size: 512M
           emulator-boot-timeout: 900
-          disable-animations: false
-          emulator-options: -no-snapshot -no-window -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          emulator-options: -no-snapshot -no-window -no-boot-anim -gpu swiftshader_indirect -noaudio -camera-back none
           script: bash tools/android_e2e.sh
       - name: Upload Android qualification artifact
         if: always()

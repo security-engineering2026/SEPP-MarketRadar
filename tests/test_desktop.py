@@ -22,7 +22,13 @@ def test_source_contracts_are_persisted():
     from marketradar.desktop import open_runtime
     root, settings, sources, conn, runtime = open_runtime()
     try:
-        assert conn.execute("SELECT COUNT(*) FROM source_contracts").fetchone()[0] == len(sources)
+        placeholders = ",".join("?" for _ in sources)
+        names = [s["name"] for s in sources]
+        matched = conn.execute(
+            f"SELECT COUNT(*) FROM source_contracts WHERE source IN ({placeholders})",
+            names,
+        ).fetchone()[0]
+        assert matched == len(sources)
     finally:
         conn.close()
 

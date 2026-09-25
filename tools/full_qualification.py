@@ -273,9 +273,29 @@ def live_acquisition_sample_gate(sample_size=20):
 def family_surface_gate(family):
     from marketradar.source_registry import load_source_records
     records = load_source_records(ROOT / "config" / "sources.json")
+
+    # Qualification surface names are capability groups, while the registry
+    # stores the concrete source taxonomy. Keep the mapping here so the gate
+    # verifies the actual registry instead of requiring a nonexistent literal
+    # family value such as "social" or "procurement".
+    family_aliases = {
+        "social": {
+            "social_platform",
+            "telegram",
+            "instagram",
+            "x",
+            "linkedin",
+            "reddit",
+            "bale",
+            "eitaa",
+            "soroush",
+        },
+        "procurement": {"market_intelligence"},
+    }
+    allowed_families = family_aliases.get(family, {family})
     candidates = [
         x for x in records
-        if str(x.get("source_family", "")).lower() == family
+        if str(x.get("source_family", "")).lower() in allowed_families
         and x.get("base_url")
         and x.get("status") != "disabled"
     ][:3]
@@ -321,16 +341,124 @@ def dynamic_browser_gate():
         return gate("DYNAMIC_JS_BROWSER", "FAIL", {"url": url, "error": type(exc).__name__ + ":" + str(exc)})
 
 def engine_contract_gate():
-    from marketradar.engine_contract import EngineManifest, EngineQA, EngineResult, build_job
-    manifest = EngineManifest(
-        "qualification-engine", "Qualification Engine", "1.0",
-        standalone=True, connectable=True, capabilities=("qualification",),
-        execution_mode="ENGINE_UNCONNECTED", health="UNKNOWN",
-    )
-    manifest.validate()
-    job = build_job("qualification-engine", 1, "python_automation", operations=("validate",))
-    result = EngineResult(job.job_id, "SUCCEEDED", outputs={"artifact": "qualification.txt"}, qa=EngineQA("PASS"))
-    return gate("ENGINE_CONTRACT_LOCAL", "PASS", {"job": job.task_type, "result": result.status, "qa": result.qa.status})
+    """Exercise the local engine manifest/job/result contract through persistence."""
+    from marketradar.db import connect
+    from marketradar.engine_contract import EngineManifest, EngineQA, EngineResult, build_job, serialize
+
+    with tempfile.TemporaryDirectory(prefix="mr-engine-contract-") as td:
+        conn = connect(Path(td) / "engine-contract.db")
+        try:
+            manifest = EngineManifest(
+                "qualification-engine",
+                "Qualification Engine",
+                "1.0",
+                standalone=True,
+                connectable=True,
+                capabilities=("qualification",),
+                execution_mode="ENGINE_UNCONNECTED",
+                health="UNKNOWN",
+            )
+            manifest.validate()
+
+            conn.execute(
+                "INSERT INTO engine_manifests "
+                "(engine_id,name,version,standalone,connectable,capabilities_json,"
+                "execution_mode,health,input_contract,output_contract,qa_contract,"
+                "authorization_scope,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    manifest.engine_id,
+                    manifest.name,
+                    manifest.version,
+                    int(manifest.standalone),
+                    int(manifest.connectable),
+                    json.dumps(manifest.capabilities),
+                    manifest.execution_mode,
+                    manifest.health,
+                    manifest.input_contract,
+                    manifest.output_contract,
+                    manifest.qa_contract,
+                    manifest.authorization_scope,
+                    now(),
+                ),
+            )
+
+            job = build_job(
+                manifest.engine_id,
+                1,
+                "python_automation",
+                operations=("validate",),
+                inputs={"qualification": True},
+            )
+            job_payload = serialize(job)
+            conn.execute(
+                "INSERT INTO engine_job_runs "
+                "(job_id,engine_id,opportunity_id,task_type,status,job_json,started_at) "
+                "VALUES (?,?,?,?,?,?,?)",
+                (
+                    job.job_id,
+                    job.engine_id,
+                    job.opportunity_id,
+                    job.task_type,
+                    "RUNNING",
+                    json.dumps(job_payload, ensure_ascii=False),
+                    job.created_at,
+                ),
+            )
+
+            result = EngineResult(
+                job.job_id,
+                "SUCCEEDED",
+                outputs={"artifact": "qualification.txt"},
+                qa=EngineQA("PASS", checks=({"contract": "job.v1/result.v1/qa.v1"},)),
+            )
+            result_payload = serialize(result)
+            qa_payload = serialize(result.qa)
+
+            conn.execute(
+                "UPDATE engine_job_runs SET status=?,result_json=?,qa_json=?,finished_at=? "
+                "WHERE job_id=?",
+                (
+                    result.status,
+                    json.dumps(result_payload, ensure_ascii=False),
+                    json.dumps(qa_payload, ensure_ascii=False),
+                    result.finished_at,
+                    result.job_id,
+                ),
+            )
+            conn.commit()
+
+            row = conn.execute(
+                "SELECT status,job_json,result_json,qa_json FROM engine_job_runs WHERE job_id=?",
+                (job.job_id,),
+            ).fetchone()
+            if not row:
+                raise AssertionError("ENGINE_JOB_NOT_PERSISTED")
+            persisted_job = json.loads(row["job_json"])
+            persisted_result = json.loads(row["result_json"])
+            persisted_qa = json.loads(row["qa_json"])
+            if row["status"] != "SUCCEEDED":
+                raise AssertionError("ENGINE_JOB_NOT_SUCCEEDED")
+            if persisted_job["job_id"] != job.job_id or persisted_job["engine_id"] != manifest.engine_id:
+                raise AssertionError("ENGINE_JOB_CONTRACT_MISMATCH")
+            if persisted_result["job_id"] != job.job_id or persisted_result["status"] != "SUCCEEDED":
+                raise AssertionError("ENGINE_RESULT_CONTRACT_MISMATCH")
+            if persisted_qa["status"] != "PASS":
+                raise AssertionError("ENGINE_QA_CONTRACT_MISMATCH")
+
+            return gate(
+                "ENGINE_CONTRACT_LOCAL",
+                "PASS",
+                {
+                    "manifest": manifest.engine_id,
+                    "job": job.task_type,
+                    "job_status": row["status"],
+                    "result_status": persisted_result["status"],
+                    "qa_status": persisted_qa["status"],
+                    "persistence": True,
+                },
+            )
+        finally:
+            conn.close()
 
 def sandbox_endpoint_gate(name, env_name):
     url = os.environ.get(env_name)
