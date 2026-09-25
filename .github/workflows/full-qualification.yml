@@ -165,7 +165,18 @@ jobs:
           # This proves the installed candidate against its own shipped registry/config.
           $env:MARKETRADAR_DATA_ROOT = Join-Path $target "qualification-data"
           & "$target/MarketRadar.exe" --smoke-test
-          if ($LASTEXITCODE -ne 0) { throw "Installed EXE smoke test failed: $LASTEXITCODE" }
+          $smokeExit = $LASTEXITCODE
+          Write-Host "INSTALLED_SMOKE_EXIT=$smokeExit"
+          $logDir = Join-Path $env:MARKETRADAR_DATA_ROOT "logs"
+          if (Test-Path $logDir) {
+            Write-Host "=== INSTALLED MARKETRADAR LOG ==="
+            Get-ChildItem $logDir -Recurse -File -ErrorAction SilentlyContinue |
+              ForEach-Object {
+                Write-Host "--- $($_.FullName) ---"
+                Get-Content $_.FullName -ErrorAction SilentlyContinue
+              }
+          }
+          if ($smokeExit -ne 0) { throw "Installed EXE smoke test failed: $smokeExit" }
           & "$target/MarketRadar.exe" --ui-smoke-test
           if ($LASTEXITCODE -ne 0) { throw "Installed EXE UI smoke test failed: $LASTEXITCODE" }
           $uninstaller = Join-Path $target "unins000.exe"
