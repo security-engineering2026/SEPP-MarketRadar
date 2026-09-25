@@ -38,7 +38,7 @@ Therefore this reconciliation preserves the ledger exactly rather than inventing
 | R062 | NOT EXECUTED | R051 | Configured payment sandbox accepts qualification payload without production side effects | EVIDENCE_ONLY / environment-owned |
 | R063 | NOT EXECUTED | R051 | Configured push sandbox accepts qualification payload without production side effects | EVIDENCE_ONLY / environment-owned |
 | R064 | NOT EXECUTED | R051–R063 | AS-IS audit reflects actual final-qualification evidence and has no stale contradiction | EVIDENCE_ONLY |
-| R065 | NOT EXECUTED | R051 | Portable EXE, installer, source archive with actual identity/path/size/SHA-256 | EVIDENCE_ONLY |
+| R065 | PATCHED / EVIDENCE_PENDING | R051 | Portable EXE, installer, source archive with actual identity/path/size/SHA-256 | EVIDENCE_ONLY until execution |
 | R066 | NOT EXECUTED | R065 | Clean Windows install -> smoke -> UI -> uninstall with no leftover executable | EVIDENCE_ONLY |
 | R067 | NOT EXECUTED | R064–R066 | Product audit + release audit + qualification report agree | EVIDENCE_ONLY |
 | R068 | NOT EXECUTED | R067 | One fresh end-to-end candidate from source/build through product workflow, Android, artifacts, uninstall and final decision | EVIDENCE_ONLY; final truth row |
@@ -128,3 +128,7 @@ Trace found a qualification-harness defect rather than a missing product compone
 The gate was patched to use an explicit taxonomy mapping, and a regression test was added. Commits: `6dbd2b220c4b981380671ee15ddd7cf449098250`, `40cc64055b0f8cdc06ed512f003575c28b7a8ec7`.
 
 Current status: **R056/R057 PATCHED / EVIDENCE_PENDING**. No reachability PASS is asserted without execution.
+
+
+## R065 focused reconciliation
+**EVIDENCE_ONLY** for current final qualification. The packaging path exists, but the qualification workflow previously did not record artifact size/SHA-256. The workflow is now patched to emit `qualification-artifacts/release_artifact_identity.json` with version/path/size/SHA-256 for the portable EXE, installer and source archive. Commit `e4e87e7dca5633aa1a986d5ec2f4d67aa6271454`. Focused/CI execution is still required; do not mark PASS from code inspection.
