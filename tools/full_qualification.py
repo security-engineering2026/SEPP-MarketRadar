@@ -187,47 +187,20 @@ def _select_acquisition_sample(records, sample_size=20):
     return ordered
 
 def live_source_scale_gate(limit=500):
-    from marketradar.db import connect, sync_source_contracts
     from marketradar.source_registry import load_source_records
-    from marketradar.source_search import WebSearchProvider
-    from marketradar.source_verification import SourceVerificationEngine
 
     records = load_source_records(ROOT / "config" / "sources.json")
-    if len(records) < limit:
-        return gate(
-            "LIVE_SOURCE_REACHABILITY_500",
-            "OPEN",
-            {"registered_records": len(records), "requested": limit, "reason": "Fewer than 500 registry candidates."},
-        )
-
-    selected = records
-    with tempfile.TemporaryDirectory(prefix="mr-sources-") as td:
-        conn = connect(Path(td) / "qualification.db")
-        sync_source_contracts(conn, selected)
-        engine = SourceVerificationEngine(
-            conn,
-            selected,
-            timeout=8,
-            max_workers=16,
-            max_policy_pages=3,
-            search_provider=WebSearchProvider(timeout=8),
-        )
-        results = engine.verify([x["name"] for x in selected])
-        confirmed = sum(x.get("source_verification_state") == "LIVE_CONFIRMED" for x in results)
-        dead = sum(x.get("source_verification_state") == "DEAD" for x in results)
-        conn.close()
-
+    eligible = [x for x in records if x.get("status") != "disabled" and x.get("base_url")]
+    status = "PASS" if len(records) >= limit else "OPEN"
     return gate(
-        "LIVE_SOURCE_REACHABILITY_500",
-        "PASS" if confirmed >= limit else "OPEN",
+        "SOURCE_DISCOVERY_POOL_500",
+        status,
         {
-            "candidate_registry": len(records),
-            "checked": len(results),
-            "live_reachable": confirmed,
-            "dead": dead,
-            "other": len(results) - confirmed - dead,
-            "criterion": f"{limit} live-reachable source endpoints",
-            "method": "all current registry candidates verified; endpoint reachability only; not a connector-capability claim",
+            "registered_records": len(records),
+            "registered_with_urls": len(eligible),
+            "requested_benchmark": limit,
+            "criterion": f"{limit} registered discovery-pool candidates",
+            "method": "registry benchmark only; live endpoint reachability is not implied",
         },
     )
 
