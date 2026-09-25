@@ -32,8 +32,33 @@ def test_unconfigured_external_qualification_gates_are_explicitly_skipped(monkey
     assert fq.sandbox_endpoint_gate("PUSH_NOTIFICATION_E2E", "QUALIFY_PUSH_URL")["status"] == "SKIPPED"
 
 
-def test_full_qualification_acceptance_blocks_only_on_failures():
+def test_full_qualification_acceptance_blocks_on_open_or_failure():
     root = Path(__file__).resolve().parents[1]
     workflow = (root / ".github" / "workflows" / "full-qualification.yml").read_text(encoding="utf-8")
-    assert 'if ([int]$r.summary.fail -gt 0) {' in workflow
-    assert 'or [int]$r.summary.open -gt 0' not in workflow
+    assert 'if ([int]$r.summary.open -gt 0 -or [int]$r.summary.fail -gt 0) {' in workflow
+
+def test_family_surface_gate_uses_registry_taxonomy_aliases(monkeypatch):
+    fq = _load_full_qualification()
+    records = [
+        {"name": "social-a", "source_family": "social_platform", "base_url": "https://social.example", "status": "candidate"},
+        {"name": "social-b", "source_family": "telegram", "base_url": "https://telegram.example", "status": "candidate"},
+        {"name": "proc-a", "source_family": "market_intelligence", "base_url": "https://proc.example", "status": "candidate"},
+    ]
+    monkeypatch.setattr(
+        "marketradar.source_registry.load_source_records",
+        lambda _path: records,
+    )
+    monkeypatch.setattr(
+        fq,
+        "http_probe",
+        lambda url: {"reachable": True, "status_code": 200, "url": url},
+    )
+
+    social = fq.family_surface_gate("social")
+    procurement = fq.family_surface_gate("procurement")
+
+    assert social["status"] == "PASS"
+    assert procurement["status"] == "PASS"
+    assert len(social["details"]["checked"]) == 2
+    assert len(procurement["details"]["checked"]) == 1
+
