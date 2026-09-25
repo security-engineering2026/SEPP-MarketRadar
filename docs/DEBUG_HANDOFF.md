@@ -234,3 +234,13 @@ Retrieve execution evidence for commit a90b881be167a4f9a66cb65b9278479d27835ac4 
 - These four Manifest implementation contracts are now PASS on runtime/CI evidence.
 - Current explicit Manifest queue is reduced to 2 items: Windows product qualification and Full post-audit CI evidence.
 - Android E2E is independently PASS from Full Qualification #209 (35838955818).
+
+
+## 2026-09-26 — Local autonomous test-command alignment
+
+- Concrete defect found in the local autonomous coding path: `tools/run_local_autonomous_cycle.ps1` exports `AUTONOMOUS_TEST_COMMAND=py -m pytest -q`, but `tools/autonomous_coding_agent.py` ignored that setting during its initial audit and hard-coded `python -m pytest -q`.
+- Minimal fix: `test_snapshot()` now executes the configured `AUTONOMOUS_TEST_COMMAND`.
+- Regression coverage added: `tests/test_autonomous_coding_agent.py` verifies the configured command is tokenized and passed to the executor.
+- Commits: `f5e7838550f77a042545b6da1fc43596258dfcec`, `ac61c913d61ce74ca9178783fdfc71a7c640cb39`.
+- Runtime execution evidence for this patch is NOT EXECUTED in this session; no PASS is inferred from source changes alone.
+- Next concrete action: run the local autonomous cycle on Windows with the existing Ollama path; do not treat GitHub runner provisioning or hosted CI as the coding engine.
