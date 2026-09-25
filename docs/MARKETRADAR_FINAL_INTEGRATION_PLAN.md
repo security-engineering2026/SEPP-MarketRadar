@@ -113,3 +113,10 @@ Minimal patch applied in `tools/full_qualification.py`:
 Patch commit: `fdfdf707eb7c0131d854a3b251ce58dc9a88102c`.
 
 Status: **PATCHED — focused execution evidence still required**. No CI/runner/Full Qualification was launched.
+
+## R056/R057 trace — qualification taxonomy mismatch
+The registry was inspected before changing the gates. Current `config/sources.json` contains concrete social families (`social_platform`, `telegram`, `instagram`, `x`, `linkedin`, `reddit`, `bale`, `eitaa`, `soroush`) and procurement-capable `market_intelligence`; it does not contain literal `social` or `procurement` source families. The qualification gate nevertheless required exact literal equality, causing a false `No registry candidates` OPEN state despite relevant registry surfaces existing.
+
+Minimal patch: `family_surface_gate()` now maps qualification capability groups to the existing registry taxonomy and probes the actual candidates. A focused regression test was added. Patch commits: `6dbd2b220c4b981380671ee15ddd7cf449098250`, `40cc64055b0f8cdc06ed512f003575c28b7a8ec7`.
+
+Status: **PATCHED / EVIDENCE_PENDING**. This corrects the qualification evidence harness; it does not claim that the external surfaces are reachable until the focused gate actually executes.
