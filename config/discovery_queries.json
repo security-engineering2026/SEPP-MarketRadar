@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "search_limit_per_query": 8,
   "max_queries_per_cycle": 300,
   "country_batch_size": 50,
@@ -198,6 +198,86 @@
       "language": "multi",
       "family": "community",
       "q": "\"posted on\" freelance project multiple platforms duplicate job cross posted"
+    },
+    {
+      "id": "global_web_android_freelance",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "freelance",
+      "q": "web Android Kotlin mobile app freelance project contract developer gig"
+    },
+    {
+      "id": "global_web_android_bug_bounty",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "bug_bounty",
+      "q": "web API Android mobile bug bounty vulnerability disclosure paid program"
+    },
+    {
+      "id": "global_deep_web_freelance",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "freelance",
+      "q": "\"deep web\" freelance developer project web Android Kotlin"
+    },
+    {
+      "id": "global_deep_web_bug_bounty",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "bug_bounty",
+      "q": "\"deep web\" bug bounty vulnerability disclosure web Android"
+    },
+    {
+      "id": "global_dark_web_freelance",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "freelance",
+      "q": "\"dark web\" freelance web developer Android project gig"
+    },
+    {
+      "id": "global_dark_web_bug_bounty",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "bug_bounty",
+      "q": "\"dark web\" bug bounty security researcher web Android"
+    },
+    {
+      "id": "global_onion_freelance",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "freelance",
+      "q": "\".onion\" freelance developer web Android project"
+    },
+    {
+      "id": "global_onion_bug_bounty",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "bug_bounty",
+      "q": "\".onion\" bug bounty vulnerability disclosure security researcher"
+    },
+    {
+      "id": "global_onion_work_opportunities",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "freelance",
+      "q": "onion service developer programmer project paid work freelance"
+    },
+    {
+      "id": "global_hidden_service_security_work",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "bug_bounty",
+      "q": "onion hidden service security research vulnerability disclosure paid"
     }
   ],
   "country_templates": [
@@ -272,6 +352,30 @@
     {
       "family": "community",
       "template": "\"{country}\" forum freelance platform scam review payment withdrawal"
+    },
+    {
+      "family": "freelance",
+      "template": "\"{country}\" \"deep web\" freelance web Android developer project"
+    },
+    {
+      "family": "bug_bounty",
+      "template": "\"{country}\" \"deep web\" bug bounty web Android security researcher"
+    },
+    {
+      "family": "freelance",
+      "template": "\"{country}\" \"dark web\" freelance web Android developer project"
+    },
+    {
+      "family": "bug_bounty",
+      "template": "\"{country}\" \"dark web\" bug bounty web Android security researcher"
+    },
+    {
+      "family": "freelance",
+      "template": "\"{country}\" .onion developer programmer project freelance"
+    },
+    {
+      "family": "bug_bounty",
+      "template": "\"{country}\" .onion vulnerability disclosure bug bounty"
     }
   ],
   "community_domains": [
@@ -292,7 +396,22 @@
   ],
   "tor_research": {
     "mode": "KNOWN_ONION_ONLY",
-    "automatic_directory_crawling": false
+    "automatic_directory_crawling": false,
+    "discovery": "INDEXED_REFERENCES_AND_OPERATOR_SUPPLIED_ADDRESSES",
+    "direct_access": "DISABLED_UNLESS_TOR_PROXY_IS_EXPLICITLY_CONFIGURED",
+    "authorized_only": true,
+    "opportunity_families": [
+      "freelance",
+      "bug_bounty"
+    ],
+    "web_targets": [
+      "web",
+      "api",
+      "android",
+      "mobile"
+    ],
+    "operator_supplied_onion_urls": [],
+    "never_auto_submit": false
   },
   "intelligence": {
     "operator_support": [
@@ -383,5 +502,22 @@
       "family": "services",
       "q": "ایران تایپ ترجمه OCR PDF Word Excel PowerPoint ورود داده پروژه آنلاین"
     }
-  ]
+  ],
+  "deep_web_research": {
+    "enabled": true,
+    "mode": "PUBLIC_OR_AUTHORIZED_DIRECT_SURFACES",
+    "search_indexed_results": true,
+    "operator_supplied_urls": [],
+    "authenticated_automation": false,
+    "opportunity_families": [
+      "freelance",
+      "bug_bounty"
+    ],
+    "web_targets": [
+      "web",
+      "api",
+      "android",
+      "mobile"
+    ]
+  }
 }
