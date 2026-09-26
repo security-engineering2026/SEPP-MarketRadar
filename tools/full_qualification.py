@@ -163,7 +163,7 @@ def live_discovery_gate():
 
 def _select_acquisition_sample(records, sample_size=20):
     """Pick a deterministic, family-balanced sample instead of records[:N]."""
-    candidates=[x for x in records if x.get("status") == "active" and x.get("base_url")]
+    candidates=[x for x in records if x.get("status", "active") == "active" and x.get("base_url")]
     families={}
     for record in candidates:
         family=str(record.get("source_family") or "unknown").lower()
