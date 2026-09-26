@@ -40,3 +40,11 @@
 ## Rule
 
 Do not tell the user a row is complete based only on a commit, a passing unit test, or a queued/in-progress workflow. Completion requires evidence.
+
+
+### Current Row 3 execution checkpoint
+- Provider path now accepts planner language and passes it to SearXNG; normalized results retain the actual provider as provenance.
+- `auto` mode now attempts configured providers sequentially and falls back on provider errors/empty results; explicit provider mode remains strict.
+- Added tests for SearXNG language propagation, malformed JSON, federation fallback/provenance, and discovery language propagation.
+- GitHub Actions for commit `e3d4bf8020937f7bc8578c20742566fe700d5750` are currently queued; Row 3 is **not PASS** until CI/runtime evidence completes.
+- Local container could not clone GitHub because outbound DNS/network is unavailable; no local test result is being represented as evidence.
