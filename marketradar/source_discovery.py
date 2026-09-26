@@ -250,9 +250,14 @@ class SourceDiscoveryEngine:
             query=plan.get('q','').strip()
             if not query: continue
             try:
-                results=self.search.search(query,int(self.query_config.get('search_limit_per_query',10)))
+                limit=int(self.query_config.get('search_limit_per_query',10))
+                language=plan.get('language') or None
+                if isinstance(self.search, WebSearchProvider):
+                    results=self.search.search(query,limit,language=language)
+                else:
+                    results=self.search.search(query,limit)
                 for item in results:
-                    item['_provider']=getattr(self.search,'provider','test')
+                    item['_provider']=item.get('_provider') or getattr(self.search,'provider','test')
                     self._intelligence_rows.append((plan,dict(item)))
                     url=item.get('url',''); title=item.get('title',''); snippet=item.get('snippet','')
                     family=_family_for(f'{title} {snippet} {url}',plan.get('family','jobs'))
