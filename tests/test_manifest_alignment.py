@@ -177,7 +177,7 @@ def test_manifest_qualification_report_uses_current_version_and_gate_name():
     from marketradar import __version__
 
     assert '"product_version": __version__' in source
-    assert '"LIVE_SOURCE_REACHABILITY_500"' in source
+    assert '"LIVE_SOURCE_SCALE_BENCHMARK"' in source
     assert '"LIVE_SOURCE_SCALE_500"' not in source
     assert '"product_version": "16.1.1"' not in source
     assert '"User-Agent": f"SEPP-MarketRadar-FullQualification/{__version__}"' in source
