@@ -36,3 +36,35 @@ def test_full_qualification_acceptance_blocks_on_open_or_fail():
     root = Path(__file__).resolve().parents[1]
     workflow = (root / ".github" / "workflows" / "full-qualification.yml").read_text(encoding="utf-8")
     assert 'if ([int]$r.summary.open -gt 0 -or [int]$r.summary.fail -gt 0) {' in workflow
+
+
+def test_live_source_scale_gate_uses_one_shallow_probe_per_endpoint(monkeypatch):
+    fq = _load_full_qualification()
+
+    records = [
+        {"name": f"S{i:03d}", "base_url": f"https://example{i}.test/", "status": "active"}
+        for i in range(500)
+    ]
+    calls = []
+
+    monkeypatch.setattr(
+        fq,
+        "http_probe",
+        lambda url, timeout=8: calls.append((url, timeout)) or {
+            "reachable": True,
+            "status_code": 403,
+        },
+    )
+    monkeypatch.setattr(
+        "marketradar.source_registry.load_source_records",
+        lambda _path: records,
+    )
+
+    result = fq.live_source_scale_gate(limit=500)
+
+    assert result["status"] == "PASS"
+    assert result["details"]["checked"] == 500
+    assert result["details"]["live_reachable"] == 500
+    assert len(calls) == 500
+    assert all(timeout == 8 for _, timeout in calls)
+    assert result["details"]["method"].startswith("one bounded HTTP reachability probe")
