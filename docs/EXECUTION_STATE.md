@@ -70,3 +70,21 @@ User should ask for the **current row/status**, not a fixed final row number. Th
 - Research gate: `docs/RESEARCH_GATE_STANDARD.md`
 - Rule: start at remaining row 1 and advance sequentially after real PASS; do not redo completed work unless impact analysis reopens it.
 - Environment rule: GitHub queueing is not a blocker; use the authorized Windows runner or main Windows PowerShell when required.
+
+
+## Baseline-first execution lock — 2026-09-26
+
+The existing executed Windows baseline is the starting implementation. Remaining rows are not a rebuild plan:
+- PRESERVE proven working baseline behavior.
+- FIX only verified defects.
+- COMPLETE only missing parts of partial implementations.
+- BUILD only genuinely absent capabilities.
+- Recover valid prior evidence before re-executing any completed capability.
+
+## Remaining Row 1 checkpoint — SearXNG / Search Federation
+
+AS-IS audit confirmed that the baseline already has the provider-neutral SearXNG path, language propagation, federation fallback, normalized result fields and downstream provider provenance persistence. No rebuild was performed.
+
+Gap identified: explicit SearXNG pagination was not exposed by the provider API. Fixed in commit `4a39c328a581d3c9b289dce58599f98f9704db7c` by adding optional `page` / `pageno` propagation. Regression test added in `32723ab9f94f193811c92ce718ede826675d592f`. Research packet: `docs/ROW1_SEARXNG_RESEARCH_PACKET.md`.
+
+**Row 1 status: IN_PROGRESS — awaiting executable/runtime evidence.**
