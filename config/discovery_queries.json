@@ -1,10 +1,10 @@
 {
-  "version": 4,
+  "version": 5,
   "search_limit_per_query": 8,
-  "max_queries_per_cycle": 200,
+  "max_queries_per_cycle": 300,
   "country_batch_size": 50,
   "crawl_result_pages": true,
-  "max_crawl_pages_per_cycle": 80,
+  "max_crawl_pages_per_cycle": 120,
   "max_outbound_links_per_page": 40,
   "queries": [
     {
@@ -78,6 +78,126 @@
       "language": "fa",
       "family": "social",
       "q": "ایران پیام رسان شبکه اجتماعی روبیکا ایتا بله سروش گپ آی گپ"
+    },
+    {
+      "id": "global_freelance_marketplaces",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "freelance",
+      "q": "freelance marketplace developer programmer projects gigs remote contract"
+    },
+    {
+      "id": "global_bug_bounty_programs",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "bug_bounty",
+      "q": "bug bounty vulnerability disclosure program security researcher paid"
+    },
+    {
+      "id": "global_intermediaries",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "marketplace",
+      "q": "freelance agency broker subcontract remote developer projects international"
+    },
+    {
+      "id": "global_crypto_freelance",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "marketplace",
+      "q": "freelance platform crypto payout USDT USDC bitcoin developer project"
+    },
+    {
+      "id": "global_iran_access",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "policy",
+      "q": "freelance platform Iran supported sanctions KYC phone payout"
+    },
+    {
+      "id": "global_market_demand",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "community",
+      "q": "freelance demand most requested software skills tools automation OCR PDF Word Python Kotlin Linux"
+    },
+    {
+      "id": "global_product_demand",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "community",
+      "q": "\"looking for\" software tool automation OCR PDF Word API Python Kotlin Linux freelance project"
+    },
+    {
+      "id": "global_social_opportunities",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "social",
+      "q": "site:linkedin.com freelance developer project OR site:x.com freelance developer project OR site:t.me freelance project OR site:instagram.com freelance developer"
+    },
+    {
+      "id": "global_classified_services",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "marketplace",
+      "q": "classified services marketplace developer programming project freelance local"
+    },
+    {
+      "id": "iran_platforms_named",
+      "country": "Iran",
+      "region": "Iran",
+      "language": "fa",
+      "family": "social",
+      "q": "روبیکا ایتا بله سروش پلاس تلگرام لینکدین ایکس توییتر اینستاگرام دیوار شیپور پروژه برنامه نویسی"
+    },
+    {
+      "id": "iran_fa_intermediaries",
+      "country": "Iran",
+      "region": "Iran",
+      "language": "fa",
+      "family": "marketplace",
+      "q": "واسطه پروژه دلاری فریلنسری کایا پروژه خارجی با ایران پرداخت ارزی"
+    },
+    {
+      "id": "iran_fa_crypto",
+      "country": "Iran",
+      "region": "Iran",
+      "language": "fa",
+      "family": "marketplace",
+      "q": "پروژه فریلنسری پرداخت تتر USDT ارز دیجیتال برنامه نویسی"
+    },
+    {
+      "id": "iran_fa_demand",
+      "country": "Iran",
+      "region": "Iran",
+      "language": "fa",
+      "family": "community",
+      "q": "تقاضای بازار پروژه برنامه نویسی پایتون لینوکس کاتلین OCR PDF Word اتوماسیون"
+    },
+    {
+      "id": "iran_fa_paid_platforms",
+      "country": "Iran",
+      "region": "Iran",
+      "language": "fa",
+      "family": "community",
+      "q": "سایت پروژه پولی اشتراک اعتبار ارسال پیشنهاد فریلنسری محدودیت درخواست"
+    },
+    {
+      "id": "community_crosspost_detection",
+      "country": "Global",
+      "region": "Global",
+      "language": "multi",
+      "family": "community",
+      "q": "\"posted on\" freelance project multiple platforms duplicate job cross posted"
     }
   ],
   "country_templates": [
@@ -104,6 +224,54 @@
     {
       "family": "policy",
       "template": "\"{country}\" platform Iran KYC payment payout restrictions"
+    },
+    {
+      "family": "freelance",
+      "template": "\"{country}\" freelance marketplace programmer developer project gig"
+    },
+    {
+      "family": "marketplace",
+      "template": "\"{country}\" local freelance services marketplace programming project"
+    },
+    {
+      "family": "bug_bounty",
+      "template": "\"{country}\" bug bounty paid security researcher vulnerability program"
+    },
+    {
+      "family": "community",
+      "template": "\"{country}\" freelancer forum experience platform payment KYC withdrawal"
+    },
+    {
+      "family": "policy",
+      "template": "\"{country}\" freelance platform Iran supported KYC phone payment sanctions"
+    },
+    {
+      "family": "marketplace",
+      "template": "\"{country}\" agency broker intermediary subcontract freelance developer"
+    },
+    {
+      "family": "community",
+      "template": "\"{country}\" demand Python Kotlin Linux OCR PDF Word automation developer"
+    },
+    {
+      "family": "marketplace",
+      "template": "\"{country}\" crypto freelance payout USDT USDC Bitcoin developer"
+    },
+    {
+      "family": "community",
+      "template": "\"{country}\" Telegram LinkedIn X Twitter Instagram freelance project developer"
+    },
+    {
+      "family": "marketplace",
+      "template": "\"{country}\" classifieds services programming developer project"
+    },
+    {
+      "family": "community",
+      "template": "\"{country}\" forum \"bug bounty\" payout KYC Iran"
+    },
+    {
+      "family": "community",
+      "template": "\"{country}\" forum freelance platform scam review payment withdrawal"
     }
   ],
   "community_domains": [
@@ -111,7 +279,16 @@
     "stackoverflow.com",
     "stackexchange.com",
     "quora.com",
-    "news.ycombinator.com"
+    "news.ycombinator.com",
+    "facebook.com",
+    "linkedin.com",
+    "x.com",
+    "twitter.com",
+    "instagram.com",
+    "t.me",
+    "medium.com",
+    "dev.to",
+    "indiehackers.com"
   ],
   "tor_research": {
     "mode": "KNOWN_ONION_ONLY",
@@ -128,7 +305,30 @@
     "adaptive_ranking": true,
     "community_as_sensor": true,
     "evidence_graph": true,
-    "multi_engine_attribution": true
+    "multi_engine_attribution": true,
+    "product_build_spec_fields": [
+      "problem_statement",
+      "target_source_family",
+      "requested_capabilities",
+      "inputs",
+      "outputs",
+      "integrations",
+      "acceptance_criteria",
+      "implementation_scope",
+      "evidence_urls",
+      "promotion_targets"
+    ],
+    "cross_post_signals": [
+      "normalized_title",
+      "description",
+      "client",
+      "budget",
+      "currency",
+      "deadline",
+      "skills",
+      "deliverables",
+      "temporal_proximity"
+    ]
   },
   "priority_regions": [
     {
@@ -146,7 +346,7 @@
         "community",
         "social"
       ],
-      "priority_boost": 5.0,
+      "priority_boost": 5,
       "reason": "local execution and payment advantage; continuous coverage priority"
     }
   ],
