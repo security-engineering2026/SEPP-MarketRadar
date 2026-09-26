@@ -71,11 +71,13 @@ def _family_for(text: str, planned: str) -> str:
     return 'community_forum' if planned in {'community', 'policy'} else {'freelance':'job_marketplace','jobs':'job_board','bug_bounty':'bug_bounty','social':'social_platform','market':'market_intelligence'}.get(planned, 'job_board')
 
 
-def _network_surface(url: str) -> str:
+def _network_surface(url: str, declared: str = '') -> str:
     host = (urlparse(url).hostname or '').lower().rstrip('.')
     if host.endswith('.onion'):
         return 'DARK_WEB'
-    return 'DEEP_WEB' if host else 'UNKNOWN'
+    if declared in {'OPEN_WEB', 'DEEP_WEB', 'DARK_WEB'}:
+        return declared
+    return 'OPEN_WEB' if host else 'UNKNOWN'
 
 
 def _slug_name(title: str, host: str) -> str:
@@ -124,7 +126,7 @@ class SourceDiscoveryEngine:
             return None
         host = urlparse(normalized).hostname
         role = ROLE_BY_FAMILY.get(family, 'source')
-        network_surface = _network_surface(normalized)
+        network_surface = _network_surface(normalized, plan.get('network_surface',''))
         lane = 'MARKET_INTELLIGENCE_ONLY' if family == 'market_intelligence' else 'GLOBAL_DISCOVERY'
         if family == 'community_forum':
             lane = 'GLOBAL_DISCOVERY'
@@ -183,7 +185,8 @@ class SourceDiscoveryEngine:
             if host.endswith('.onion') and not tor_cfg.get('authorized_only', True):
                 errors.append({'direct_source':url, 'error':'DARK_WEB_AUTHORIZATION_POLICY_DISABLED'})
                 continue
-            plan={'country':'Global','region':'Global','language':'multi','family':family}
+            surface = 'DARK_WEB' if host.endswith('.onion') else 'DEEP_WEB'
+            plan={'country':'Global','region':'Global','language':'multi','family':family,'network_surface':surface}
             candidate=self._candidate(host, normalized, family, plan, method, normalized, host, 'operator supplied source address', 0.8, method.lower())
             if candidate:
                 self._merge(discovered,candidate,evidence,{'query':method,'provider':'operator','url':normalized,'title':host,'snippet':'operator supplied source address','country':'Global','region':'Global','language':'multi','method':method.lower()})
