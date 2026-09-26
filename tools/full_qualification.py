@@ -163,7 +163,7 @@ def live_discovery_gate():
 
 def _select_acquisition_sample(records, sample_size=20):
     """Pick a deterministic, family-balanced sample instead of records[:N]."""
-    candidates=[x for x in records if x.get("status") == "active" and x.get("base_url")]
+    candidates=[x for x in records if x.get("status") in (None, "active") and x.get("base_url")]
     families={}
     for record in candidates:
         family=str(record.get("source_family") or "unknown").lower()
@@ -195,7 +195,7 @@ def live_source_scale_gate(limit=500):
     records = load_source_records(ROOT / "config" / "sources.json")
     if len(records) < limit:
         return gate(
-            "LIVE_SOURCE_SCALE_BENCHMARK",
+            "LIVE_SOURCE_REACHABILITY_500",
             "OPEN",
             {"registered_records": len(records), "requested": limit, "reason": "Fewer than 500 registry candidates."},
         )
