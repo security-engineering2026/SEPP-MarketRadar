@@ -28,4 +28,4 @@ jobs:
       - name: Row 4 active source runtime qualification
         shell: pwsh
         run: |
-          python -c "import json; from tools.full_qualification import active_source_terms_gate; print(json.dumps(active_source_terms_gate(), ensure_ascii=False, indent=2)); raise SystemExit(0 if active_source_terms_gate()['status'] == 'PASS' else 1)"
+          python -c "import json; from tools.full_qualification import active_source_terms_gate; r=active_source_terms_gate(); print(json.dumps(r, ensure_ascii=False, indent=2)); raise SystemExit(0 if r['status'] == 'PASS' else 1)"
