@@ -113,3 +113,35 @@ Use the newest main commit as the source of truth. Inspect the next GitHub Actio
 - MarketRadar product functionality such as source discovery is unchanged; this removal is limited to autonomous software-engineering execution.
 - Live engineering validation is now performed through the existing GitHub Actions workflows or the existing dedicated Windows runner.
 - No PASS is inferred from repository edits; fresh live execution evidence remains required.
+
+
+## 2026-09-26 — Qualification Rows 1-4 Control Checkpoint
+
+### Row 1 — PASS / CLOSED
+- SearXNG provider/federation/language/provenance capability was verified against the existing provider-neutral architecture.
+- Explicit SearXNG pagination was added and covered by regression tests.
+- Runtime provider reachability evidence was obtained from the configured local SearXNG instance.
+- Do not rebuild Row 1 unless a later impact analysis reopens it.
+
+### Row 2 — PASS / CLOSED
+- Bounded/resumable discovery was verified against the existing persistent discovery state and query-planning architecture.
+- Synthetic 1000-entity execution demonstrated bounded cycles and cursor persistence/resume.
+- No production rebuild was required.
+- Do not repeat Row 2 unless a later impact analysis reopens it.
+
+### Row 3 — PASS / CLOSED
+- The stale fixed 500-source reachability gate was replaced by the evidence-qualified source-health scale gate.
+- Qualification criterion: 500 source-health records processed and classified; this is not an execution-readiness claim.
+- Direct gate evidence: 500 checked, 500 health records complete, 120 LIVE_REACHABLE, 380 DEAD, 0 unresolved.
+- Bounded verification parameters: surface_scan_pages=1, max_workers=16, max_policy_pages=3.
+- Commit: 5f02a28 (QUAL: close Row 3 source health scale).
+- Do not repeat Row 3 unless a later impact analysis reopens it.
+
+### Row 4 — OPEN
+- Historical gate: closure of per-source terms-review warnings for active sources.
+- Current registry state: 48 active sources and 48 ACTIVE_SOURCE_TERMS_NOT_REVIEWED warnings.
+- Runtime verification of all 48 active sources produced 22 LIVE_CONFIRMED and 26 DEAD; 0 terms evidence URLs were produced by the baseline verification path.
+- Closure mechanism is implemented and directly regression-tested: source_review_queue transitions OPEN -> RESOLVED when valid policy/terms evidence makes the source execution-ready.
+- Identified gap: baseline _one() did not explicitly probe bounded same-origin Terms/Legal candidate endpoints before classification, so registry terms URLs were not reliably converted into fetched authoritative terms evidence.
+- A gap-only patch and regression test were prepared on PR #72 (qual/row4-terms-evidence). PR remains OPEN and has not been accepted as Row 4 PASS.
+- Row 4 must remain OPEN until the patch is executed and the 48-source active warning state is revalidated with actual evidence.
