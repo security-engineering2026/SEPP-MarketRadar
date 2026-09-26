@@ -1,6 +1,7 @@
 name: Row 4 Qualification
 
 on:
+  push:
   pull_request:
     paths:
       - "marketradar/source_verification.py"
