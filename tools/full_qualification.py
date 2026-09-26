@@ -7,6 +7,7 @@ import sys
 import tempfile
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -187,47 +188,68 @@ def _select_acquisition_sample(records, sample_size=20):
     return ordered
 
 def live_source_scale_gate(limit=500):
-    from marketradar.db import connect, sync_source_contracts
+    """Measure registry scale with a bounded, shallow HTTP reachability probe.
+
+    This gate answers exactly one question: can the registered base endpoints be
+    reached from the qualification environment? It deliberately does not run the
+    policy/terms/KYC crawler. Those deeper checks belong to source verification and
+    the smaller acquisition/policy gates below.
+    """
     from marketradar.source_registry import load_source_records
-    from marketradar.source_search import WebSearchProvider
-    from marketradar.source_verification import SourceVerificationEngine
 
     records = load_source_records(ROOT / "config" / "sources.json")
-    if len(records) < limit:
+    candidates = [
+        x for x in records
+        if x.get("base_url") and x.get("status") != "disabled"
+    ]
+    if len(candidates) < limit:
         return gate(
             "LIVE_SOURCE_SCALE_BENCHMARK",
             "OPEN",
-            {"registered_records": len(records), "requested": limit, "reason": "Fewer than 500 registry candidates."},
+            {
+                "registered_records": len(records),
+                "eligible_candidates": len(candidates),
+                "requested": limit,
+                "reason": "Fewer than the requested number of eligible registry endpoints.",
+                "method": "bounded HTTP reachability probe; no policy crawl",
+            },
         )
 
-    selected = records
-    with tempfile.TemporaryDirectory(prefix="mr-sources-") as td:
-        conn = connect(Path(td) / "qualification.db")
-        sync_source_contracts(conn, selected)
-        engine = SourceVerificationEngine(
-            conn,
-            selected,
-            timeout=8,
-            max_workers=16,
-            max_policy_pages=3,
-            search_provider=WebSearchProvider(timeout=8),
-        )
-        results = engine.verify([x["name"] for x in selected])
-        confirmed = sum(x.get("source_verification_state") == "LIVE_CONFIRMED" for x in results)
-        dead = sum(x.get("source_verification_state") == "DEAD" for x in results)
-        conn.close()
+    def probe(record):
+        result = http_probe(record["base_url"], timeout=8)
+        return {
+            "source": record.get("name"),
+            "url": record.get("base_url"),
+            "reachable": bool(result.get("reachable")),
+            "status_code": result.get("status_code"),
+            "error": result.get("error"),
+        }
+
+    # One request per registered endpoint, with bounded concurrency. GET is used
+    # rather than HEAD because many public sites reject HEAD while serving normal
+    # client requests. http_probe treats HTTP error responses as reachable transport
+    # evidence, including 401/403/429/5xx.
+    results = []
+    workers = min(32, max(8, len(candidates)))
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(probe, record) for record in candidates]
+        for future in as_completed(futures):
+            results.append(future.result())
+
+    confirmed = sum(bool(x["reachable"]) for x in results)
+    dead = len(results) - confirmed
 
     return gate(
         "LIVE_SOURCE_SCALE_BENCHMARK",
         "PASS" if confirmed >= limit else "OPEN",
         {
             "candidate_registry": len(records),
+            "eligible_candidates": len(candidates),
             "checked": len(results),
             "live_reachable": confirmed,
             "dead": dead,
-            "other": len(results) - confirmed - dead,
             "criterion": f"{limit} live-reachable source endpoints",
-            "method": "all current registry candidates verified; endpoint reachability only; not a connector-capability claim",
+            "method": "one bounded HTTP reachability probe per eligible registry endpoint; endpoint reachability only; not a connector-capability claim",
             "blocking": False,
             "contract": "strategic discovery-pool benchmark; not a final-release gate",
         },
