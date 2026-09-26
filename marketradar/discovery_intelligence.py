@@ -47,6 +47,7 @@ class QueryPlanner:
             plans.append(dict(x, operator_mode='explicit', operator_score=1.0))
         templates=self.config.get('country_templates', [])
         batch=int(self.config.get('country_batch_size',50))
+        country_plans=[]
         for entity in entities[:batch]:
             country=entity.get('country','Global'); language=entity.get('language','multi')
             for t in templates:
@@ -63,12 +64,18 @@ class QueryPlanner:
                 for domain in self.config.get('community_domains', ['reddit.com','stackoverflow.com','stackexchange.com','quora.com']):
                     variants.append(('forum_site',f'site:{domain} "{topic}" {signal} "{country}" -jobs -course'))
                 for mode,q in variants:
-                    plans.append({'id':f'{entity.get("iso2",country)}_{fam}_{mode}','country':country,'region':entity.get('region','Global'),'language':language,'family':fam,'q':q,'operator_mode':mode,'operator_score':self._priority(fam,mode)})
+                    country_plans.append({'id':f'{entity.get("iso2",country)}_{fam}_{mode}','country':country,'region':entity.get('region','Global'),'language':language,'family':fam,'q':q,'operator_mode':mode,'operator_score':self._priority(fam,mode)})
         priority_cfg={str(x.get('country')):float(x.get('priority_boost',0)) for x in self.config.get('priority_regions',[]) if x.get('country')}
-        for p in plans:
+        for p in plans + country_plans:
             p['operator_score']=float(p.get('operator_score',0))+priority_cfg.get(str(p.get('country','')),0.0)
-        plans.sort(key=lambda p:p.get('operator_score',0), reverse=True)
-        return plans[:max_queries]
+        country_plans.sort(key=lambda p:p.get('operator_score',0), reverse=True)
+        base_plans=sorted(plans,key=lambda p:p.get('operator_score',0),reverse=True)
+        if country_plans:
+            # Reserve most of each cycle for country/language coverage so a small
+            # max_queries_per_cycle cannot starve the global discovery matrix.
+            country_budget=max(1, int(max_queries*0.75))
+            return (country_plans[:country_budget] + base_plans[:max_queries-country_budget])[:max_queries]
+        return base_plans[:max_queries]
 
     def _priority(self, family, mode):
         key=f'{family}:{mode}'
