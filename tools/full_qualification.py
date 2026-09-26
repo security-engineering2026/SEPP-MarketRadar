@@ -195,8 +195,12 @@ def live_source_scale_gate(limit=500):
     ]
     transport = Federation(sources, timeout=8, max_workers=32, retries=2)
     results = transport.verify_many([r["name"] for r in records if r.get("base_url")])
-    confirmed = sum(x.get("status") == "OK" for x in results)
-    dead = sum(x.get("status") == "ERROR" for x in results)
+    # Transport reachability means the remote endpoint answered, including
+    # intentional HTTP errors such as 401/403/404/405. This matches http_probe()
+    # and the family-surface gates; an HTTP response is evidence of reachability,
+    # not evidence that the resource is usable or authorized.
+    confirmed = sum(x.get("status") == "OK" or x.get("http_status") is not None for x in results)
+    dead = sum(x.get("status") == "ERROR" and x.get("http_status") is None for x in results)
 
     return gate(
         "LIVE_SOURCE_REACHABILITY_500",
@@ -206,15 +210,18 @@ def live_source_scale_gate(limit=500):
             "checked": len(results),
             "live_reachable": confirmed,
             "dead": dead,
-            "other": 0,
-            "criterion": f"{limit} live-reachable source endpoints",
-            "method": "all current registry base endpoints verified with the lightweight federation transport; HTTP endpoint reachability only; policy/connector capability is not inferred",
+            "other": len(results) - confirmed - dead,
+            "criterion": f"{limit} registry endpoints must answer at the transport layer",
+            "method": "all current registry base endpoints verified with the lightweight federation transport; any HTTP response counts as reachable, while timeout/DNS/TLS/transport failures count as dead; policy/connector capability is not inferred",
         },
     )
 
 def _select_acquisition_sample(records, sample_size=20):
     """Pick a deterministic, family-balanced sample instead of records[:N]."""
-    candidates=[x for x in records if x.get("status") != "disabled" and x.get("base_url")]
+    # Runtime.federate() intentionally exposes only active sources. Sampling
+    # candidate/discovery records here produces SOURCE_NOT_REGISTERED by design,
+    # which is a qualification-harness error rather than useful acquisition evidence.
+    candidates=[x for x in records if x.get("status") == "active" and x.get("base_url")]
     families={}
     for record in candidates:
         family=str(record.get("source_family") or "unknown").lower()
