@@ -39,3 +39,75 @@ def test_explicit_iran_restrictions_are_blocked():
 def test_source_audit_has_no_invalid_records():
     report=audit_registry(load_source_records(ROOT/'config/sources.json'))
     assert report['invalid']==0
+
+
+def test_row4_verification_fetches_direct_terms_candidate(tmp_path):
+    from marketradar.db import connect
+    from marketradar.source_verification import SourceVerificationEngine
+
+    connection = connect(tmp_path / "row4-terms.db")
+    source = {
+        "name": "Row4TermsSource",
+        "base_url": "https://example.test/jobs",
+        "adapter": "json",
+        "status": "active",
+        "allow_hosts": ["example.test"],
+        "access_scope": "public",
+        "terms_status": "needs_review",
+        "execution_capability": "authorized_api",
+    }
+    engine = SourceVerificationEngine(connection, [source], search_provider=None, surface_scan_pages=1)
+
+    def fake_fetch(name, url=None):
+        if url is None:
+            return {"body": b"<html><body>Jobs</body></html>", "url": "https://example.test/jobs",
+                    "status": 200, "bytes": 32, "sha256": "home"}
+        if url == "https://example.test/terms-and-conditions":
+            return {"body": b"<html><body>Terms of Service. These conditions apply to users.</body></html>",
+                    "url": url, "status": 200, "bytes": 74, "sha256": "terms"}
+        raise RuntimeError("not found")
+
+    engine.http.fetch = fake_fetch
+    result = engine._one("Row4TermsSource")
+    assert result["terms_evidence_url"] == "https://example.test/terms-and-conditions"
+    assert result["terms_status"] == "reviewed"
+    assert "https://example.test/terms-and-conditions" in result["evidence_urls"]
+    connection.close()
+
+
+def test_row4_active_source_review_warning_closes_when_policy_evidence_is_execution_ready(tmp_path):
+    from marketradar.db import connect
+    from marketradar.source_verification import SourceVerificationEngine
+
+    connection = connect(tmp_path / "row4.db")
+    source = {
+        "name": "Row4TestSource",
+        "base_url": "https://example.test",
+        "adapter": "json",
+        "status": "active",
+        "allow_hosts": ["example.test"],
+        "access_scope": "public",
+        "terms_status": "needs_review",
+        "execution_capability": "authorized_api",
+    }
+    engine = SourceVerificationEngine(connection, [source], search_provider=None)
+    result = {
+        "source": "Row4TestSource",
+        "source_verification_state": "LIVE_CONFIRMED",
+        "review_reason": "ACTIVE_SOURCE_TERMS_NOT_REVIEWED",
+        "execution_ready": True,
+        "terms_status": "reviewed",
+        "evidence_urls": ["https://example.test/terms"],
+        "last_verified_at": "2026-09-26T12:00:00+00:00",
+        "source_constraints": [],
+    }
+    engine.persist([result])
+    row = connection.execute(
+        "SELECT status, resolution, evidence_url FROM source_review_queue WHERE source=?",
+        ("Row4TestSource",),
+    ).fetchone()
+    assert row is not None
+    assert row[0] == "RESOLVED"
+    assert row[1] == "AUTOMATIC_POLICY_VERIFICATION"
+    assert row[2] == "https://example.test/terms"
+    connection.close()
