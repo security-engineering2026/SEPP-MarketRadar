@@ -201,6 +201,309 @@ A Manifest requirement is DONE only when:
 5. audit/reporting exposes the state;
 6. no contradictory legacy path remains.
 
+
+## 50. Manifest Amendment A-2026-09-26 — Global Market Universe, Personalized Search and Economic Loop
+
+This amendment makes the intended MarketRadar operating model explicit. It does not reinterpret a source count as verified coverage and does not replace the truth model above.
+
+### 50.1 Global discovery universe
+
+MarketRadar MUST operate as a global discovery system for opportunities in:
+- freelance marketplaces and job/project boards;
+- bug-bounty, vulnerability-disclosure and security-program platforms;
+- direct-employer/project sources where freelance/contract work is offered;
+- country-specific and regional marketplaces;
+- Iranian/local platforms;
+- social and messaging platforms, including Telegram, LinkedIn, X/Twitter, Instagram, Reddit, Rubika, Eitaa, Bale, Soroush Plus and comparable platforms;
+- classifieds/service marketplaces such as Divar, Sheypoor and comparable services;
+- community forums and discussion sites where users publish experience, recommendations, warnings or opportunity leads;
+- intermediary, broker, agency and referral platforms that can expose projects originating from otherwise inaccessible sources;
+- any other public or authorized source that can contain relevant paid work, demand signals, project requirements or evidence about platform accessibility.
+
+The discovery universe MUST NOT be restricted to a fixed list of countries, languages, domains or source families. Country and language coverage MUST be extensible and MUST include multilingual discovery.
+
+There is no final fixed number of sources. The 500 figure remains a discovery-pool benchmark only. A registry may grow from hundreds to thousands or more as discovery continues. Source growth MUST be evidence/provenance-backed and MUST NOT be fabricated with placeholders.
+
+### 50.2 Discovery versus source study
+
+For every discovered candidate, MarketRadar SHOULD progress through the capability ladder as evidence permits:
+REGISTERED -> DISCOVERED -> REACHABLE -> PARSEABLE -> VALIDATED -> POLICY_VERIFIED -> EXECUTION_READY.
+
+Where technically and legally permitted, source study MUST examine the source's relevant public or authorized surfaces, not only its homepage. Relevant surfaces include:
+- registration/login requirements;
+- country and jurisdiction restrictions;
+- terms, FAQ, help and policy pages;
+- project/job/bounty listings;
+- payment and payout documentation;
+- KYC/identity requirements;
+- phone-number and country-code requirements;
+- subscription, credits, proposal and application limits;
+- source-declared application concurrency limits;
+- intermediary/referral structure;
+- public community/forum evidence;
+- other evidence needed to determine whether a user from Iran can practically use the service.
+
+Silence on a source page MUST NOT be interpreted as Iran compatibility, no-KYC, crypto payout or unrestricted application access. UNKNOWN remains UNKNOWN until evidence changes it.
+
+### 50.3 Iran compatibility, payment and KYC intelligence
+
+For non-Iranian sources, the system MUST independently represent:
+- Iran access: ALLOW / BLOCK / REVIEW / UNKNOWN;
+- KYC: NOT_REQUIRED / REQUIRED / REVIEW / UNKNOWN, with evidence for the observed requirement;
+- payment/payout: fiat, crypto, mixed, other, UNKNOWN, and the specific currencies/networks when documented;
+- phone/country-code compatibility;
+- registration/access blockers;
+- terms/policy evidence and freshness.
+
+Foreign sources that are not usable from Iran MUST NOT be deleted. They MUST be retained in a market-intelligence lane for demand discovery, product/tool ideation, competitive intelligence and indirect-access/intermediary analysis.
+
+For Iranian/domestic sources, the default discovery rule MUST be inclusive: a source MUST NOT be rejected merely because it requires identity verification or uses domestic/fiat payment. KYC/payment information is still recorded for decision support, but it is not by itself a rejection criterion for domestic sources.
+
+### 50.4 Intermediary and indirect-access intelligence
+
+MarketRadar MUST model intermediaries separately from first-party sources.
+
+It MUST be able to identify and monitor cases such as:
+- an Iranian intermediary offering access to work originating on an otherwise Iran-incompatible global platform;
+- an agency or broker receiving a project and subcontracting or referring work;
+- a local platform offering projects denominated or paid in foreign currency;
+- a person/company acting as an intermediary between a source and a worker.
+
+Indirect access MUST be reported as a relationship with evidence, not as proof that the original source itself accepts Iranian users.
+
+### 50.5 Market-intelligence lane
+
+Foreign/incompatible sources and other non-executable sources MUST remain useful inputs to demand intelligence.
+
+At least twice per day when online, the system MUST search these sources for:
+- recurring requested skills;
+- recurring task types and deliverables;
+- requested software/tool capabilities;
+- budgets/pricing signals where observable;
+- required experience/certification/portfolio signals;
+- competition and demand changes;
+- emerging clusters of unmet demand.
+
+The intelligence layer SHOULD convert recurring demand into an evidence-backed Product Build Specification containing, where supported:
+- proposed tool/product name;
+- problem statement;
+- target user/source family;
+- requested capabilities;
+- input/output formats;
+- required integrations;
+- quality/acceptance criteria;
+- suggested implementation scope;
+- evidence URLs and observations;
+- candidate marketplaces/platforms for later promotion or service listing.
+
+AI/LLM output is advisory. It MUST be traceable to the underlying demand evidence and MUST NOT be treated as authoritative policy.
+
+### 50.6 User skill/capability profile
+
+The product MUST expose a user-editable capability profile with per-skill proficiency and optional evidence, including but not limited to Python, Kotlin, Linux and other skills.
+
+The profile MUST support:
+- enable/disable skill or capability;
+- proficiency level/percentage;
+- learning track and current level;
+- portfolio/projects;
+- resume/CV evidence;
+- experience/history;
+- certifications where applicable;
+- explicit stretch-policy setting.
+
+Recommendation and application generation MUST use the profile. A project MUST NOT be presented as a normal-fit recommendation merely because a skill name matches if its required proficiency, experience, certification or portfolio evidence exceeds the user's configured capability.
+
+Stretch opportunities MUST be visibly marked as stretch/learning candidates rather than silently treated as normal-fit work.
+
+### 50.7 Opportunity matching and recommendation rationale
+
+For each candidate opportunity, the system MUST evaluate, where evidence exists:
+- skill fit;
+- proficiency fit;
+- experience fit;
+- portfolio fit;
+- KYC/access feasibility;
+- payment feasibility;
+- budget;
+- deadline/TTM;
+- application constraints;
+- competition/freshness;
+- source trust/evidence confidence;
+- learning value when the user allows stretch work.
+
+The system MUST produce a reproducible rationale explaining why a candidate was recommended, including the principal positive and negative factors and the evidence used. Ranking MUST NOT override hard policy blocks.
+
+Duplicate opportunities appearing across multiple sites MUST be linked to one canonical opportunity where identity evidence supports the match. Source-specific observations, URLs and application paths MUST remain attached to the canonical opportunity. The system SHOULD recommend one application path rather than submitting duplicates.
+
+### 50.8 Source-aware application limits and adaptive search
+
+MarketRadar MUST learn and persist source-specific operational constraints, including:
+- free/paid application models;
+- credits/subscriptions;
+- one-active-application or pending-request limits;
+- cooldowns and rate limits;
+- required waiting periods;
+- source-specific proposal/application quotas.
+
+Before submission, the system MUST check the current source constraints. If a source permits only one pending request, MarketRadar MUST NOT submit another while the existing request remains pending unless the source evidence indicates that a second request is permitted.
+
+Search strategy MUST adapt to the user's enabled skills, newly completed tools/products, prior application outcomes and current market signals. When a new capability or product is added to the profile, future searches MUST be able to generate queries and matching criteria for that capability without requiring a code change.
+
+### 50.9 Application package generation
+
+For an eligible, authorized opportunity, MarketRadar MUST be able to prepare a source-appropriate application package from the user's profile and opportunity evidence, including as applicable:
+- project title and concise understanding;
+- proposal/application text;
+- tailored resume/CV content;
+- relevant portfolio/project selection;
+- skill and capability mapping;
+- delivery approach and scope;
+- clarifying questions;
+- requested images or visual assets when the source requires them.
+
+Generated application material MUST be evidence-grounded and MUST NOT fabricate experience, certifications, portfolio items, client history or completed work.
+
+### 50.10 Submission, follow-up and project tracking
+
+The system MUST support a durable application lifecycle covering, where the source exposes the state:
+DISCOVERED -> ELIGIBILITY_CHECK -> RECOMMENDED -> APPROVAL_PENDING -> SUBMITTED -> VIEWED/MESSAGE_RECEIVED/NEGOTIATION -> ACCEPTED/REJECTED/EXPIRED.
+
+Authorized automation MAY submit or communicate only through permitted connectors and authorization bindings. Human approval remains the default for consequential actions unless the user has explicitly configured a narrower low-risk preauthorization policy.
+
+After submission, the system MUST be able to:
+- monitor status changes;
+- detect missing/no-response periods;
+- schedule follow-up;
+- prepare an email/message follow-up;
+- record sent/received evidence and external references;
+- track accepted work, milestones, deadline, delivery and payment state.
+
+No follow-up or external message may be silently sent outside an authorized action path.
+
+### 50.11 Scan cadence by source lane
+
+Source scheduling MUST be lane-aware and durable:
+- Iran-compatible/evidence-qualified execution sources: target scan interval 60 minutes (or 120 minutes when configured);
+- foreign/incompatible market-intelligence sources: target scan interval 12 hours;
+- newly discovered/unknown sources: revalidation cadence determined by freshness/health policy;
+- blocked/blacklist sources: no normal recommendation scanning, but retained for audit/history and policy re-checks where explicitly configured.
+
+The scheduler MUST persist next-run state, retries, backoff, stale status and recovery state.
+
+### 50.12 Social/community discovery boundaries
+
+Social, messaging and community platforms MUST be treated as discovery/evidence surfaces unless an authorized connector exists.
+
+The product MUST support public/indexed discovery and authorized access. It MUST NOT bypass CAPTCHA, authentication controls, access controls, rate limits or platform restrictions. A social platform appearing in a search result does not imply that its content is fully crawlable.
+
+Forum/community reports are evidence inputs with provenance and confidence. A forum statement such as "this platform does not work in Iran" MUST be retained as a claim with source/time, and MUST be reconciled with direct platform evidence when available.
+
+### 50.13 Search-provider federation and SearXNG
+
+Search acquisition MUST support a provider abstraction so coverage can be expanded without changing domain logic.
+
+Supported providers MAY include:
+- Brave;
+- Bing;
+- Serper;
+- SearXNG;
+- other explicitly configured providers.
+
+SearXNG may be deployed locally (including Docker on Windows) and used as a metasearch provider. Provider identity MUST be recorded in discovery provenance. A search result is discovery evidence, not source-policy proof.
+
+The system MUST support provider fallback and multi-provider attribution where configured. Provider failure MUST be distinguishable from source absence.
+
+### 50.14 Large-source-pool operation
+
+The runtime MUST be capable of handling a source registry that grows well beyond 500 records, including 1,000+ discovered/registered sources, without changing the meaning of the 500 benchmark.
+
+Scanning MUST be bounded by:
+- per-source timeout;
+- host/rate limits;
+- concurrency controls;
+- retry/backoff;
+- crawl/page/byte budgets;
+- persistent checkpoints;
+- resumability;
+- per-source failure isolation.
+
+A failure on one source MUST NOT terminate the whole federation scan.
+
+### 50.15 Duplicate and cross-post intelligence
+
+The system MUST detect likely cross-posted projects across sources using multiple signals where available, such as:
+- normalized title/description;
+- client/employer/party identity;
+- budget/currency;
+- deadline;
+- required skills;
+- deliverables;
+- URLs or source references;
+- temporal proximity.
+
+Deduplication MUST preserve all source observations and confidence rather than deleting the duplicates as if they never existed.
+
+### 50.16 Red-list policy as a configurable operational rule
+
+The user-configured execution blacklist MUST support country/jurisdiction and relationship-based blocking. The current configured policy includes Israel as an explicit execution blacklist target.
+
+When configured, evidence-backed links to the blocked jurisdiction/entity MUST place the source, party or opportunity into a retained blacklist/archive lane and exclude it from recommendations and execution. Records MUST NOT be deleted.
+
+The detector MUST distinguish an operational relationship from incidental textual mention. Evidence can include jurisdiction, ownership, operator, employer/client, payment/registration relationship, explicit business relationship or other auditable linkage. An incidental mention alone MUST NOT be treated as a relationship.
+
+### 50.17 Continuous source expansion
+
+The system MUST support a continuous discovery loop:
+DISCOVER -> DEDUP -> REGISTER -> STUDY -> VERIFY/UNKNOWN -> CLASSIFY -> SCHEDULE -> SCAN -> LEARN -> DISCOVER.
+
+Discovery results MUST include provenance so the operator can see which query/provider/community/source caused a candidate to enter the registry.
+
+The system MUST be able to expand beyond the initial catalog automatically when configured and online. Manual source insertion remains supported for operator-discovered platforms.
+
+### 50.18 Evidence and reporting additions
+
+The UI and reports MUST expose, separately:
+- discovered/registered count;
+- unique canonical hosts;
+- reachable count;
+- parseable count;
+- policy-verified count;
+- execution-ready count;
+- Iran ALLOW/BLOCK/REVIEW/UNKNOWN;
+- KYC states;
+- payment capabilities;
+- market-intelligence sources;
+- blacklist/archive count;
+- dynamic-discovery provenance;
+- duplicate/cross-post relationships;
+- current scan/failure/retry state.
+
+No one of these counts may be presented as another.
+
+### 50.19 Acceptance criteria for this amendment
+
+This amendment is considered implemented only when:
+1. code paths exist for global multilingual discovery and source-family expansion;
+2. social/community discovery boundaries are represented;
+3. SearXNG/provider federation is represented in configuration and provenance;
+4. source study persists Iran/KYC/payment/phone/subscription/intermediary evidence;
+5. user skill proficiency is persisted and used in matching;
+6. demand intelligence can produce evidence-backed Product Build Specifications;
+7. cross-source opportunity deduplication preserves source observations;
+8. source application limits prevent invalid duplicate submissions;
+9. application packages are generated without fabricated claims;
+10. follow-up/project tracking is durable and auditable;
+11. lane-specific scan cadences are persisted and scheduled;
+12. blacklist/archive behavior is non-destructive;
+13. 1,000+ source-pool scale is handled with bounded/resumable execution;
+14. regression/adversarial tests cover the amendment;
+15. CI evidence and audit/reporting distinguish implemented behavior from live external qualification.
+
+## 51. Amendment governance
+
+This amendment is part of the normative contract for the next implementation cycle. Existing Manifest sections remain in force unless this amendment explicitly extends them. Any future change to these requirements MUST be recorded as a further amendment rather than silently reinterpreting the product.
+
 ## 47. Manifest governance
 This Manifest is normative.
 New capabilities must map to an existing contract section or receive an explicit amendment.
