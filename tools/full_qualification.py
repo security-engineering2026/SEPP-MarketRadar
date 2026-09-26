@@ -218,7 +218,7 @@ def live_source_scale_gate(limit=500):
         conn.close()
 
     return gate(
-        "LIVE_SOURCE_SCALE_BENCHMARK",
+        "LIVE_SOURCE_REACHABILITY_500",
         "PASS" if confirmed >= limit else "OPEN",
         {
             "candidate_registry": len(records),
@@ -372,7 +372,7 @@ def main():
         except Exception as exc:
             gates.append(gate(getattr(fn, "__name__", "UNKNOWN_GATE"), "FAIL", {"error": type(exc).__name__ + ":" + str(exc)}))
 
-    non_blocking = {"LIVE_SOURCE_SCALE_BENCHMARK"}
+    non_blocking = {"LIVE_SOURCE_REACHABILITY_500"}
     blocking_open = [x for x in gates if x["status"] == "OPEN" and x["name"] not in non_blocking]
     blocking_fail = [x for x in gates if x["status"] == "FAIL" and x["name"] not in non_blocking]
     summary = {
