@@ -46,8 +46,9 @@ class WebSearchProvider:
         except urllib.error.URLError as exc:
             raise SearchProviderError(str(exc)) from exc
 
-    def _search_searxng(self, query, limit, language=None):
-        params = {"q": query, "format": "json", "categories": "general", "language": language or "all"}
+    def _search_searxng(self, query, limit, language=None, page=1):
+        page = max(1, int(page or 1))
+        params = {"q": query, "format": "json", "categories": "general", "language": language or "all", "pageno": page}
         url = self.searxng_url + "/search?" + urllib.parse.urlencode(params)
         payload = json.loads(self._get(url, {"Accept": "application/json", "User-Agent": "SEPP-MarketRadar/15.1.0"}))
         if not isinstance(payload, dict): raise SearchProviderError("INVALID_JSON_PAYLOAD")
@@ -61,8 +62,8 @@ class WebSearchProvider:
             out.append({"title": title, "url": target, "snippet": x.get("content", "") if isinstance(x.get("content", ""), str) else "", "engines": x.get("engines", []) if isinstance(x.get("engines", []), list) else [], "_provider": "searxng"})
         return out
 
-    def _search_one(self, provider, query, limit, language=None):
-        if provider == "searxng": return self._search_searxng(query, limit, language)
+    def _search_one(self, provider, query, limit, language=None, page=1):
+        if provider == "searxng": return self._search_searxng(query, limit, language, page)
         if provider == "brave":
             url = "https://api.search.brave.com/res/v1/web/search?" + urllib.parse.urlencode({"q": query, "count": min(limit, 20)})
             payload = json.loads(self._get(url, {"Accept": "application/json", "X-Subscription-Token": self.brave_key}))
@@ -85,13 +86,13 @@ class WebSearchProvider:
         if self.provider != "auto": return [self.provider]
         return [p for p, configured in (("brave", self.brave_key), ("bing", self.bing_key), ("searxng", self.searxng_url), ("serper", self.serper_key)) if configured]
 
-    def search(self, query, limit=10, language=None):
+    def search(self, query, limit=10, language=None, page=1):
         providers = self._configured_provider_order()
         if not providers: raise SearchProviderError("NO_SEARCH_PROVIDER_CONFIGURED")
         errors = []
         for provider in providers:
             try:
-                rows = self._search_one(provider, query, limit, language)
+                rows = self._search_one(provider, query, limit, language, page)
                 if rows: return rows
                 if self.provider != "auto": return []
             except (SearchProviderError, json.JSONDecodeError, ValueError, KeyError) as exc:
