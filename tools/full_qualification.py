@@ -206,19 +206,16 @@ def live_source_scale_gate(limit=500):
         )
 
     results = []
+    by_name = {record["name"]: record["base_url"] for record in records if record.get("base_url")}
     with ThreadPoolExecutor(max_workers=32) as pool:
-        futures = {
-            pool.submit(http_probe, record["base_url"], 8): record["name"]
-            for record in records
-            if record.get("base_url")
-        }
+        futures = {pool.submit(http_probe, url, 8): name for name, url in by_name.items()}
         for future in as_completed(futures):
             name = futures[future]
             try:
                 probe = future.result()
             except Exception as exc:
                 probe = {"reachable": False, "status_code": None, "error": type(exc).__name__ + ":" + str(exc)}
-            results.append({"name": name, "url": records[[r["name"] for r in records].index(name)]["base_url"], "probe": probe})
+            results.append({"name": name, "url": by_name[name], "probe": probe})
 
     confirmed = sum(bool(x["probe"].get("reachable")) for x in results)
     dead = len(results) - confirmed
