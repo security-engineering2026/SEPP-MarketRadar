@@ -519,3 +519,62 @@ No feature is considered complete merely because code exists.
 WORLD -> OBSERVATIONS -> EVIDENCE -> ONTOLOGY/DOMAIN STATE -> DECISION -> ACTION -> OUTCOME -> LEARNING -> NEW DECISION.
 
 The system must preserve the distinction between what happened, what was observed, what is believed, what is allowed, what was approved, what was executed, and what actually happened afterward.
+
+
+## 51. Manifest Amendment A-2026-09-26 — Deep/Dark Web Opportunity Discovery
+
+MarketRadar's global opportunity universe explicitly includes **deep-web and dark-web opportunity intelligence** for the user's target domains, especially **Web, API, Android and mobile** freelance/project work and bug-bounty/vulnerability-disclosure opportunities.
+
+### 51.1 Deep-web lane
+The system MUST treat the deep web as a separate discovery surface from ordinary indexed web search. Deep-web research may include public or explicitly authorized direct surfaces that are not reliably indexed by conventional search engines.
+
+The deep-web lane MUST:
+- support operator-supplied direct source URLs;
+- preserve provenance and evidence that the source was supplied or discovered through an authorized path;
+- support freelance/project and bug-bounty opportunity families;
+- support Web/API/Android/mobile target labels;
+- never infer authorization merely because a URL is reachable;
+- never automate authentication or access-control bypass.
+
+### 51.2 Dark-web / onion lane
+The system MUST include onion-service opportunity intelligence where relevant to freelance/project and bug-bounty/security-research discovery.
+
+The dark-web lane MUST:
+- recognize and preserve `.onion` source addresses as a distinct network surface;
+- discover onion references from indexed/public evidence and from operator-supplied known onion addresses;
+- support Web/API/Android/mobile opportunity labels;
+- record that Tor transport is required for direct access;
+- default to **KNOWN_ONION_ONLY** and **authorized-only** operation;
+- NOT perform automatic onion-directory crawling;
+- NOT directly crawl an onion address unless an explicitly configured Tor transport exists and the access is authorized;
+- treat an onion address as discovery evidence, not as proof of legitimacy, safety, authorization, scope, payment, or eligibility.
+
+Authenticated onion services require valid operator-provided authorization. The product MUST NOT attempt to obtain, guess, bypass or steal onion-service credentials.
+
+### 51.3 Opportunity scope
+Deep/dark-web discovery is part of the same evidence model as other sources:
+WORLD -> OBSERVATION -> SNAPSHOT -> EVIDENCE -> CLAIM -> DOMAIN STATE -> DECISION.
+
+The system MUST preserve source URL, network surface, transport requirement, discovery method, query/provenance, timestamp and verification state. Dark/deep-web presence MUST NOT bypass existing policy, KYC, payment, eligibility, authorization, or human-approval gates.
+
+### 51.4 Program implementation
+The normative implementation is:
+- discovery query families for Web/API/Android/mobile freelance/project opportunities;
+- discovery query families for Web/API/Android/mobile bug-bounty/security-research opportunities;
+- explicit deep-web operator URL configuration;
+- explicit known-onion operator URL configuration;
+- `DARK_WEB` / `DEEP_WEB` network-surface classification;
+- Tor transport requirement on onion candidates;
+- regression tests proving query coverage and onion policy;
+- no automatic directory crawling.
+
+### 51.5 Acceptance criteria
+This amendment is DONE only when:
+1. Manifest and discovery configuration contain deep/dark opportunity lanes;
+2. query planning covers Web/API/Android/mobile freelance/project and bug-bounty opportunity discovery;
+3. known onion addresses are represented without automatic directory crawling;
+4. deep-web direct surfaces can be registered without authentication bypass;
+5. candidates preserve network-surface and transport metadata;
+6. onion direct crawling is blocked unless Tor transport is explicitly configured;
+7. existing eligibility, policy and authorization gates remain authoritative;
+8. regression tests cover the new behavior.
