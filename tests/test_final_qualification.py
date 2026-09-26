@@ -68,3 +68,27 @@ def test_live_source_scale_gate_uses_one_shallow_probe_per_endpoint(monkeypatch)
     assert len(calls) == 500
     assert all(timeout == 8 for _, timeout in calls)
     assert result["details"]["method"].startswith("one bounded HTTP reachability probe")
+
+
+def test_live_source_scale_gate_excludes_disabled_endpoints(monkeypatch):
+    fq = _load_full_qualification()
+    records = [
+        {"name": "LIVE", "base_url": "https://live.example/", "status": "active"},
+        {"name": "DISABLED", "base_url": "https://disabled.example/", "status": "disabled"},
+    ]
+    calls = []
+    monkeypatch.setattr(
+        fq,
+        "http_probe",
+        lambda url, timeout=8: calls.append(url) or {"reachable": True, "status_code": 200},
+    )
+    monkeypatch.setattr(
+        "marketradar.source_registry.load_source_records",
+        lambda _path: records,
+    )
+
+    result = fq.live_source_scale_gate(limit=1)
+
+    assert result["status"] == "PASS"
+    assert result["details"]["eligible_candidates"] == 1
+    assert calls == ["https://live.example/"]
