@@ -46,26 +46,55 @@ class WebSearchProvider:
         except urllib.error.URLError as exc:
             raise SearchProviderError(str(exc)) from exc
 
-    def search(self, query, limit=10):
-        if self.provider in {"auto", "brave"} and self.brave_key:
+    def _search_searxng(self, query, limit, language=None):
+        params = {"q": query, "format": "json", "categories": "general", "language": language or "all"}
+        url = self.searxng_url + "/search?" + urllib.parse.urlencode(params)
+        payload = json.loads(self._get(url, {"Accept": "application/json", "User-Agent": "SEPP-MarketRadar/15.1.0"}))
+        if not isinstance(payload, dict): raise SearchProviderError("INVALID_JSON_PAYLOAD")
+        rows = payload.get("results", [])
+        if not isinstance(rows, list): raise SearchProviderError("INVALID_RESULTS_PAYLOAD")
+        out = []
+        for x in rows[:min(limit, 50)]:
+            if not isinstance(x, dict): continue
+            title, target = x.get("title"), x.get("url")
+            if not isinstance(title, str) or not isinstance(target, str) or not target: continue
+            out.append({"title": title, "url": target, "snippet": x.get("content", "") if isinstance(x.get("content", ""), str) else "", "engines": x.get("engines", []) if isinstance(x.get("engines", []), list) else [], "_provider": "searxng"})
+        return out
+
+    def _search_one(self, provider, query, limit, language=None):
+        if provider == "searxng": return self._search_searxng(query, limit, language)
+        if provider == "brave":
             url = "https://api.search.brave.com/res/v1/web/search?" + urllib.parse.urlencode({"q": query, "count": min(limit, 20)})
             payload = json.loads(self._get(url, {"Accept": "application/json", "X-Subscription-Token": self.brave_key}))
-            return [{"title": x.get("title", ""), "url": x.get("url", ""), "snippet": x.get("description", "")} for x in payload.get("web", {}).get("results", [])]
-        if self.provider in {"auto", "bing"} and self.bing_key:
+            return [{"title": x.get("title", ""), "url": x.get("url", ""), "snippet": x.get("description", ""), "_provider": "brave"} for x in payload.get("web", {}).get("results", []) if isinstance(x, dict)]
+        if provider == "bing":
             url = "https://api.bing.microsoft.com/v7.0/search?" + urllib.parse.urlencode({"q": query, "count": min(limit, 50), "responseFilter": "Webpages"})
             payload = json.loads(self._get(url, {"Ocp-Apim-Subscription-Key": self.bing_key}))
-            return [{"title": x.get("name", ""), "url": x.get("url", ""), "snippet": x.get("snippet", "")} for x in payload.get("webPages", {}).get("value", [])]
-        if self.provider in {"auto", "searxng"} and self.searxng_url:
-            url = self.searxng_url + "/search?" + urllib.parse.urlencode({"q": query, "format": "json", "categories": "general", "language": "all"})
-            payload = json.loads(self._get(url, {"Accept": "application/json", "User-Agent": "SEPP-MarketRadar/15.1.0"}))
-            return [{"title": x.get("title", ""), "url": x.get("url", ""), "snippet": x.get("content", ""), "engines": x.get("engines", [])} for x in payload.get("results", [])[:min(limit, 50)]]
-        if self.provider in {"auto", "serper"} and self.serper_key:
+            return [{"title": x.get("name", ""), "url": x.get("url", ""), "snippet": x.get("snippet", ""), "_provider": "bing"} for x in payload.get("webPages", {}).get("value", []) if isinstance(x, dict)]
+        if provider == "serper":
             body = json.dumps({"q": query, "num": min(limit, 20)}).encode()
             req = urllib.request.Request("https://google.serper.dev/search", data=body, headers={"Content-Type": "application/json", "X-API-KEY": self.serper_key})
             try:
-                with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                    payload = json.loads(resp.read().decode("utf-8", errors="replace"))
-            except urllib.error.URLError as exc:
-                raise SearchProviderError(str(exc)) from exc
-            return [{"title": x.get("title", ""), "url": x.get("link", ""), "snippet": x.get("snippet", "")} for x in payload.get("organic", [])]
-        raise SearchProviderError("NO_SEARCH_PROVIDER_CONFIGURED")
+                with urllib.request.urlopen(req, timeout=self.timeout) as resp: payload = json.loads(resp.read().decode("utf-8", errors="replace"))
+            except urllib.error.HTTPError as exc: raise SearchProviderError(f"HTTP_{exc.code}") from exc
+            except (urllib.error.URLError, TimeoutError) as exc: raise SearchProviderError(str(exc)) from exc
+            return [{"title": x.get("title", ""), "url": x.get("link", ""), "snippet": x.get("snippet", ""), "_provider": "serper"} for x in payload.get("organic", []) if isinstance(x, dict)]
+        raise SearchProviderError("UNKNOWN_SEARCH_PROVIDER")
+
+    def _configured_provider_order(self):
+        if self.provider != "auto": return [self.provider]
+        return [p for p, configured in (("brave", self.brave_key), ("bing", self.bing_key), ("searxng", self.searxng_url), ("serper", self.serper_key)) if configured]
+
+    def search(self, query, limit=10, language=None):
+        providers = self._configured_provider_order()
+        if not providers: raise SearchProviderError("NO_SEARCH_PROVIDER_CONFIGURED")
+        errors = []
+        for provider in providers:
+            try:
+                rows = self._search_one(provider, query, limit, language)
+                if rows: return rows
+                if self.provider != "auto": return []
+            except (SearchProviderError, json.JSONDecodeError, ValueError, KeyError) as exc:
+                errors.append(f"{provider}:{type(exc).__name__}:{exc}")
+                if self.provider != "auto": raise SearchProviderError(errors[-1]) from exc
+        raise SearchProviderError("SEARCH_FEDERATION_FAILED:" + "|".join(errors))
