@@ -31,7 +31,7 @@ jobs:
       QUALIFICATION_ARTIFACT_DIR: qualification-artifacts
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - uses: actions/setup-python@a26af69d6e4f9f7f4f3f4b0b5d8d5c2b1f7d6e5c # v5.6.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: '3.12'
       - name: Install dependencies
