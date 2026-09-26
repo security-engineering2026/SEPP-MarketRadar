@@ -71,6 +71,13 @@ def _family_for(text: str, planned: str) -> str:
     return 'community_forum' if planned in {'community', 'policy'} else {'freelance':'job_marketplace','jobs':'job_board','bug_bounty':'bug_bounty','social':'social_platform','market':'market_intelligence'}.get(planned, 'job_board')
 
 
+def _network_surface(url: str) -> str:
+    host = (urlparse(url).hostname or '').lower().rstrip('.')
+    if host.endswith('.onion'):
+        return 'DARK_WEB'
+    return 'DEEP_WEB' if host else 'UNKNOWN'
+
+
 def _slug_name(title: str, host: str) -> str:
     text = re.sub(r'\s+', ' ', str(title or '')).strip()
     text = re.split(r'\s+[|\-–—:]\s+', text)[0].strip()
@@ -117,6 +124,7 @@ class SourceDiscoveryEngine:
             return None
         host = urlparse(normalized).hostname
         role = ROLE_BY_FAMILY.get(family, 'source')
+        network_surface = _network_surface(normalized)
         lane = 'MARKET_INTELLIGENCE_ONLY' if family == 'market_intelligence' else 'GLOBAL_DISCOVERY'
         if family == 'community_forum':
             lane = 'GLOBAL_DISCOVERY'
@@ -124,8 +132,9 @@ class SourceDiscoveryEngine:
             lane = 'NEEDS_ANALYSIS'
         return {
             'name': _slug_name(name, host), 'base_url': f'{urlparse(normalized).scheme}://{host}/', 'allow_hosts':[host],
-            'adapter':'html', 'status':'candidate', 'source_kind':family, 'acquisition':'http', 'verification_state':'documented',
+            'adapter':'html', 'status':'candidate', 'source_kind':family, 'acquisition':'tor' if network_surface == 'DARK_WEB' else 'http', 'verification_state':'documented',
             'access_scope':'public', 'terms_status':'needs_review', 'country':plan.get('country','Global'), 'region':plan.get('region','Global'),
+            'network_surface':network_surface, 'transport_requirement':'TOR' if network_surface == 'DARK_WEB' else 'DIRECT_HTTP',
             'language':plan.get('language','multi'), 'source_family':family, 'source_role':role, 'policy_lane':lane,
             'daily_scan':False, 'needs_analysis':True, 'source_verification_state':'DISCOVERED', 'iran_eligibility':'UNKNOWN',
             'kyc_requirement':'UNKNOWN', 'payment_capabilities':[], 'evidence_confidence':round(min(max(float(score),0.1),0.95),2),
@@ -133,7 +142,7 @@ class SourceDiscoveryEngine:
             'discovery_basis':basis, 'discovery_evidence_url':evidence_url, 'discovery_method':discovery_method,
             'discovery_title':title[:240], 'discovery_snippet':snippet[:700], 'source_origin':'dynamic_discovery',
             'verification_basis':'automatic_search_discovery', 'upstream_sources':[evidence_url] if evidence_url else [],
-            'notes':f'Autodiscovered via {discovery_method}; candidate only until automatic source-policy verification.'
+            'notes':f'Autodiscovered via {discovery_method}; candidate only until automatic source-policy verification.' + (' Onion service: direct access requires an explicitly configured Tor transport.' if network_surface == 'DARK_WEB' else '')
         }
 
     def _parse_markdown(self, text, catalog=None):
@@ -154,6 +163,30 @@ class SourceDiscoveryEngine:
             name=item.get('program_name') or item.get('name') or item.get('company_name')
             if url and name: out.append((str(name),str(url),item))
         return out
+
+    def _configured_direct_sources(self, discovered, evidence, errors):
+        deep_cfg = self.query_config.get('deep_web_research', {}) or {}
+        tor_cfg = self.query_config.get('tor_research', {}) or {}
+        entries = []
+        for item in deep_cfg.get('operator_supplied_urls', []) or []:
+            entries.append((item, 'freelance', 'DEEP_WEB_OPERATOR_URL'))
+        for item in tor_cfg.get('operator_supplied_onion_urls', []) or []:
+            entries.append((item, 'freelance', 'DARK_WEB_OPERATOR_ONION'))
+        for url, family, method in entries:
+            if not isinstance(url, str) or not url.strip():
+                continue
+            normalized = self._normalize(url.strip())
+            if not normalized:
+                errors.append({'direct_source':url, 'error':'INVALID_DIRECT_SOURCE_URL'})
+                continue
+            host = urlparse(normalized).hostname or ''
+            if host.endswith('.onion') and not tor_cfg.get('authorized_only', True):
+                errors.append({'direct_source':url, 'error':'DARK_WEB_AUTHORIZATION_POLICY_DISABLED'})
+                continue
+            plan={'country':'Global','region':'Global','language':'multi','family':family}
+            candidate=self._candidate(host, normalized, family, plan, method, normalized, host, 'operator supplied source address', 0.8, method.lower())
+            if candidate:
+                self._merge(discovered,candidate,evidence,{'query':method,'provider':'operator','url':normalized,'title':host,'snippet':'operator supplied source address','country':'Global','region':'Global','language':'multi','method':method.lower()})
 
     def _catalog_discovery(self, discovered, evidence, errors):
         if not self.http: return
@@ -213,6 +246,9 @@ class SourceDiscoveryEngine:
         url=result.get('url','')
         p=urlparse(url)
         if p.scheme not in {'http','https'} or not p.hostname: return
+        if (p.hostname or '').lower().endswith('.onion'):
+            errors.append({'crawl_url':url,'error':'DARK_WEB_DIRECT_CRAWL_REQUIRES_TOR_TRANSPORT','skipped':True})
+            return
         try:
             req=Request(url,headers={'User-Agent':'SEPP-MarketRadar/16.1.2 DiscoveryCrawler'})
             with urlopen(req,timeout=self.timeout) as resp:
@@ -302,6 +338,7 @@ class SourceDiscoveryEngine:
 
     def discover(self, include_catalogs=True, include_search=True):
         discovered={}; evidence=[]; errors=[]
+        self._configured_direct_sources(discovered,evidence,errors)
         if include_catalogs: self._catalog_discovery(discovered,evidence,errors)
         plans=self._search_discovery(discovered,evidence,errors) if include_search else []
         used=set()
