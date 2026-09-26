@@ -273,6 +273,65 @@ def live_source_scale_gate(limit=None):
             "max_policy_pages": 3,
         },
     )
+def active_source_terms_gate():
+    from marketradar.db import connect, sync_source_contracts
+    from marketradar.source_registry import load_source_records
+    from marketradar.source_search import WebSearchProvider
+    from marketradar.source_verification import SourceVerificationEngine
+
+    records = [
+        x for x in load_source_records(ROOT / "config" / "sources.json")
+        if str(x.get("status", "")).lower() == "active" and x.get("base_url")
+    ]
+    if not records:
+        return gate("ACTIVE_SOURCE_TERMS_CLOSURE", "OPEN", {"reason": "No active sources with URLs."})
+
+    with tempfile.TemporaryDirectory(prefix="mr-row4-") as td:
+        conn = connect(Path(td) / "qualification.db")
+        sync_source_contracts(conn, records)
+        engine = SourceVerificationEngine(
+            conn,
+            records,
+            timeout=8,
+            max_workers=16,
+            max_policy_pages=3,
+            surface_scan_pages=8,
+            search_provider=WebSearchProvider(timeout=8),
+        )
+        results = engine.verify([x["name"] for x in records])
+        engine.persist(results)
+        conn.close()
+
+    terms_reviewed = sum(str(x.get("terms_status", "")).lower() == "reviewed" for x in results)
+    terms_pending = [
+        x["source"] for x in results
+        if str(x.get("terms_status", "")).lower() != "reviewed"
+    ]
+    evidence_urls = sum(bool(x.get("terms_evidence_url")) for x in results)
+    live = sum(x.get("source_verification_state") == "LIVE_CONFIRMED" for x in results)
+    dead = sum(x.get("source_verification_state") == "DEAD" for x in results)
+
+    complete = len(results) == len(records) and terms_reviewed == len(records)
+    return gate(
+        "ACTIVE_SOURCE_TERMS_CLOSURE",
+        "PASS" if complete else "OPEN",
+        {
+            "active_sources": len(records),
+            "checked": len(results),
+            "terms_reviewed": terms_reviewed,
+            "terms_pending": len(terms_pending),
+            "terms_evidence_urls": evidence_urls,
+            "live_reachable": live,
+            "dead": dead,
+            "pending_sources": terms_pending[:50],
+            "criterion": "Every active source has fetched Terms/Legal evidence and terms_status=reviewed",
+            "method": "bounded same-origin policy endpoint probing plus existing shallow source verification",
+            "surface_scan_pages": 8,
+            "max_workers": 16,
+            "max_policy_pages": 3,
+        },
+    )
+
 def live_acquisition_sample_gate(sample_size=20):
     from marketradar.db import connect, sync_source_contracts
     from marketradar.runtime import MarketRadarRuntime
@@ -394,6 +453,7 @@ def main():
         resilience_gate,
         live_discovery_gate,
         live_source_scale_gate,
+        active_source_terms_gate,
         live_acquisition_sample_gate,
         lambda: family_surface_gate("social"),
         lambda: family_surface_gate("procurement"),
