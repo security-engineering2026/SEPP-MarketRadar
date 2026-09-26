@@ -5,6 +5,7 @@ import logging
 import queue
 import sys
 import threading
+import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 import tkinter as tk
@@ -1277,15 +1278,33 @@ def needs_initial_acquisition(conn) -> bool:
 
 
 def smoke_test():
-    root, settings, sources, conn, runtime = open_runtime()
+    conn = None
     try:
+        root, settings, sources, conn, runtime = open_runtime()
         assert __version__
         target = json.loads((root / "config" / "source_targets.json").read_text(encoding="utf-8"))["target_registered_sources"]
         assert target >= 500 and len(sources) >= 5 and runtime is not None
-        assert conn.execute("SELECT COUNT(*) FROM source_contracts").fetchone()[0] == len(sources)
+        contracts = conn.execute("SELECT COUNT(*) FROM source_contracts").fetchone()[0]
+        assert contracts == len(sources), f"SOURCE_CONTRACT_COUNT_MISMATCH:{contracts}!={len(sources)}"
         return 0
+    except Exception as exc:
+        report = {
+            "version": __version__,
+            "platform": sys.platform,
+            "executable": str(Path(sys.executable).resolve()),
+            "app_root": str(app_root()),
+            "data_root": str(data_root()),
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+            "traceback": traceback.format_exc(),
+        }
+        target_path = os.environ.get("MARKETRADAR_SMOKE_REPORT")
+        if target_path:
+            Path(target_path).write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        return 1
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 def ui_smoke_test():
