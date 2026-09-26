@@ -30,3 +30,36 @@ def test_onion_config_is_known_address_only():
     cfg = json.loads((Path(__file__).parents[1] / "config" / "discovery_queries.json").read_text(encoding="utf-8"))
     assert cfg["tor_research"]["mode"] == "KNOWN_ONION_ONLY"
     assert cfg["tor_research"]["automatic_directory_crawling"] is False
+
+
+def test_opportunity_discovery_includes_deep_dark_web_web_android_lanes():
+    import json
+    from pathlib import Path
+    cfg = json.loads((Path(__file__).parents[1] / 'config' / 'discovery_queries.json').read_text(encoding='utf-8'))
+    queries = [x['q'].lower() for x in cfg['queries']]
+    assert any('deep web' in q and 'android' in q for q in queries)
+    assert any('dark web' in q and 'android' in q for q in queries)
+    assert any('.onion' in q and 'bug bounty' in q for q in queries)
+    assert cfg['tor_research']['mode'] == 'KNOWN_ONION_ONLY'
+    assert cfg['tor_research']['authorized_only'] is True
+
+
+def test_known_onion_is_classified_and_not_directly_crawled_without_tor_transport():
+    from marketradar.source_discovery import SourceDiscoveryEngine
+    onion = 'http://exampleexampleexampleexampleexampleexampleexampleexampleexampleexample.onion/'
+    cfg = {
+        'queries': [],
+        'tor_research': {
+            'mode': 'KNOWN_ONION_ONLY',
+            'authorized_only': True,
+            'operator_supplied_onion_urls': [onion],
+        },
+        'deep_web_research': {'operator_supplied_urls': []},
+        'max_crawl_pages_per_cycle': 1,
+    }
+    e = SourceDiscoveryEngine([], cfg)
+    result = e.discover(False, False)
+    assert result['candidates']
+    candidate = result['candidates'][0]
+    assert candidate['network_surface'] == 'DARK_WEB'
+    assert candidate['transport_requirement'] == 'TOR'
