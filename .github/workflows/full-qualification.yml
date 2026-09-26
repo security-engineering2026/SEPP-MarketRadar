@@ -126,8 +126,8 @@ jobs:
             throw "Full qualification report missing"
           }
           $r = Get-Content qualification-artifacts/full_qualification.json -Raw | ConvertFrom-Json
-          Write-Host ("PASS=" + $r.summary.pass + " OPEN=" + $r.summary.open + " FAIL=" + $r.summary.fail)
-          if ([int]$r.summary.open -gt 0 -or [int]$r.summary.fail -gt 0) {
+          Write-Host ("PASS=" + $r.summary.pass + " OPEN=" + $r.summary.open + " FAIL=" + $r.summary.fail + " BLOCKING_OPEN=" + $r.summary.blocking_open + " BLOCKING_FAIL=" + $r.summary.blocking_fail)
+          if ([int]$r.summary.blocking_open -gt 0 -or [int]$r.summary.blocking_fail -gt 0) {
             throw "FULL_QUALIFICATION_NOT_FINAL"
           }
 
