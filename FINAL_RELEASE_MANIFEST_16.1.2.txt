@@ -1,0 +1,23 @@
+SEPP-MarketRadar 16.1.2 RELEASE VALIDATION CONTRACT
+
+Baseline:
+- Product version: 16.1.2
+- 500+ source scale is a strategic discovery-pool benchmark, not a final-release gate.
+- Registry count alone is never treated as proof of live source health.
+
+Release-blocking evidence gates:
+- live source acquisition evidence
+- external engine execution
+- Android device/emulator E2E
+- external application/payment execution
+- Windows EXE/installer certification
+
+Benchmark:
+- 500+ live-reachable sources remains an OPEN/non-blocking scale benchmark until the runtime discovery pool reaches the target.
+- An OPEN benchmark must remain visible in qualification artifacts and must never be converted to PASS without evidence.
+
+Evidence policy:
+- Fixture data is not live market evidence.
+- DISCOVERED is not LIVE_CONFIRMED.
+- UNKNOWN is not healthy or executable.
+- No production-side effects are permitted during qualification.
