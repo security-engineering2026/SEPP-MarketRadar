@@ -1,8 +1,8 @@
 # Market Radar — Execution State
 
 **Contract:** docs/EXECUTION_CONTRACT_31_ROWS.md  
-**Current row:** 3  
-**Current status:** IN_PROGRESS  
+**Legacy execution row:** 3  
+**Legacy row status:** IN_PROGRESS  
 **Execution direction:** 3 → 31, strictly sequential  
 **Do not advance:** until current row has real PASS evidence.
 
@@ -61,3 +61,12 @@ The repository is now the cross-chat source of truth for continuation.
 - Ordered execution contract: `docs/EXECUTION_CONTRACT_31_ROWS.md`
 
 User should ask for the **current row/status**, not a fixed final row number. The chat must finish the current row to real PASS, record evidence, then continue automatically to the next row.
+
+
+## Audited remaining-work cursor — authoritative
+
+- Active queue: `docs/REMAINING_WORK_MASTER_TABLE.md`
+- Current remaining row: **1 — SearXNG / Search Federation**
+- Research gate: `docs/RESEARCH_GATE_STANDARD.md`
+- Rule: start at remaining row 1 and advance sequentially after real PASS; do not redo completed work unless impact analysis reopens it.
+- Environment rule: GitHub queueing is not a blocker; use the authorized Windows runner or main Windows PowerShell when required.
