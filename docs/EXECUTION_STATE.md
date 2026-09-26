@@ -48,3 +48,16 @@ Do not tell the user a row is complete based only on a commit, a passing unit te
 - Added tests for SearXNG language propagation, malformed JSON, federation fallback/provenance, and discovery language propagation.
 - GitHub Actions for commit `e3d4bf8020937f7bc8578c20742566fe700d5750` are currently queued; Row 3 is **not PASS** until CI/runtime evidence completes.
 - Local container could not clone GitHub because outbound DNS/network is unavailable; no local test result is being represented as evidence.
+
+
+## Chat continuation
+
+The repository is now the cross-chat source of truth for continuation.
+
+- User follow-up protocol: `docs/CHAT_CONTINUATION_PROTOCOL.md`
+- Completion boundary: `docs/COMPLETION_BOUNDARY.md`
+- Superset coverage: `docs/COMPLETION_MAP_100.md`
+- Live cursor: this file
+- Ordered execution contract: `docs/EXECUTION_CONTRACT_31_ROWS.md`
+
+User should ask for the **current row/status**, not a fixed final row number. The chat must finish the current row to real PASS, record evidence, then continue automatically to the next row.
