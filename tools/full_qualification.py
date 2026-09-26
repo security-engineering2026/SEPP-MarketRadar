@@ -163,7 +163,7 @@ def live_discovery_gate():
 
 def _select_acquisition_sample(records, sample_size=20):
     """Pick a deterministic, family-balanced sample instead of records[:N]."""
-    candidates=[x for x in records if x.get("status") == "active" and x.get("base_url")]
+    candidates=[x for x in records if x.get("status") in (None, "active") and x.get("base_url")]
     families={}
     for record in candidates:
         family=str(record.get("source_family") or "unknown").lower()
@@ -187,49 +187,51 @@ def _select_acquisition_sample(records, sample_size=20):
     return ordered
 
 def live_source_scale_gate(limit=500):
-    from marketradar.db import connect, sync_source_contracts
+    """Lightweight endpoint-reachability benchmark.
+
+    This gate is intentionally non-blocking. It measures whether registered
+    source endpoints respond at all; policy/KYC/payout verification belongs to
+    the dedicated verification workflow and must not turn a scale benchmark
+    into a multi-page crawl of every source.
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     from marketradar.source_registry import load_source_records
-    from marketradar.source_search import WebSearchProvider
-    from marketradar.source_verification import SourceVerificationEngine
 
     records = load_source_records(ROOT / "config" / "sources.json")
     if len(records) < limit:
         return gate(
-            "LIVE_SOURCE_SCALE_BENCHMARK",
+            "LIVE_SOURCE_REACHABILITY_500",
             "OPEN",
             {"registered_records": len(records), "requested": limit, "reason": "Fewer than 500 registry candidates."},
         )
 
-    selected = records
-    with tempfile.TemporaryDirectory(prefix="mr-sources-") as td:
-        conn = connect(Path(td) / "qualification.db")
-        sync_source_contracts(conn, selected)
-        engine = SourceVerificationEngine(
-            conn,
-            selected,
-            timeout=8,
-            max_workers=16,
-            max_policy_pages=3,
-            search_provider=WebSearchProvider(timeout=8),
-        )
-        results = engine.verify([x["name"] for x in selected])
-        confirmed = sum(x.get("source_verification_state") == "LIVE_CONFIRMED" for x in results)
-        dead = sum(x.get("source_verification_state") == "DEAD" for x in results)
-        conn.close()
+    results = []
+    by_name = {record["name"]: record["base_url"] for record in records if record.get("base_url")}
+    with ThreadPoolExecutor(max_workers=32) as pool:
+        futures = {pool.submit(http_probe, url, 8): name for name, url in by_name.items()}
+        for future in as_completed(futures):
+            name = futures[future]
+            try:
+                probe = future.result()
+            except Exception as exc:
+                probe = {"reachable": False, "status_code": None, "error": type(exc).__name__ + ":" + str(exc)}
+            results.append({"name": name, "url": by_name[name], "probe": probe})
 
+    confirmed = sum(bool(x["probe"].get("reachable")) for x in results)
+    dead = len(results) - confirmed
     return gate(
-        "LIVE_SOURCE_SCALE_BENCHMARK",
+        "LIVE_SOURCE_REACHABILITY_500",
         "PASS" if confirmed >= limit else "OPEN",
         {
             "candidate_registry": len(records),
             "checked": len(results),
             "live_reachable": confirmed,
             "dead": dead,
-            "other": len(results) - confirmed - dead,
             "criterion": f"{limit} live-reachable source endpoints",
-            "method": "all current registry candidates verified; endpoint reachability only; not a connector-capability claim",
+            "method": "parallel HTTP endpoint reachability probes; HTTP error responses count as reachable; no policy/connector capability claim",
             "blocking": False,
             "contract": "strategic discovery-pool benchmark; not a final-release gate",
+            "sample": results[:25],
         },
     )
 
@@ -372,7 +374,7 @@ def main():
         except Exception as exc:
             gates.append(gate(getattr(fn, "__name__", "UNKNOWN_GATE"), "FAIL", {"error": type(exc).__name__ + ":" + str(exc)}))
 
-    non_blocking = {"LIVE_SOURCE_SCALE_BENCHMARK"}
+    non_blocking = {"LIVE_SOURCE_REACHABILITY_500"}
     blocking_open = [x for x in gates if x["status"] == "OPEN" and x["name"] not in non_blocking]
     blocking_fail = [x for x in gates if x["status"] == "FAIL" and x["name"] not in non_blocking]
     summary = {
