@@ -46,8 +46,8 @@ A queued GitHub job is **not** a blocker. If a runner is unavailable or queued, 
 | 3 | 25 | Real source-health verification at scale | live Internet verification with persisted evidence |
 | 4 | 38 | Close active-source warnings/ambiguities | live source-policy review and persisted resolution |
 | 5 | 39 | Authorized social/API runtime evidence | authorized runtime connectors, no bypass |
-| 6 | 53 | Real-market 1000→7→3 decision evidence | live discovery, dedup, ranking, rationale evidence |
-| 7 | 64 | Newly added capability automatically changes search end-to-end | add capability → search plan/query/result proof |
+| 6 | 53 + 51 | Real-market 1000→7→3 decision evidence across surface, deep and dark/known-onion opportunity lanes | live discovery, dedup, ranking, rationale evidence with network-surface provenance |
+| 7 | 64 + 51 | Newly added capability automatically changes search end-to-end, including deep/dark opportunity lanes | add capability → search plan/query/result proof across applicable network surfaces |
 | 8 | 74 | Site-specific authorized application adapters | real permitted adapter execution and constraints |
 | 9 | 75 | Browser session recovery | real browser interruption/recovery proof |
 | 10 | 77 | Real user-approved application submission | one authorized submission with evidence |
@@ -67,7 +67,7 @@ A queued GitHub job is **not** a blocker. If a runner is unavailable or queued, 
 | 24 | Distribution | Windows scheduler installation and execution | actual scheduled scan |
 | 25 | Distribution | Process restart/recovery after failure | kill/restart/reconcile proof |
 | 26 | Distribution | Real configured SearXNG instance | live configured instance exercise |
-| 27 | Distribution | Live Internet source verification | real source observations |
+| 27 | Distribution + 51 | Live Internet source verification, including applicable deep/dark known-onion lanes | real source observations with transport/provenance evidence |
 | 28 | Distribution | Android APK build/deployment | actual APK artifact |
 | 29 | Distribution | Android device/emulator E2E | install/use/recovery evidence |
 | 30 | Distribution | External engine/connector execution | actual authorized connector execution |
