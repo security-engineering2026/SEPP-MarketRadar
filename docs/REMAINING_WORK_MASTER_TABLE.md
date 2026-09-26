@@ -81,3 +81,8 @@ A queued GitHub job is **not** a blocker. If a runner is unavailable or queued, 
 The product is not called complete until Row 34 passes and the final acceptance check confirms that no applicable OPEN/RUNTIME-GATE item remains in the Manifest or Completion Map.
 
 Historical PASS is retained as evidence and is not re-executed unless change-impact analysis invalidates it.
+
+
+## Locked execution mode — Baseline-first / Evidence-first / Gap-only
+
+The existing executed baseline is the starting implementation. For every row: **PRESERVE** proven working behavior; **FIX** verified defects; **COMPLETE** partial implementations; **BUILD** only genuinely missing capability. The queue is not a rebuild plan. Valid historical evidence must be recovered before re-execution, and no working component is replaced merely to satisfy a row.
