@@ -45,3 +45,18 @@ def test_discovery_propagates_plan_language_to_real_provider(monkeypatch):
     result=SourceDiscoveryEngine([],cfg,p).discover(False,True)
     assert seen['language']=='fa'
     assert result['candidates'][0]['language']=='fa'
+
+
+def test_searxng_propagates_pagination_page(monkeypatch):
+    monkeypatch.setenv('SEARXNG_URL','http://searx.local')
+    p=WebSearchProvider(provider='searxng')
+    seen={}
+    def fake_get(url, headers=None):
+        seen['url']=url
+        return json.dumps({'results':[{'title':'page 2','url':'https://example.test/page2','content':'x'}]})
+    monkeypatch.setattr(p,'_get',fake_get)
+    rows=p.search('test',5,language='en',page=2)
+    assert 'language=en' in seen['url']
+    assert 'pageno=2' in seen['url']
+    assert rows[0]['_provider']=='searxng'
+
