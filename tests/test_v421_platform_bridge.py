@@ -63,3 +63,15 @@ def test_known_onion_is_classified_and_not_directly_crawled_without_tor_transpor
     candidate = result['candidates'][0]
     assert candidate['network_surface'] == 'DARK_WEB'
     assert candidate['transport_requirement'] == 'TOR'
+
+
+def test_network_surface_does_not_mislabel_normal_search_results_as_deep_web():
+    from marketradar.source_discovery import SourceDiscoveryEngine
+    class FakeSearch:
+        provider = 'fake'
+        def available(self): return True
+        def search(self, query, limit):
+            return [{'title':'Web freelance projects','url':'https://example.com/jobs','snippet':'Android developer project'}]
+    cfg = {'queries':[{'id':'web','country':'Global','region':'Global','language':'multi','family':'freelance','q':'Android freelance project'}], 'max_crawl_pages_per_cycle':0}
+    result = SourceDiscoveryEngine([], cfg, FakeSearch()).discover(False, True)
+    assert result['candidates'][0]['network_surface'] == 'OPEN_WEB'
