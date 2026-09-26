@@ -101,10 +101,19 @@ jobs:
           if (Test-Path $target) { Remove-Item $target -Recurse -Force -ErrorAction SilentlyContinue }
           Start-Process -FilePath $installer.FullName -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART","/DIR=$target" -Wait -PassThru | Out-Null
           if (-not (Test-Path "$target/MarketRadar.exe")) { throw "Installed EXE missing" }
+          New-Item -ItemType Directory -Force -Path qualification-artifacts | Out-Null
+          $env:MARKETRADAR_SMOKE_REPORT = Join-Path $env:RUNNER_TEMP "MarketRadar-smoke-report.json"
+          Remove-Item $env:MARKETRADAR_SMOKE_REPORT -Force -ErrorAction SilentlyContinue
           & "$target/MarketRadar.exe" --smoke-test
-          if ($LASTEXITCODE -ne 0) { throw "Installed EXE smoke test failed: $LASTEXITCODE" }
+          $smokeExit = $LASTEXITCODE
+          if (Test-Path $env:MARKETRADAR_SMOKE_REPORT) {
+            Copy-Item $env:MARKETRADAR_SMOKE_REPORT "qualification-artifacts/installed-exe-smoke-report.json" -Force
+          }
+          if ($smokeExit -ne 0) { throw "Installed EXE smoke test failed: $smokeExit" }
+          Remove-Item Env:MARKETRADAR_SMOKE_REPORT -ErrorAction SilentlyContinue
           & "$target/MarketRadar.exe" --ui-smoke-test
-          if ($LASTEXITCODE -ne 0) { throw "Installed EXE UI smoke test failed: $LASTEXITCODE" }
+          $uiExit = $LASTEXITCODE
+          if ($uiExit -ne 0) { throw "Installed EXE UI smoke test failed: $uiExit" }
           $uninstaller = Join-Path $target "unins000.exe"
           if (-not (Test-Path $uninstaller)) { throw "Uninstaller missing" }
           Start-Process -FilePath $uninstaller -ArgumentList "/VERYSILENT","/SUPPRESSMSGBOXES","/NORESTART" -Wait | Out-Null
