@@ -68,6 +68,7 @@ def test_row4_verification_fetches_direct_terms_candidate(tmp_path):
         raise RuntimeError("not found")
 
     engine.http.fetch = fake_fetch
+    engine.policy_http.fetch = fake_fetch
     result = engine._one("Row4TermsSource")
     assert result["terms_evidence_url"] == "https://example.test/terms-and-conditions"
     assert result["terms_status"] == "reviewed"
