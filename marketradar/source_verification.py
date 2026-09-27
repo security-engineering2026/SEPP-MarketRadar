@@ -173,11 +173,13 @@ class SourceVerificationEngine:
             operational_hosts=tuple(r.get('allow_hosts') or ())
             declared_policy_hosts=tuple(r.get('policy_hosts') or ())
             policy_hosts=tuple(dict.fromkeys([*declared_policy_hosts, *operational_hosts]))
+            policy_headers = dict(r.get('headers') or {})
+            policy_headers['Accept'] = 'text/html,application/xhtml+xml,text/plain,*/*'
             policy_sources.append(Source(
                 r['name'], _policy_origin(r, r.get('base_url','')),
                 r.get('adapter','json'), r.get('status','candidate'),
                 policy_hosts, r.get('access_scope','public'),
-                tuple((r.get('headers') or {}).items())
+                tuple(policy_headers.items())
             ))
         self.policy_http=Federation(policy_sources, timeout=timeout, max_workers=max_workers)
         self.max_workers=max(1,min(max_workers,24)); self.max_policy_pages=max(1,min(max_policy_pages,8)); self.surface_scan_pages=max(1,min(int(surface_scan_pages),64)); self.search=search_provider or WebSearchProvider(timeout=timeout); self.policy_search_interval_days=max(1,int(policy_search_interval_days))
