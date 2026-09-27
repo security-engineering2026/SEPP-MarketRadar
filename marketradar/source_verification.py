@@ -214,8 +214,25 @@ class SourceVerificationEngine:
 
     def _one(self, name):
         r=self.records[name]
+        operational_error = None
         try:
             obs=self.http.fetch(name)
+            operational_reachable = True
+        except Exception as exc:
+            # Policy/Terms evidence is an independent verification surface. An
+            # operational API failure must not prevent closure of the Row 4
+            # Terms warning when the declared policy host is reachable.
+            operational_error = type(exc).__name__ + ': ' + str(exc)
+            policy_base = _policy_origin(r, r.get('base_url',''))
+            obs = {
+                'body': b'',
+                'url': policy_base,
+                'status': None,
+                'bytes': 0,
+                'sha256': '',
+            }
+            operational_reachable = False
+        try:
             text=_html_text(obs['body'])
             links=_links(obs['body'],obs['url'])
             search_links, search_snippets = self._policy_search(r, text, links)
@@ -259,7 +276,7 @@ class SourceVerificationEngine:
             result['evidence_urls']=evidence_urls
             constraints=extract_source_constraints(combined,evidence_urls)
             result['source_constraints']=constraints
-            result.update({'source':name,'http_status':obs['status'],'bytes':obs['bytes'],'sha256':obs['sha256'],'last_verified_at':datetime.now(timezone.utc).isoformat(),'source_verification_state':'LIVE_CONFIRMED'})
+            result.update({'source':name,'http_status':obs['status'],'bytes':obs['bytes'],'sha256':obs['sha256'],'last_verified_at':datetime.now(timezone.utc).isoformat(),'source_verification_state':'LIVE_CONFIRMED' if operational_reachable else 'DEAD','error': operational_error})
             blocked_countries = self.records.get(name, {}).get('execution_blacklist_countries') or ['Israel']
             classification = classify_source_lane(r, result, blocked_countries)
             result['source_lane'] = classification.lane
@@ -273,7 +290,7 @@ class SourceVerificationEngine:
             result['blacklisted_at'] = result.get('last_verified_at') if classification.blacklisted else None
             result['project_scan_interval_minutes'] = classification.interval_minutes if classification.lane == EXECUTION_LANE else 0
             result['intelligence_scan_interval_minutes'] = classification.interval_minutes if classification.lane == INTELLIGENCE_LANE else 0
-            result['verification_state'] = 'blocked' if classification.blacklisted else ('verified' if result.get('source_verification_state')=='LIVE_CONFIRMED' else 'documented')
+            result['verification_state'] = 'blocked' if classification.blacklisted else ('verified' if result.get('source_verification_state')=='LIVE_CONFIRMED' else 'degraded')
             current_maturity = str(r.get('capability_maturity') or 'REGISTERED')
             execution_evidence = bool(
                 result.get('source_verification_state') == 'LIVE_CONFIRMED'
