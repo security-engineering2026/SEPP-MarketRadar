@@ -76,6 +76,43 @@ def test_row4_verification_fetches_direct_terms_candidate(tmp_path):
     connection.close()
 
 
+def test_row4_terms_close_when_operational_api_is_unavailable(tmp_path):
+    from marketradar.db import connect
+    from marketradar.source_verification import SourceVerificationEngine
+
+    connection = connect(tmp_path / "row4-operational-down.db")
+    source = {
+        "name": "Row4OperationalDownSource",
+        "base_url": "https://api.example.test/v1/jobs",
+        "adapter": "json",
+        "status": "active",
+        "allow_hosts": ["api.example.test"],
+        "policy_hosts": ["www.example.test"],
+        "access_scope": "public",
+        "terms_status": "needs_review",
+    }
+    engine = SourceVerificationEngine(connection, [source], search_provider=None, surface_scan_pages=1)
+
+    def operational_fetch(name, url=None):
+        raise RuntimeError("HTTPError: HTTP Error 403: Forbidden")
+
+    def policy_fetch(name, url=None):
+        if url == "https://www.example.test/terms-and-conditions":
+            return {"body": b"<html><body>Terms of Service. These conditions apply to users.</body></html>",
+                    "url": url, "status": 200, "bytes": 74, "sha256": "terms"}
+        raise RuntimeError("not found")
+
+    engine.http.fetch = operational_fetch
+    engine.policy_http.fetch = policy_fetch
+    result = engine._one(source["name"])
+
+    assert result["source_verification_state"] == "DEAD"
+    assert result["terms_status"] == "reviewed"
+    assert result["terms_evidence_url"] == "https://www.example.test/terms-and-conditions"
+    assert "operational API" not in result.get("error", "")
+    connection.close()
+
+
 def test_row4_policy_fetch_uses_html_accept_header(tmp_path):
     from marketradar.db import connect
     from marketradar.source_verification import SourceVerificationEngine
