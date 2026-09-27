@@ -76,6 +76,27 @@ def test_row4_verification_fetches_direct_terms_candidate(tmp_path):
     connection.close()
 
 
+def test_row4_policy_fetch_uses_html_accept_header(tmp_path):
+    from marketradar.db import connect
+    from marketradar.source_verification import SourceVerificationEngine
+
+    connection = connect(tmp_path / "row4-policy-headers.db")
+    source = {
+        "name": "Row4PolicyHeaderSource",
+        "base_url": "https://api.example.test/v1/jobs",
+        "adapter": "json",
+        "status": "active",
+        "allow_hosts": ["api.example.test"],
+        "policy_hosts": ["www.example.test"],
+        "access_scope": "public",
+        "terms_status": "needs_review",
+    }
+    engine = SourceVerificationEngine(connection, [source], search_provider=None, surface_scan_pages=1)
+    headers = dict(engine.policy_http.sources[source["name"]].headers)
+    assert headers["Accept"] == "text/html,application/xhtml+xml,text/plain,*/*"
+    connection.close()
+
+
 def test_row4_policy_host_is_separate_from_operational_host(tmp_path):
     from marketradar.db import connect
     from marketradar.source_verification import SourceVerificationEngine
