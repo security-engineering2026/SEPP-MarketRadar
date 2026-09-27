@@ -78,6 +78,19 @@ def _surface_links(body: bytes, base_url: str, max_links: int = 80) -> list[str]
         if len(out)>=max_links: break
     return out
 
+def _policy_origin(record: dict, fallback_url: str) -> str:
+    hosts = tuple(
+        str(h).strip().lower().rstrip(".")
+        for h in (record.get("policy_hosts") or ())
+        if isinstance(h, str) and str(h).strip()
+    )
+    if hosts:
+        parsed = urlparse(fallback_url)
+        scheme = parsed.scheme if parsed.scheme in {"http", "https"} else "https"
+        return f"{scheme}://{hosts[0]}/"
+    return fallback_url
+
+
 def _candidate_policy_links(base_url: str) -> list[str]:
     parsed = urlparse(base_url)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
@@ -155,6 +168,18 @@ class SourceVerificationEngine:
         self.records={r['name']:r for r in source_records}
         sources=[Source(r['name'],r['base_url'],r.get('adapter','json'),r.get('status','candidate'),tuple(r.get('allow_hosts',[])),r.get('access_scope','public'),tuple((r.get('headers') or {}).items())) for r in source_records]
         self.http=Federation(sources, timeout=timeout, max_workers=max_workers)
+        policy_sources=[]
+        for r in source_records:
+            operational_hosts=tuple(r.get('allow_hosts') or ())
+            declared_policy_hosts=tuple(r.get('policy_hosts') or ())
+            policy_hosts=tuple(dict.fromkeys([*declared_policy_hosts, *operational_hosts]))
+            policy_sources.append(Source(
+                r['name'], _policy_origin(r, r.get('base_url','')),
+                r.get('adapter','json'), r.get('status','candidate'),
+                policy_hosts, r.get('access_scope','public'),
+                tuple((r.get('headers') or {}).items())
+            ))
+        self.policy_http=Federation(policy_sources, timeout=timeout, max_workers=max_workers)
         self.max_workers=max(1,min(max_workers,24)); self.max_policy_pages=max(1,min(max_policy_pages,8)); self.surface_scan_pages=max(1,min(int(surface_scan_pages),64)); self.search=search_provider or WebSearchProvider(timeout=timeout); self.policy_search_interval_days=max(1,int(policy_search_interval_days))
 
     def _policy_search(self, r, text, links):
@@ -164,18 +189,23 @@ class SourceVerificationEngine:
         """
         if not self.search.available(): return [], []
         if r.get('iran_eligibility') not in (None, '', 'UNKNOWN'): return [], []
-        host=urlparse(r.get('base_url','')).hostname or ''
-        if not host: return [], []
+        hosts=tuple(r.get('policy_hosts') or r.get('allow_hosts') or ())
+        if not hosts:
+            host=urlparse(r.get('base_url','')).hostname or ''
+            hosts=(host,) if host else ()
+        if not hosts: return [], []
         found=[]; snippets=[]
-        for query in (f'site:{host} Iran sanctions terms eligibility', f'site:{host} Iran KYC payout payment'):
-            try:
-                results=self.search.search(query,5)
-            except SearchProviderError:
-                continue
-            for item in results:
-                u=item.get('url')
-                if u and urlparse(u).hostname and urlparse(u).hostname.lower().endswith(host.lower()) and u not in found:
-                    found.append(u); snippets.append(item.get('snippet',''))
+        for host in hosts:
+            for query in (f'site:{host} Iran sanctions terms eligibility', f'site:{host} Iran KYC payout payment'):
+                try:
+                    results=self.search.search(query,5)
+                except SearchProviderError:
+                    continue
+                for item in results:
+                    u=item.get('url')
+                    if u and urlparse(u).hostname and urlparse(u).hostname.lower() == host.lower() and u not in found:
+                        found.append(u); snippets.append(item.get('snippet',''))
+                    if len(found)>=4: break
                 if len(found)>=4: break
             if len(found)>=4: break
         return found, snippets
@@ -202,14 +232,14 @@ class SourceVerificationEngine:
                 elif any(k in low for k in ('forum','community','discussion','thread')): kind='community'
                 endpoint_rows.append((link,kind))
             pages=[]
-            candidate_links = _candidate_policy_links(obs['url'])
+            candidate_links = _candidate_policy_links(_policy_origin(r, obs['url']))
             queue=list(dict.fromkeys(candidate_links + [u for u in _surface_links(obs['body'], obs['url'], 40)] + [u for u,_ in endpoint_rows[:self.max_policy_pages + 4]]))[:self.surface_scan_pages]
             seen=set(queue); fetched=0
             # Public internal surfaces are crawled shallowly so account limits, subscriptions, application rules, payout pages and terms are not missed merely because they are not linked from a policy page.
             while queue and fetched < self.surface_scan_pages:
                 link=queue.pop(0)
                 try:
-                    child=self.http.fetch(name, link); fetched += 1
+                    child=self.policy_http.fetch(name, link); fetched += 1
                     child_text=_html_text(child['body']); pages.append((child['url'], child_text))
                     for nxt in _surface_links(child['body'], child['url'], 40):
                         if nxt not in seen and len(seen) < self.surface_scan_pages*4:
