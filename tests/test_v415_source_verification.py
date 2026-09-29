@@ -76,6 +76,45 @@ def test_row4_verification_fetches_direct_terms_candidate(tmp_path):
     connection.close()
 
 
+def test_row4_declared_policy_path_is_probed_before_default_candidates(tmp_path):
+    from marketradar.db import connect
+    from marketradar.source_verification import SourceVerificationEngine
+
+    connection = connect(tmp_path / "row4-policy-path.db")
+    source = {
+        "name": "Row4DeclaredPolicyPathSource",
+        "base_url": "https://example.test/jobs",
+        "adapter": "json",
+        "status": "active",
+        "allow_hosts": ["example.test"],
+        "access_scope": "public",
+        "terms_status": "needs_review",
+        "policy_paths": ["/legal/terms-of-service"],
+    }
+    engine = SourceVerificationEngine(connection, [source], search_provider=None, surface_scan_pages=1)
+    seen = []
+
+    def fake_fetch(name, url=None):
+        if url is None:
+            return {"body": b"<html><body>Jobs</body></html>", "url": source["base_url"],
+                    "status": 200, "bytes": 32, "sha256": "home"}
+        seen.append(url)
+        if url == "https://example.test/legal/terms-of-service":
+            return {"body": b"<html><body>Terms of Service. These conditions apply to users.</body></html>",
+                    "url": url, "status": 200, "bytes": 74, "sha256": "terms"}
+        raise RuntimeError("not found")
+
+    engine.http.fetch = fake_fetch
+    engine.policy_http.fetch = fake_fetch
+    result = engine._one(source["name"])
+
+    assert seen
+    assert seen[0] == "https://example.test/legal/terms-of-service"
+    assert result["terms_evidence_url"] == "https://example.test/legal/terms-of-service"
+    assert result["terms_status"] == "reviewed"
+    connection.close()
+
+
 def test_row4_terms_close_when_operational_api_is_unavailable(tmp_path):
     from marketradar.db import connect
     from marketradar.source_verification import SourceVerificationEngine
