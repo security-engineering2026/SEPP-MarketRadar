@@ -199,7 +199,7 @@ A new chat must not replace this with:
 
 As of 2026-09-29:
 
-- Current `main`: `2b7875b6b0a11b476bc64e6c69b996bdcfae18c1`.
+- Current `main` is always authoritative; the exact checkpoint SHA is recorded in `docs/DEBUG_HANDOFF.md`.
 - Rows 1-3 are PASS/CLOSED and must not be repeated without impact analysis.
 - Row 4 is OPEN.
 - Row 4 concerns closure of active-source Terms/Legal evidence warnings.
