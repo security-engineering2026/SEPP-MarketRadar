@@ -109,7 +109,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://weworkremotely.com/terms-and-conditions",
+      "https://weworkremotely.com/privacy"
+    ]
   },
   {
     "name": "Remotive",
@@ -571,7 +575,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.bayt.com/en/pages/terms/"
+    ]
   },
   {
     "name": "GulfTalent_UAE",
@@ -613,7 +620,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.gulftalent.com/terms",
+      "https://www.gulftalent.com/privacy-policy"
+    ]
   },
   {
     "name": "Wuzzuf_Egypt",
@@ -655,7 +666,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://wuzzuf.net/user_agreement/",
+      "https://wuzzuf.net/policies"
+    ]
   },
   {
     "name": "TokyoDev_Japan",
@@ -697,7 +712,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.tokyodev.com/privacy-policy"
+    ]
   },
   {
     "name": "JapanDev",
@@ -739,7 +757,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://japan-dev.com/docs/privacy_policy.pdf"
+    ]
   },
   {
     "name": "Wanted_Korea",
@@ -959,7 +980,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://jobinja.ir/knowledge/job-seeker-faq/pages/job-seeker-tos"
+    ]
   },
   {
     "name": "JobVision_Iran",
@@ -1170,7 +1194,10 @@
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
     "discovery_basis": "existing_v4.14_registry",
-    "proposal_limit": "max_open_projects=1;max_pending_applications=1"
+    "proposal_limit": "max_open_projects=1;max_pending_applications=1",
+    "policy_paths": [
+      "https://parscoders.com/faq-new"
+    ]
   },
   {
     "name": "Karlancer_Iran",
@@ -3469,7 +3496,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.gulftalent.com/terms",
+      "https://www.gulftalent.com/privacy-policy"
+    ]
   },
   {
     "name": "Akhtaboot_Jordan",
@@ -3553,7 +3584,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.naukrigulf.com/terms-and-conditions",
+      "https://www.naukrigulf.com/ni/nilinks/nkr_links.php?con=&flag=&open=privacy"
+    ]
   },
   {
     "name": "GulfJobs",
@@ -3721,7 +3756,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.mubawab.ma/en/privacy",
+      "https://www.mubawab.ma/privacy"
+    ]
   },
   {
     "name": "HiredChina",
@@ -3763,7 +3802,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.hiredchina.com/en/terms",
+      "https://www.hiredchina.com/en/privacy"
+    ]
   },
   {
     "name": "TokyoDev",
@@ -3805,7 +3848,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.tokyodev.com/privacy-policy"
+    ]
   },
   {
     "name": "Daijob_Japan",
@@ -3889,7 +3935,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.careercross.com/en/article/detail-1697",
+      "https://www.careercross.com/en/article/detail-590"
+    ]
   },
   {
     "name": "Zigbang_Jobs",
@@ -4015,7 +4065,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.rabota.ru/info/"
+    ]
   },
   {
     "name": "SuperJob_Russia",
@@ -4057,7 +4110,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.superjob.ru/info/personalnye_dannye.html"
+    ]
   },
   {
     "name": "Headhunter_KZ",
@@ -4309,7 +4365,13 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://en.boss.az/pages/terms-conditions"
+    ],
+    "policy_hosts": [
+      "en.boss.az"
+    ]
   },
   {
     "name": "JobSearch_Azerbaijan",
