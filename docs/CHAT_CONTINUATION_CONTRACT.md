@@ -11,14 +11,21 @@ Every new engineering chat MUST continue from the repository's current evidenced
 
 This document controls the assistant's engineering workflow. It does not add product requirements to the System Manifest.
 
-## 1. Source of truth
+## 1. Source-of-truth hierarchy
 
-1. Current `main` is the source of truth.
-2. Git history is the audit trail.
-3. Open or stale branches/PRs are not authoritative unless deliberately integrated into `main`.
-4. Historical PASS evidence remains historical; a later change can reopen an affected requirement.
-5. Closed rows must not be re-executed unless impact analysis shows they were reopened.
-6. UNKNOWN and OPEN remain explicit states. OPEN is never PASS.
+When instructions appear to conflict, use this hierarchy:
+
+1. Current `main` repository state and Git history are the implementation/audit truth.
+2. `docs/MANIFEST.md` is the normative product/system contract.
+3. `docs/REMAINING_WORK_MASTER_TABLE.md` is the normative execution queue and defines the order of remaining rows.
+4. `docs/CHAT_CONTINUATION_CONTRACT.md` defines the engineering-chat execution method.
+5. `docs/DEBUG_HANDOFF.md` records the current checkpoint and next action; it cannot override the Manifest or execution queue.
+6. Open PRs/branches are candidates only. They are not authoritative until deliberately integrated into `main`.
+7. Older chat instructions, stale handoffs, old execution tables, and historical planning documents are non-authoritative when they conflict with the sources above.
+
+The old `docs/EXECUTION_CONTRACT_31_ROWS.md` is historical. It was superseded by `docs/REMAINING_WORK_MASTER_TABLE.md` and must not be used as the current execution order.
+
+Historical PASS evidence remains historical; a later change can reopen an affected requirement. Closed rows must not be re-executed unless impact analysis shows they were reopened. UNKNOWN and OPEN remain explicit states. OPEN is never PASS.
 
 ## 2. Required continuation sequence
 
@@ -26,7 +33,9 @@ Every chat MUST use this sequence:
 
 ```
 INSPECT CURRENT MAIN
+  -> READ MANIFEST + REMAINING WORK MASTER TABLE + DEBUG HANDOFF
   -> IDENTIFY CURRENT OPEN ROW / DEFECT
+  -> INSPECT CURRENT ACTIVE CANDIDATE/EVIDENCE
   -> DEFINE ONE BOUNDED CHANGE
   -> IMPLEMENT SMALLEST COHERENT INCREMENT
   -> ADD/UPDATE REGRESSION COVERAGE
@@ -102,11 +111,15 @@ For normal engineering work:
 - work against current `main`;
 - create a reviewable logical branch/PR when a change is required;
 - do not create multiple competing branches for the same defect;
-- do not continue from a stale branch when a mainline-integrated continuation already exists;
+- do not continue from a stale branch when a newer candidate supersedes it;
 - before creating another patch, compare the candidate branch with current `main`;
 - merge only after the required review/evidence gate.
 
-For the current Row 4 work, PR #73 is the current mainline-integrated qualification candidate. PR #72 is historical/stale and must not be treated as the active source of truth.
+For the current Row 4 work:
+- PR #72 is stale and is not the active candidate.
+- PR #73 is the current Row 4 qualification candidate based on current main.
+- PR #73 is OPEN and UNMERGED. It is not mainline-integrated and is not itself Row 4 PASS.
+- Row 4 remains OPEN until its required runtime qualification produces the required evidence and the change is deliberately integrated into `main`.
 
 ## 7. Chat-to-repository handoff
 
@@ -146,13 +159,13 @@ The repository-local autonomous coding/supervisor/overnight execution mechanism 
 
 This chat contract therefore does NOT authorize or recreate an autonomous coding loop inside MarketRadar.
 
-Live engineering validation remains through the existing repository CI and the user's permitted local Windows execution environment.
+Live engineering validation remains through existing GitHub Actions/repository CI or an explicit user-approved local Windows execution command. Do not create or escalate to a self-hosted runner request merely to advance a row.
 
 ## 10. No runner escalation
 
 Do not introduce new requests to the user's self-hosted Windows runner as a default recovery mechanism.
 
-If an environment-specific gate is required, first inspect existing CI evidence and determine whether the required evidence can be obtained without changing the user's runner setup.
+If an environment-specific gate is required, first inspect existing CI evidence and determine whether the required evidence can be obtained without changing the user's runner setup. If local Windows execution is genuinely required, give the user the exact bounded command and wait for its real output.
 
 ## 11. Model/strategy lock
 
@@ -160,6 +173,7 @@ All future engineering chats for this repository MUST preserve the current metho
 
 ```
 current main
+-> current normative requirements
 -> current evidence
 -> one concrete gap
 -> smallest coherent change
@@ -183,25 +197,29 @@ A new chat must not replace this with:
 
 ## 12. Current checkpoint
 
-As of this contract's creation:
+As of 2026-09-29:
 
+- Current `main`: `2b7875b6b0a11b476bc64e6c69b996bdcfae18c1`.
 - Rows 1-3 are PASS/CLOSED and must not be repeated without impact analysis.
 - Row 4 is OPEN.
 - Row 4 concerns closure of active-source Terms/Legal evidence warnings.
 - Current active-source population is 48.
-- The latest mainline-integrated Row 4 candidate is PR #73.
-- Row 4 remains OPEN until its dedicated runtime qualification produces the required evidence.
-- The next chat must inspect current `main` and PR #73 evidence before changing code.
+- PR #72 is stale and must not be used as the active candidate.
+- PR #73 (`qual/row4-mainline-integrated`) is the current Row 4 candidate, OPEN and UNMERGED.
+- PR #73 is mergeable according to the current GitHub PR metadata, but that does not constitute qualification PASS.
+- Row 4 remains OPEN until the dedicated runtime qualification produces the required evidence.
+- The next chat must inspect current `main`, the current execution queue, and PR #73 evidence before changing code.
 
 ## 13. Definition of a good next chat
 
-A correct new chat should be able to begin with:
+A correct new chat should begin with:
 
 ```
 Read:
   docs/CHAT_CONTINUATION_CONTRACT.md
   docs/DEBUG_HANDOFF.md
   docs/MANIFEST.md
+  docs/REMAINING_WORK_MASTER_TABLE.md
 
 Then:
   inspect current main
