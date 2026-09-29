@@ -253,3 +253,40 @@ def test_row4_active_source_review_warning_closes_when_policy_evidence_is_execut
     assert row[1] == "AUTOMATIC_POLICY_VERIFICATION"
     assert row[2] == "https://example.test/terms"
     connection.close()
+
+
+def test_row4_default_privacy_policy_candidate_can_close_terms(tmp_path):
+    from marketradar.db import connect
+    from marketradar.source_verification import SourceVerificationEngine
+
+    connection = connect(tmp_path / "row4-privacy-policy.db")
+    source = {
+        "name": "Row4PrivacyPolicySource",
+        "base_url": "https://example.test/jobs",
+        "adapter": "json",
+        "status": "active",
+        "allow_hosts": ["example.test"],
+        "access_scope": "public",
+        "terms_status": "needs_review",
+    }
+    engine = SourceVerificationEngine(connection, [source], search_provider=None, surface_scan_pages=1)
+    seen = []
+
+    def fake_fetch(name, url=None):
+        if url is None:
+            return {"body": b"<html><body>Jobs</body></html>", "url": source["base_url"],
+                    "status": 200, "bytes": 32, "sha256": "home"}
+        seen.append(url)
+        if url == "https://example.test/privacy-policy":
+            return {"body": b"<html><body>Privacy Policy and terms governing use of the service.</body></html>",
+                    "url": url, "status": 200, "bytes": 86, "sha256": "privacy"}
+        raise RuntimeError("not found")
+
+    engine.http.fetch = fake_fetch
+    engine.policy_http.fetch = fake_fetch
+    result = engine._one(source["name"])
+
+    assert "https://example.test/privacy-policy" in seen
+    assert result["terms_evidence_url"] == "https://example.test/privacy-policy"
+    assert result["terms_status"] == "reviewed"
+    connection.close()
