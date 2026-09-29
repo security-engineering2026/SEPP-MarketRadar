@@ -108,6 +108,8 @@ def _candidate_policy_links(base_url: str, policy_paths=None) -> list[str]:
         "terms",
         "legal/terms",
         "legal",
+        "privacy-policy",
+        "policies",
         "user-agreement",
         "conditions",
     )
