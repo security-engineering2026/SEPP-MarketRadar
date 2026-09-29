@@ -145,3 +145,14 @@ Use the newest main commit as the source of truth. Inspect the next GitHub Actio
 - Identified gap: baseline _one() did not explicitly probe bounded same-origin Terms/Legal candidate endpoints before classification, so registry terms URLs were not reliably converted into fetched authoritative terms evidence.
 - A gap-only patch and regression test were prepared on PR #72 (qual/row4-terms-evidence). PR remains OPEN and has not been accepted as Row 4 PASS.
 - Row 4 must remain OPEN until the patch is executed and the 48-source active warning state is revalidated with actual evidence.
+
+## 2026-09-29 — Chat Continuation Contract
+
+- Added `docs/CHAT_CONTINUATION_CONTRACT.md` to make the current engineering-chat methodology repository-visible and durable.
+- Every new chat must start from current `main`, read the continuation contract + DEBUG_HANDOFF + Manifest, identify one current concrete gap, make the smallest coherent change, run direct regression, inspect actual execution evidence, and update the handoff before continuing.
+- Closed rows are not repeated without impact analysis; OPEN/UNKNOWN are never silently promoted to PASS.
+- Multiple competing branches for the same defect are prohibited; current mainline-integrated work is authoritative over stale branches.
+- The repository-local autonomous coding/supervisor/overnight mechanism remains removed. This contract does not recreate it.
+- Current qualification state: Rows 1-3 PASS/CLOSED; Row 4 OPEN.
+- Current Row 4 mainline-integrated candidate: PR #73. Row 4 remains OPEN until dedicated runtime qualification produces the required evidence.
+- Next chat action: inspect current main and PR #73 evidence before making any code change.
