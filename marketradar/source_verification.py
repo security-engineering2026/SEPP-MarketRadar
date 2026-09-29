@@ -91,12 +91,17 @@ def _policy_origin(record: dict, fallback_url: str) -> str:
     return fallback_url
 
 
-def _candidate_policy_links(base_url: str) -> list[str]:
+def _candidate_policy_links(base_url: str, policy_paths=None) -> list[str]:
     parsed = urlparse(base_url)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         return []
     origin = f"{parsed.scheme}://{parsed.netloc}/"
-    paths = (
+    explicit_paths = tuple(
+        str(path).lstrip("/")
+        for path in (policy_paths or ())
+        if isinstance(path, str) and str(path).strip()
+    )
+    default_paths = (
         "terms-and-conditions",
         "terms-of-service",
         "terms-of-use",
@@ -106,6 +111,7 @@ def _candidate_policy_links(base_url: str) -> list[str]:
         "user-agreement",
         "conditions",
     )
+    paths = tuple(dict.fromkeys([*explicit_paths, *default_paths]))
     return [urljoin(origin, path) for path in paths]
 
 
@@ -251,7 +257,7 @@ class SourceVerificationEngine:
                 elif any(k in low for k in ('forum','community','discussion','thread')): kind='community'
                 endpoint_rows.append((link,kind))
             pages=[]
-            candidate_links = _candidate_policy_links(_policy_origin(r, obs['url']))
+            candidate_links = _candidate_policy_links(_policy_origin(r, obs['url']), r.get('policy_paths'))
             queue=list(dict.fromkeys(candidate_links + [u for u in _surface_links(obs['body'], obs['url'], 40)] + [u for u,_ in endpoint_rows[:self.max_policy_pages + 4]]))[:self.surface_scan_pages]
             seen=set(queue); fetched=0
             # Public internal surfaces are crawled shallowly so account limits, subscriptions, application rules, payout pages and terms are not missed merely because they are not linked from a policy page.
