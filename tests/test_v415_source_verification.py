@@ -91,7 +91,7 @@ def test_row4_declared_policy_path_is_probed_before_default_candidates(tmp_path)
         "terms_status": "needs_review",
         "policy_paths": ["/legal/terms-of-service"],
     }
-    engine = SourceVerificationEngine(connection, [source], search_provider=None, surface_scan_pages=7)
+    engine = SourceVerificationEngine(connection, [source], search_provider=None, surface_scan_pages=1)
     seen = []
 
     def fake_fetch(name, url=None):
