@@ -156,3 +156,17 @@ Use the newest main commit as the source of truth. Inspect the next GitHub Actio
 - Current qualification state: Rows 1-3 PASS/CLOSED; Row 4 OPEN.
 - Current Row 4 mainline-integrated candidate: PR #73. Row 4 remains OPEN until dedicated runtime qualification produces the required evidence.
 - Next chat action: inspect current main and PR #73 evidence before making any code change.
+
+
+## 2026-09-29 — Continuation Contract Correction
+
+- Current `main` is `2b7875b6b0a11b476bc64e6c69b996bdcfae18c1`.
+- `docs/REMAINING_WORK_MASTER_TABLE.md` is the normative remaining-work execution queue and supersedes the historical `docs/EXECUTION_CONTRACT_31_ROWS.md`.
+- `docs/CHAT_CONTINUATION_CONTRACT.md` now explicitly establishes the source-of-truth hierarchy and conflict resolution rules.
+- PR #72 is stale and is not the active Row 4 candidate.
+- PR #73 is the current Row 4 qualification candidate based on current main. It is OPEN, UNMERGED, and currently reported by GitHub as mergeable. It is not Row 4 PASS.
+- The phrase "mainline-integrated candidate" is intentionally removed from the active continuation language: PR #73 is a candidate based on main, not integrated into main.
+- No new self-hosted runner request is authorized by the continuation contract. Existing CI or an explicit bounded user-run local command is preferred.
+- Historical sections above remain audit history and are not to be interpreted as current execution instructions when they conflict with the current checkpoint.
+- Next action: inspect PR #73's actual qualification evidence/checks, then perform only the next required Row 4 action.
+
