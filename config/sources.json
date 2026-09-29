@@ -1281,7 +1281,13 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_hosts": [
+      "s2.anjammidam.com"
+    ],
+    "policy_paths": [
+      "/support/terms-of-service"
+    ]
   },
   {
     "name": "Typiran_Iran",
