@@ -269,7 +269,7 @@ def test_row4_default_privacy_policy_candidate_can_close_terms(tmp_path):
         "access_scope": "public",
         "terms_status": "needs_review",
     }
-    engine = SourceVerificationEngine(connection, [source], search_provider=None, surface_scan_pages=1)
+    engine = SourceVerificationEngine(connection, [source], search_provider=None, surface_scan_pages=7)
     seen = []
 
     def fake_fetch(name, url=None):
