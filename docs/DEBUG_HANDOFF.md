@@ -160,7 +160,7 @@ Use the newest main commit as the source of truth. Inspect the next GitHub Actio
 
 ## 2026-09-29 — Continuation Contract Correction
 
-- Current `main` is `2b7875b6b0a11b476bc64e6c69b996bdcfae18c1`.
+- Current `main` at this checkpoint is `d5aa958ea6bf659df86263aa60205ef1ae0b42ce`.
 - `docs/REMAINING_WORK_MASTER_TABLE.md` is the normative remaining-work execution queue and supersedes the historical `docs/EXECUTION_CONTRACT_31_ROWS.md`.
 - `docs/CHAT_CONTINUATION_CONTRACT.md` now explicitly establishes the source-of-truth hierarchy and conflict resolution rules.
 - PR #72 is stale and is not the active Row 4 candidate.
