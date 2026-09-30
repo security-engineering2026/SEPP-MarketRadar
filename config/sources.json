@@ -1163,7 +1163,8 @@
     "adapter": "html_jobs",
     "status": "active",
     "allow_hosts": [
-      "karlancer.com"
+      "karlancer.com",
+      "www.karlancer.com"
     ],
     "verification_basis": "official_public_site_catalog",
     "source_kind": "job_marketplace",
