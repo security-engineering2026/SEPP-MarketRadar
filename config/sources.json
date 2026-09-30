@@ -577,7 +577,8 @@
     "execution_ready": false,
     "discovery_basis": "existing_v4.14_registry",
     "policy_paths": [
-      "https://www.bayt.com/en/pages/terms/"
+      "https://www.bayt.com/en/pages/terms/",
+      "https://www.bayt.com/en/pages/privacy-statement/"
     ]
   },
   {
@@ -1240,8 +1241,12 @@
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
     "discovery_basis": "existing_v4.14_registry",
-    "policy_hosts": ["www.karlancer.com"],
-    "policy_paths": ["https://www.karlancer.com/terms"]
+    "policy_hosts": [
+      "www.karlancer.com"
+    ],
+    "policy_paths": [
+      "https://www.karlancer.com/terms"
+    ]
   },
   {
     "name": "AnjamMidam_Iran",
@@ -3902,7 +3907,10 @@
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
     "discovery_basis": "existing_v4.14_registry",
-    "policy_paths": ["https://www.daijob.com/en/top/terms","https://www.daijob.com/aboutdaijob/privacy/"]
+    "policy_paths": [
+      "https://www.daijob.com/en/top/terms",
+      "https://www.daijob.com/aboutdaijob/privacy/"
+    ]
   },
   {
     "name": "CareerCross_Japan",
@@ -3947,7 +3955,8 @@
     "discovery_basis": "existing_v4.14_registry",
     "policy_paths": [
       "https://www.careercross.com/en/article/detail-1697",
-      "https://www.careercross.com/en/article/detail-590"
+      "https://www.careercross.com/en/article/detail-1366",
+      "https://www.careercross.com/en/article/detail-604"
     ]
   },
   {
@@ -3991,7 +4000,9 @@
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
     "discovery_basis": "existing_v4.14_registry",
-    "policy_paths": ["https://www.zigbang.com/event/notice"]
+    "policy_paths": [
+      "https://www.zigbang.com/event/notice"
+    ]
   },
   {
     "name": "HH_Russia",
@@ -4122,6 +4133,7 @@
     "execution_ready": false,
     "discovery_basis": "existing_v4.14_registry",
     "policy_paths": [
+      "https://www.superjob.ru/info/user_agreement.html",
       "https://www.superjob.ru/info/personalnye_dannye.html"
     ]
   },
@@ -4377,7 +4389,8 @@
     "execution_ready": false,
     "discovery_basis": "existing_v4.14_registry",
     "policy_paths": [
-      "https://en.boss.az/pages/terms-conditions"
+      "https://en.boss.az/pages/terms-conditions",
+      "https://en.react.boss.az/pages/privacy-policy"
     ],
     "policy_hosts": [
       "en.boss.az"
