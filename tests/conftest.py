@@ -2,6 +2,13 @@ import os
 import sys
 from pathlib import Path
 import pytest
+import importlib
+
+# Purge any preloaded third-party/local-shadowed marketradar modules before tests import them.
+for _name in list(sys.modules):
+    if _name == "marketradar" or _name.startswith("marketradar."):
+        del sys.modules[_name]
+importlib.invalidate_caches()
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT_STR = str(REPO_ROOT)
