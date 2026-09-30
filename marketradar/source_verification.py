@@ -165,6 +165,11 @@ def classify_content(text: str, url: str, link_urls: list[str], declared_policy_
         'evidence_urls': list(dict.fromkeys([url] + terms[:2] + payout[:2] + kyc_links[:2])),
     }
 
+class _DisabledSearchProvider:
+    def available(self):
+        return False
+
+
 class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
@@ -199,7 +204,7 @@ class SourceVerificationEngine:
                 tuple(policy_headers.items())
             ))
         self.policy_http=Federation(policy_sources, timeout=timeout, max_workers=max_workers)
-        self.max_workers=max(1,min(max_workers,24)); self.max_policy_pages=max(1,min(max_policy_pages,8)); self.surface_scan_pages=max(1,min(int(surface_scan_pages),64)); self.search=search_provider or WebSearchProvider(timeout=timeout); self.policy_search_interval_days=max(1,int(policy_search_interval_days))
+        self.max_workers=max(1,min(max_workers,24)); self.max_policy_pages=max(1,min(max_policy_pages,8)); self.surface_scan_pages=max(1,min(int(surface_scan_pages),64)); self.search=_DisabledSearchProvider() if search_provider is False else (search_provider or WebSearchProvider(timeout=timeout)); self.policy_search_interval_days=max(1,int(policy_search_interval_days))
 
     def _policy_fetch_fallback(self, name, url):
         """Fetch a public policy page through the system HTTP proxy stack.
@@ -269,6 +274,26 @@ class SourceVerificationEngine:
                 'attempts': 1,
                 'acquisition_provider': 'policy-urlopen-fallback',
             }
+
+    def _bounded_policy_fetch_fallback(self, name, url):
+        """Run the proxy-stack fallback without letting a blocked resolver pin a worker."""
+        result = []
+        error = []
+        def fetch():
+            try:
+                result.append(self._policy_fetch_fallback(name, url))
+            except Exception as exc:
+                error.append(exc)
+        worker = __import__("threading").Thread(target=fetch, name="sepp-policy-fallback", daemon=True)
+        worker.start()
+        worker.join(max(0.1, float(self.policy_http.timeout)))
+        if worker.is_alive():
+            raise TimeoutError("POLICY_FALLBACK_TIMEOUT")
+        if error:
+            raise error[0]
+        if not result:
+            raise RuntimeError("POLICY_FALLBACK_NO_RESULT")
+        return result[0]
 
     def _policy_search(self, r, text, links):
         """Use a search API only as an evidence locator; final classification still
@@ -347,7 +372,7 @@ class SourceVerificationEngine:
                     try:
                         child=self.policy_http.fetch(name, link)
                     except Exception:
-                        child=self._policy_fetch_fallback(name, link)
+                        child=self._bounded_policy_fetch_fallback(name, link)
                     fetched += 1
                     child_text=_html_text(child['body']); pages.append((child['url'], child_text))
                     for nxt in _surface_links(child['body'], child['url'], 40):
