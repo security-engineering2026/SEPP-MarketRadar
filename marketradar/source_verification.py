@@ -38,7 +38,7 @@ CRYPTO = {
     'DAI': re.compile(r"\bdai\b", re.I),
 }
 PAYOUT_TERMS = re.compile(r"\b(?:payout|withdraw|withdrawal|payment|paid|pay|earnings|settlement|transfer)\b", re.I)
-TERMS_HINTS = re.compile(r"\b(?:terms(?:\s+of\s+service)?|legal|policy|eligibility|acceptable\s+use|user\s+agreement|conditions)\b", re.I)
+TERMS_HINTS = re.compile(r"\b(?:terms(?:\s+of\s+service)?|legal|policy|policies|privacy(?:\s+policy)?|tos|eligibility|acceptable\s+use|user\s+agreement|conditions)\b", re.I)
 
 
 def _html_text(body: bytes) -> str:
@@ -127,7 +127,7 @@ def _evidence_windows(text: str, patterns: list[re.Pattern]) -> list[str]:
     return out[:4]
 
 
-def classify_content(text: str, url: str, link_urls: list[str]) -> dict:
+def classify_content(text: str, url: str, link_urls: list[str], declared_policy_urls: set[str] | None = None) -> dict:
     iran_claim=iran_policy_claims(text)
     kyc_claim=aggregate_kyc(text)
     crypto=[name for name, pat in CRYPTO.items() if pat.search(text)]
@@ -139,7 +139,8 @@ def classify_content(text: str, url: str, link_urls: list[str]) -> dict:
     if 'payoneer' in text.lower(): payment.append('PAYONEER')
     payment=list(dict.fromkeys(payment))
     verified_links=list(dict.fromkeys(link_urls))
-    terms=[u for u in verified_links if TERMS_HINTS.search(u)]
+    declared_policy_urls = declared_policy_urls or set()
+    terms=[u for u in verified_links if TERMS_HINTS.search(u) or u in declared_policy_urls]
     payout=[u for u in verified_links if re.search(r'payout|withdraw|payment|pay',u,re.I)]
     kyc_links=[u for u in verified_links if re.search(r'kyc|identity|verification',u,re.I)]
     confidence=0.55
@@ -279,7 +280,13 @@ class SourceVerificationEngine:
             # falsely blocking Iran eligibility or changing KYC/payment state.
             combined=text + ' ' + ' '.join(t for _,t in pages)
             verified_page_urls=[u for u,_ in pages]
-            result=classify_content(combined,obs['url'],verified_page_urls)
+            policy_origin = _policy_origin(r, obs['url'])
+            declared_policy_urls = {
+                urljoin(policy_origin, str(path).lstrip("/"))
+                for path in (r.get('policy_paths') or ())
+                if isinstance(path, str) and str(path).strip()
+            }
+            result=classify_content(combined,obs['url'],verified_page_urls,declared_policy_urls)
             evidence_urls=list(dict.fromkeys(result.get('evidence_urls',[]) + search_links + [u for u,_ in pages]))
             result['evidence_urls']=evidence_urls
             constraints=extract_source_constraints(combined,evidence_urls)
