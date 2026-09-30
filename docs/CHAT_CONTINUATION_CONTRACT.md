@@ -229,3 +229,14 @@ Then:
 ```
 
 No project history reconstruction from memory is required.
+
+
+## 2026-09-30 — Current Row 4 execution checkpoint
+
+- Row 4 remains OPEN.
+- Latest active candidate: `qual/row4-mainline-integrated`, commit `8587804070d3c382f88bd6d5c82d1878426348ee`.
+- Real Windows gate evidence: 48/48 checked, 29 terms reviewed, 19 terms pending, 29 evidence URLs, 16 live reachable, 32 dead.
+- Exact pending set: Bayt_MENA, Boss_Azerbaijan, CareerCross_Japan, Daijob_Japan, GulfTalent, GulfTalent_UAE, Headhunter_AZ, Headhunter_GE, HiredChina, JobSearch_Azerbaijan, Karlancer_Iran, Naukrigulf, Rabota_Russia, SuperJob_Russia, TokyoDev, TokyoDev_Japan, Typiran_Iran, WeWorkRemotely, Zigbang_Jobs.
+- Do not repeat broad diagnostics without first inspecting the existing evidence. Continue from the 19-source blocker set.
+- Latest Row 4 commits already applied: `cbd014e`, `5b58680`, `8587804`.
+- Next chat must inspect current candidate/main state, registry policy declarations, source-verification behavior, and the prior runtime evidence; then make one bounded fix, add regression coverage, commit, and require the user's real Windows pull/test cycle.
