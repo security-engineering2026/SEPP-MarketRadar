@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, re
+import json, re, hashlib, urllib.error, urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from html import unescape
@@ -196,6 +196,80 @@ class SourceVerificationEngine:
         self.policy_http=Federation(policy_sources, timeout=timeout, max_workers=max_workers)
         self.max_workers=max(1,min(max_workers,24)); self.max_policy_pages=max(1,min(max_policy_pages,8)); self.surface_scan_pages=max(1,min(int(surface_scan_pages),64)); self.search=search_provider or WebSearchProvider(timeout=timeout); self.policy_search_interval_days=max(1,int(policy_search_interval_days))
 
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+    def _policy_fetch_fallback(self, name, url):
+        """Fetch a public policy page through the system HTTP proxy stack.
+
+        Native Federation remains the primary transport. This fallback is used
+        only for policy evidence when direct socket acquisition is blocked by
+        local DNS/proxy/CDN behavior. Host-boundary validation and TLS
+        certificate verification remain mandatory.
+        """
+        source = self.policy_http.sources[name]
+        current = url
+        redirects = 0
+        headers = dict(source.headers)
+        headers.pop('Host', None)
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler(), _NoRedirectHandler())
+        while True:
+            self.policy_http._validate_target(source, current)
+            request = urllib.request.Request(current, headers=headers, method='GET')
+            try:
+                response = opener.open(request, timeout=self.policy_http.timeout)
+            except urllib.error.HTTPError as exc:
+                if 300 <= exc.code < 400:
+                    location = exc.headers.get('Location')
+                    exc.close()
+                    if not location:
+                        raise ValueError('REDIRECT_WITHOUT_LOCATION')
+                    redirects += 1
+                    if redirects > self.policy_http.max_redirects:
+                        raise ValueError('TOO_MANY_REDIRECTS')
+                    current = urljoin(current, location)
+                    continue
+                raise
+            try:
+                if 300 <= response.status < 400:
+                    location = response.headers.get('Location')
+                    response.close()
+                    if not location:
+                        raise ValueError('REDIRECT_WITHOUT_LOCATION')
+                    redirects += 1
+                    if redirects > self.policy_http.max_redirects:
+                        raise ValueError('TOO_MANY_REDIRECTS')
+                    current = urljoin(current, location)
+                    continue
+                body = response.read(self.policy_http.max_bytes + 1)
+                status = response.status
+                content_type = (response.headers.get('Content-Type') or '').lower()
+                final_url = response.geturl() or current
+            finally:
+                try:
+                    response.close()
+                except Exception:
+                    pass
+            self.policy_http._validate_target(source, final_url)
+            if len(body) > self.policy_http.max_bytes:
+                raise ValueError('RESPONSE_TOO_LARGE')
+            if status < 200 or status >= 300:
+                raise urllib.error.HTTPError(final_url, status, 'HTTP policy fetch failed', response.headers, None)
+            return {
+                'source': name,
+                'url': final_url,
+                'status': status,
+                'content_type': content_type,
+                'bytes': len(body),
+                'sha256': hashlib.sha256(body).hexdigest(),
+                'elapsed_ms': None,
+                'body': body,
+                'attempts': 1,
+                'acquisition_provider': 'policy-urlopen-fallback',
+            }
+
     def _policy_search(self, r, text, links):
         """Use a search API only as an evidence locator; final classification still
         requires fetching the actual source/policy page. This closes the blind spot
@@ -270,7 +344,11 @@ class SourceVerificationEngine:
             while queue and fetched < self.surface_scan_pages:
                 link=queue.pop(0)
                 try:
-                    child=self.policy_http.fetch(name, link); fetched += 1
+                    try:
+                        child=self.policy_http.fetch(name, link)
+                    except Exception:
+                        child=self._policy_fetch_fallback(name, link)
+                    fetched += 1
                     child_text=_html_text(child['body']); pages.append((child['url'], child_text))
                     for nxt in _surface_links(child['body'], child['url'], 40):
                         if nxt not in seen and len(seen) < self.surface_scan_pages*4:
