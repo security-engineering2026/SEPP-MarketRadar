@@ -97,7 +97,11 @@ def _candidate_policy_links(base_url: str, policy_paths=None) -> list[str]:
         return []
     origin = f"{parsed.scheme}://{parsed.netloc}/"
     explicit_paths = tuple(
-        str(path).lstrip("/")
+        (
+            str(path).strip()
+            if urlparse(str(path).strip()).scheme in {"http", "https"} and urlparse(str(path).strip()).netloc
+            else str(path).strip().lstrip("/")
+        )
         for path in (policy_paths or ())
         if isinstance(path, str) and str(path).strip()
     )
@@ -362,8 +366,25 @@ class SourceVerificationEngine:
                 elif any(k in low for k in ('forum','community','discussion','thread')): kind='community'
                 endpoint_rows.append((link,kind))
             pages=[]
-            candidate_links = _candidate_policy_links(_policy_origin(r, obs['url']), r.get('policy_paths'))
-            queue=list(dict.fromkeys(candidate_links + [u for u in _surface_links(obs['body'], obs['url'], 40)] + [u for u,_ in endpoint_rows[:self.max_policy_pages + 4]]))[:self.surface_scan_pages]
+            policy_origin = _policy_origin(r, obs['url'])
+            explicit_policy_links = []
+            for path in (r.get('policy_paths') or ()):
+                if not isinstance(path, str) or not path.strip():
+                    continue
+                raw_path = path.strip()
+                if urlparse(raw_path).scheme in {"http", "https"} and urlparse(raw_path).netloc:
+                    explicit_policy_links.append(raw_path)
+                else:
+                    explicit_policy_links.append(urljoin(policy_origin, raw_path.lstrip("/")))
+            default_policy_links = _candidate_policy_links(policy_origin, None)
+            discovered_links = [u for u in _surface_links(obs['body'], obs['url'], 40)]
+            endpoint_links = [u for u,_ in endpoint_rows[:self.max_policy_pages + 4]]
+            # Explicit registry URLs and search/discovered policy surfaces must win
+            # over generic /terms guesses. A one-page gate otherwise spends its only
+            # fetch on a 404/403 default candidate and never reaches the real Terms page.
+            queue=list(dict.fromkeys(
+                explicit_policy_links + search_links + discovered_links + endpoint_links + default_policy_links
+            ))[:self.surface_scan_pages]
             seen=set(queue); fetched=0
             # Public internal surfaces are crawled shallowly so account limits, subscriptions, application rules, payout pages and terms are not missed merely because they are not linked from a policy page.
             while queue and fetched < self.surface_scan_pages:
@@ -387,11 +408,15 @@ class SourceVerificationEngine:
             combined=text + ' ' + ' '.join(t for _,t in pages)
             verified_page_urls=[u for u,_ in pages]
             policy_origin = _policy_origin(r, obs['url'])
-            declared_policy_urls = {
-                urljoin(policy_origin, str(path).lstrip("/"))
-                for path in (r.get('policy_paths') or ())
-                if isinstance(path, str) and str(path).strip()
-            }
+            declared_policy_urls = set()
+            for path in (r.get('policy_paths') or ()):
+                if not isinstance(path, str) or not path.strip():
+                    continue
+                raw_path = path.strip()
+                if urlparse(raw_path).scheme in {"http", "https"} and urlparse(raw_path).netloc:
+                    declared_policy_urls.add(raw_path)
+                else:
+                    declared_policy_urls.add(urljoin(policy_origin, raw_path.lstrip("/")))
             result=classify_content(combined,obs['url'],verified_page_urls,declared_policy_urls)
             evidence_urls=list(dict.fromkeys(result.get('evidence_urls',[]) + search_links + [u for u,_ in pages]))
             result['evidence_urls']=evidence_urls
