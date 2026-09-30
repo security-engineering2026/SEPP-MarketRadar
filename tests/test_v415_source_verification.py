@@ -434,10 +434,10 @@ def test_row4_open_sources_terms_gate(tmp_path):
         engine = SourceVerificationEngine(
             connection,
             pending,
-            timeout=8,
-            max_workers=12,
+            timeout=3,
+            max_workers=24,
             max_policy_pages=1,
-            surface_scan_pages=4,
+            surface_scan_pages=1,
             search_provider=None,
         )
         results = engine.verify([r["name"] for r in pending])
