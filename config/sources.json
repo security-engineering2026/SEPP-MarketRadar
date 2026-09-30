@@ -3552,6 +3552,7 @@
     "discovery_basis": "existing_v4.14_registry",
     "policy_paths": [
       "https://www.gulftalent.com/terms",
+      "https://www.gulftalent.com/repository/int/GulfTalent_Terms_of_Service.pdf",
       "https://www.gulftalent.com/privacy-policy"
     ]
   },
