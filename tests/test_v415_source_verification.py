@@ -332,3 +332,22 @@ def test_row4_karlancer_registry_declares_official_policy_host_and_terms_path():
     source = next(x for x in rows if x["name"] == "Karlancer_Iran")
     assert source["policy_hosts"] == ["www.karlancer.com"]
     assert source["policy_paths"] == ["https://www.karlancer.com/terms"]
+
+
+def test_row4_policy_registry_uses_verified_official_endpoints():
+    import json
+    from pathlib import Path
+    rows = json.loads((Path(__file__).parents[1] / 'config' / 'sources.json').read_text(encoding='utf-8'))
+    expected = {
+        'Bayt_MENA': 'https://www.bayt.com/en/pages/terms/',
+        'CareerCross_Japan': 'https://www.careercross.com/en/article/detail-1697',
+        'Daijob_Japan': 'https://www.daijob.com/en/top/terms',
+        'GulfTalent': 'https://www.gulftalent.com/terms',
+        'HiredChina': 'https://www.hiredchina.com/en/terms',
+        'Naukrigulf': 'https://www.naukrigulf.com/terms-and-conditions',
+        'TokyoDev': 'https://www.tokyodev.com/privacy-policy',
+        'WeWorkRemotely': 'https://weworkremotely.com/terms-and-conditions',
+    }
+    by_name = {row['name']: row for row in rows}
+    for name, url in expected.items():
+        assert url in by_name[name].get('policy_paths', [])
