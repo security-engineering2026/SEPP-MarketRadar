@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, re
+import json, re, hashlib, os, shutil, subprocess, tempfile, urllib.error, urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from html import unescape
@@ -38,7 +38,7 @@ CRYPTO = {
     'DAI': re.compile(r"\bdai\b", re.I),
 }
 PAYOUT_TERMS = re.compile(r"\b(?:payout|withdraw|withdrawal|payment|paid|pay|earnings|settlement|transfer)\b", re.I)
-TERMS_HINTS = re.compile(r"\b(?:terms(?:\s+of\s+service)?|legal|policy|eligibility|acceptable\s+use|user\s+agreement|conditions)\b", re.I)
+TERMS_HINTS = re.compile(r"\b(?:terms(?:\s+of\s+service)?|legal|policy|policies|privacy(?:\s+policy)?|tos|eligibility|acceptable\s+use|user\s+agreement|conditions)\b", re.I)
 
 
 def _html_text(body: bytes) -> str:
@@ -78,6 +78,49 @@ def _surface_links(body: bytes, base_url: str, max_links: int = 80) -> list[str]
         if len(out)>=max_links: break
     return out
 
+def _policy_origin(record: dict, fallback_url: str) -> str:
+    hosts = tuple(
+        str(h).strip().lower().rstrip(".")
+        for h in (record.get("policy_hosts") or ())
+        if isinstance(h, str) and str(h).strip()
+    )
+    if hosts:
+        parsed = urlparse(fallback_url)
+        scheme = parsed.scheme if parsed.scheme in {"http", "https"} else "https"
+        return f"{scheme}://{hosts[0]}/"
+    return fallback_url
+
+
+def _candidate_policy_links(base_url: str, policy_paths=None) -> list[str]:
+    parsed = urlparse(base_url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return []
+    origin = f"{parsed.scheme}://{parsed.netloc}/"
+    explicit_paths = tuple(
+        (
+            str(path).strip()
+            if urlparse(str(path).strip()).scheme in {"http", "https"} and urlparse(str(path).strip()).netloc
+            else str(path).strip().lstrip("/")
+        )
+        for path in (policy_paths or ())
+        if isinstance(path, str) and str(path).strip()
+    )
+    default_paths = (
+        "terms-and-conditions",
+        "terms-of-service",
+        "terms-of-use",
+        "terms",
+        "legal/terms",
+        "legal",
+        "privacy-policy",
+        "policies",
+        "user-agreement",
+        "conditions",
+    )
+    paths = tuple(dict.fromkeys([*explicit_paths, *default_paths]))
+    return [urljoin(origin, path) for path in paths]
+
+
 def _evidence_windows(text: str, patterns: list[re.Pattern]) -> list[str]:
     out=[]
     for p in patterns:
@@ -88,7 +131,7 @@ def _evidence_windows(text: str, patterns: list[re.Pattern]) -> list[str]:
     return out[:4]
 
 
-def classify_content(text: str, url: str, link_urls: list[str]) -> dict:
+def classify_content(text: str, url: str, link_urls: list[str], declared_policy_urls: set[str] | None = None) -> dict:
     iran_claim=iran_policy_claims(text)
     kyc_claim=aggregate_kyc(text)
     crypto=[name for name, pat in CRYPTO.items() if pat.search(text)]
@@ -100,7 +143,8 @@ def classify_content(text: str, url: str, link_urls: list[str]) -> dict:
     if 'payoneer' in text.lower(): payment.append('PAYONEER')
     payment=list(dict.fromkeys(payment))
     verified_links=list(dict.fromkeys(link_urls))
-    terms=[u for u in verified_links if TERMS_HINTS.search(u)]
+    declared_policy_urls = declared_policy_urls or set()
+    terms=[u for u in verified_links if TERMS_HINTS.search(u) or u in declared_policy_urls]
     payout=[u for u in verified_links if re.search(r'payout|withdraw|payment|pay',u,re.I)]
     kyc_links=[u for u in verified_links if re.search(r'kyc|identity|verification',u,re.I)]
     confidence=0.55
@@ -125,6 +169,16 @@ def classify_content(text: str, url: str, link_urls: list[str]) -> dict:
         'evidence_urls': list(dict.fromkeys([url] + terms[:2] + payout[:2] + kyc_links[:2])),
     }
 
+class _DisabledSearchProvider:
+    def available(self):
+        return False
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 class SourceVerificationEngine:
     """Automatic source-policy monitor.
 
@@ -137,7 +191,180 @@ class SourceVerificationEngine:
         self.records={r['name']:r for r in source_records}
         sources=[Source(r['name'],r['base_url'],r.get('adapter','json'),r.get('status','candidate'),tuple(r.get('allow_hosts',[])),r.get('access_scope','public'),tuple((r.get('headers') or {}).items())) for r in source_records]
         self.http=Federation(sources, timeout=timeout, max_workers=max_workers)
-        self.max_workers=max(1,min(max_workers,24)); self.max_policy_pages=max(1,min(max_policy_pages,8)); self.surface_scan_pages=max(1,min(int(surface_scan_pages),64)); self.search=search_provider or WebSearchProvider(timeout=timeout); self.policy_search_interval_days=max(1,int(policy_search_interval_days))
+        policy_sources=[]
+        for r in source_records:
+            operational_hosts=tuple(r.get('allow_hosts') or ())
+            declared_policy_hosts=tuple(r.get('policy_hosts') or ())
+            policy_hosts=tuple(dict.fromkeys([*declared_policy_hosts, *operational_hosts]))
+            policy_headers = dict(r.get('headers') or {})
+            policy_headers['Accept'] = 'text/html,application/xhtml+xml,text/plain,*/*'
+            # Some public Terms pages reject API-style clients with 403. Policy evidence is an HTML surface, so use a browser-compatible identity without changing operational acquisition behavior.
+            policy_headers.setdefault('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36')
+            policy_headers.setdefault('Accept-Language', 'en-US,en;q=0.9')
+            policy_headers.setdefault('Referer', _policy_origin(r, r.get('base_url','')))
+            policy_headers.setdefault('Sec-Fetch-Dest', 'document')
+            policy_headers.setdefault('Sec-Fetch-Mode', 'navigate')
+            policy_headers.setdefault('Sec-Fetch-Site', 'same-origin')
+            policy_headers.setdefault('Upgrade-Insecure-Requests', '1')
+            policy_sources.append(Source(
+                r['name'], _policy_origin(r, r.get('base_url','')),
+                r.get('adapter','json'), r.get('status','candidate'),
+                policy_hosts, r.get('access_scope','public'),
+                tuple(policy_headers.items())
+            ))
+        self.policy_http=Federation(policy_sources, timeout=timeout, max_workers=max_workers)
+        self.max_workers=max(1,min(max_workers,24)); self.max_policy_pages=max(1,min(max_policy_pages,8)); self.surface_scan_pages=max(1,min(int(surface_scan_pages),64)); self.search=_DisabledSearchProvider() if search_provider is False else (search_provider or WebSearchProvider(timeout=timeout)); self.policy_search_interval_days=max(1,int(policy_search_interval_days))
+
+    def _policy_fetch_fallback(self, name, url):
+        """Fetch a public policy page through the system HTTP proxy stack.
+
+        Native Federation remains the primary transport. This fallback is used
+        only for policy evidence when direct socket acquisition is blocked by
+        local DNS/proxy/CDN behavior. Host-boundary validation and TLS
+        certificate verification remain mandatory.
+        """
+        source = self.policy_http.sources[name]
+        current = url
+        redirects = 0
+        headers = dict(source.headers)
+        headers.pop('Host', None)
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler(), _NoRedirectHandler())
+        while True:
+            self.policy_http._validate_target(source, current)
+            request = urllib.request.Request(current, headers=headers, method='GET')
+            try:
+                response = opener.open(request, timeout=self.policy_http.timeout)
+            except urllib.error.HTTPError as exc:
+                if 300 <= exc.code < 400:
+                    location = exc.headers.get('Location')
+                    exc.close()
+                    if not location:
+                        raise ValueError('REDIRECT_WITHOUT_LOCATION')
+                    redirects += 1
+                    if redirects > self.policy_http.max_redirects:
+                        raise ValueError('TOO_MANY_REDIRECTS')
+                    current = urljoin(current, location)
+                    continue
+                raise
+            try:
+                if 300 <= response.status < 400:
+                    location = response.headers.get('Location')
+                    response.close()
+                    if not location:
+                        raise ValueError('REDIRECT_WITHOUT_LOCATION')
+                    redirects += 1
+                    if redirects > self.policy_http.max_redirects:
+                        raise ValueError('TOO_MANY_REDIRECTS')
+                    current = urljoin(current, location)
+                    continue
+                body = response.read(self.policy_http.max_bytes + 1)
+                status = response.status
+                content_type = (response.headers.get('Content-Type') or '').lower()
+                final_url = response.geturl() or current
+            finally:
+                try:
+                    response.close()
+                except Exception:
+                    pass
+            self.policy_http._validate_target(source, final_url)
+            if len(body) > self.policy_http.max_bytes:
+                raise ValueError('RESPONSE_TOO_LARGE')
+            if status < 200 or status >= 300:
+                raise urllib.error.HTTPError(final_url, status, 'HTTP policy fetch failed', response.headers, None)
+            return {
+                'source': name,
+                'url': final_url,
+                'status': status,
+                'content_type': content_type,
+                'bytes': len(body),
+                'sha256': hashlib.sha256(body).hexdigest(),
+                'elapsed_ms': None,
+                'body': body,
+                'attempts': 1,
+                'acquisition_provider': 'policy-urlopen-fallback',
+            }
+
+    def _policy_fetch_curl(self, name, url):
+        """Use system curl as a bounded policy-only transport fallback."""
+        curl = shutil.which("curl.exe") or shutil.which("curl")
+        if not curl:
+            raise RuntimeError("CURL_NOT_AVAILABLE")
+        source = self.policy_http.sources[name]
+        self.policy_http._validate_target(source, url)
+        headers = dict(source.headers)
+        headers.pop("Host", None)
+        body_path = None
+        try:
+            body_file = tempfile.NamedTemporaryFile(prefix="sepp-policy-", suffix=".body", delete=False)
+            body_path = body_file.name
+            body_file.close()
+            command = [
+                curl, "--silent", "--show-error",
+                "--max-time", str(max(1, int(self.policy_http.timeout))),
+                "--connect-timeout", str(max(1, int(self.policy_http.timeout))),
+                "--max-filesize", str(self.policy_http.max_bytes + 1),
+                "--output", body_path,
+                "--write-out", "%{http_code}\\t%{url_effective}\\t%{content_type}",
+                "--url", url,
+            ]
+            for key, value in headers.items():
+                if isinstance(key, str) and isinstance(value, str) and key.lower() not in {"host", "content-length"}:
+                    command.extend(["--header", f"{key}: {value}"])
+            completed = subprocess.run(
+                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                text=True, timeout=max(1.5, float(self.policy_http.timeout) + 1.0),
+                check=False,
+            )
+            if completed.returncode != 0:
+                detail = completed.stderr.strip()
+                raise RuntimeError(f"CURL_EXIT_{completed.returncode}" + (f": {detail[:240]}" if detail else ""))
+            meta = completed.stdout.strip().split("\\t", 2)
+            if len(meta) != 3:
+                raise RuntimeError("CURL_METADATA_INVALID")
+            status = int(meta[0])
+            final_url = meta[1] or url
+            content_type = meta[2] or ""
+            self.policy_http._validate_target(source, final_url)
+            with open(body_path, "rb") as handle:
+                body = handle.read(self.policy_http.max_bytes + 1)
+            if len(body) > self.policy_http.max_bytes:
+                raise ValueError("RESPONSE_TOO_LARGE")
+            if status < 200 or status >= 300:
+                raise urllib.error.HTTPError(final_url, status, "HTTP policy fetch failed", {}, None)
+            return {
+                "source": name, "url": final_url, "status": status,
+                "content_type": content_type.lower(), "bytes": len(body),
+                "sha256": hashlib.sha256(body).hexdigest(), "elapsed_ms": None,
+                "body": body, "attempts": 1, "acquisition_provider": "policy-curl-fallback",
+            }
+        finally:
+            if body_path:
+                try:
+                    os.unlink(body_path)
+                except OSError:
+                    pass
+
+    def _bounded_policy_fetch_fallback(self, name, url):
+        """Run policy fallbacks without letting a blocked resolver pin a worker."""
+        result = []
+        error = []
+        def fetch():
+            try:
+                result.append(self._policy_fetch_fallback(name, url))
+            except Exception as exc:
+                error.append(exc)
+        worker = __import__("threading").Thread(target=fetch, name="sepp-policy-fallback", daemon=True)
+        worker.start()
+        worker.join(max(0.1, float(self.policy_http.timeout)))
+        if worker.is_alive():
+            raise TimeoutError("POLICY_FALLBACK_TIMEOUT")
+        if result:
+            return result[0]
+        first_error = error[0] if error else RuntimeError("POLICY_FALLBACK_NO_RESULT")
+        try:
+            return self._policy_fetch_curl(name, url)
+        except Exception:
+            raise first_error
 
     def _policy_search(self, r, text, links):
         """Use a search API only as an evidence locator; final classification still
@@ -146,26 +373,48 @@ class SourceVerificationEngine:
         """
         if not self.search.available(): return [], []
         if r.get('iran_eligibility') not in (None, '', 'UNKNOWN'): return [], []
-        host=urlparse(r.get('base_url','')).hostname or ''
-        if not host: return [], []
+        hosts=tuple(r.get('policy_hosts') or r.get('allow_hosts') or ())
+        if not hosts:
+            host=urlparse(r.get('base_url','')).hostname or ''
+            hosts=(host,) if host else ()
+        if not hosts: return [], []
         found=[]; snippets=[]
-        for query in (f'site:{host} Iran sanctions terms eligibility', f'site:{host} Iran KYC payout payment'):
-            try:
-                results=self.search.search(query,5)
-            except SearchProviderError:
-                continue
-            for item in results:
-                u=item.get('url')
-                if u and urlparse(u).hostname and urlparse(u).hostname.lower().endswith(host.lower()) and u not in found:
-                    found.append(u); snippets.append(item.get('snippet',''))
+        for host in hosts:
+            for query in (f'site:{host} Iran sanctions terms eligibility', f'site:{host} Iran KYC payout payment'):
+                try:
+                    results=self.search.search(query,5)
+                except SearchProviderError:
+                    continue
+                for item in results:
+                    u=item.get('url')
+                    if u and urlparse(u).hostname and urlparse(u).hostname.lower() == host.lower() and u not in found:
+                        found.append(u); snippets.append(item.get('snippet',''))
+                    if len(found)>=4: break
                 if len(found)>=4: break
             if len(found)>=4: break
         return found, snippets
 
     def _one(self, name):
         r=self.records[name]
+        operational_error = None
         try:
             obs=self.http.fetch(name)
+            operational_reachable = True
+        except Exception as exc:
+            # Policy/Terms evidence is an independent verification surface. An
+            # operational API failure must not prevent closure of the Row 4
+            # Terms warning when the declared policy host is reachable.
+            operational_error = type(exc).__name__ + ': ' + str(exc)
+            policy_base = _policy_origin(r, r.get('base_url',''))
+            obs = {
+                'body': b'',
+                'url': policy_base,
+                'status': None,
+                'bytes': 0,
+                'sha256': '',
+            }
+            operational_reachable = False
+        try:
             text=_html_text(obs['body'])
             links=_links(obs['body'],obs['url'])
             search_links, search_snippets = self._policy_search(r, text, links)
@@ -184,13 +433,42 @@ class SourceVerificationEngine:
                 elif any(k in low for k in ('forum','community','discussion','thread')): kind='community'
                 endpoint_rows.append((link,kind))
             pages=[]
-            queue=list(dict.fromkeys([u for u in _surface_links(obs['body'], obs['url'], 40)] + [u for u,_ in endpoint_rows[:self.max_policy_pages + 4]]))[:self.surface_scan_pages]
+            policy_origin = _policy_origin(r, obs['url'])
+            explicit_policy_links = []
+            for path in (r.get('policy_paths') or ()):
+                if not isinstance(path, str) or not path.strip():
+                    continue
+                raw_path = path.strip()
+                if urlparse(raw_path).scheme in {"http", "https"} and urlparse(raw_path).netloc:
+                    explicit_policy_links.append(raw_path)
+                else:
+                    explicit_policy_links.append(urljoin(policy_origin, raw_path.lstrip("/")))
+            default_policy_links = _candidate_policy_links(policy_origin, None)
+            discovered_links = [u for u in _surface_links(obs['body'], obs['url'], 40)]
+            endpoint_links = [u for u,_ in endpoint_rows[:self.max_policy_pages + 4]]
+            # Explicit registry URLs and search/discovered policy surfaces must win
+            # over generic /terms guesses. A one-page gate otherwise spends its only
+            # fetch on a 404/403 default candidate and never reaches the real Terms page.
+            # Keep every declared policy endpoint ahead of discovery/default guesses.
+            # surface_scan_pages limits successful evidence pages, not the number of
+            # declared endpoints we may need to try when a provider returns 403/404.
+            queue=list(dict.fromkeys(
+                # Declared/search-discovered policy endpoints must be tried before
+                # generic same-host surface links. With a one-success-page budget,
+                # consuming the budget on an ordinary navigation page can hide a
+                # Terms/Privacy page that was already discoverable from the source.
+                explicit_policy_links + search_links + endpoint_links + discovered_links + default_policy_links
+            ))
             seen=set(queue); fetched=0
             # Public internal surfaces are crawled shallowly so account limits, subscriptions, application rules, payout pages and terms are not missed merely because they are not linked from a policy page.
             while queue and fetched < self.surface_scan_pages:
                 link=queue.pop(0)
                 try:
-                    child=self.http.fetch(name, link); fetched += 1
+                    try:
+                        child=self.policy_http.fetch(name, link)
+                    except Exception:
+                        child=self._bounded_policy_fetch_fallback(name, link)
+                    fetched += 1
                     child_text=_html_text(child['body']); pages.append((child['url'], child_text))
                     for nxt in _surface_links(child['body'], child['url'], 40):
                         if nxt not in seen and len(seen) < self.surface_scan_pages*4:
@@ -203,12 +481,22 @@ class SourceVerificationEngine:
             # falsely blocking Iran eligibility or changing KYC/payment state.
             combined=text + ' ' + ' '.join(t for _,t in pages)
             verified_page_urls=[u for u,_ in pages]
-            result=classify_content(combined,obs['url'],verified_page_urls)
+            policy_origin = _policy_origin(r, obs['url'])
+            declared_policy_urls = set()
+            for path in (r.get('policy_paths') or ()):
+                if not isinstance(path, str) or not path.strip():
+                    continue
+                raw_path = path.strip()
+                if urlparse(raw_path).scheme in {"http", "https"} and urlparse(raw_path).netloc:
+                    declared_policy_urls.add(raw_path)
+                else:
+                    declared_policy_urls.add(urljoin(policy_origin, raw_path.lstrip("/")))
+            result=classify_content(combined,obs['url'],verified_page_urls,declared_policy_urls)
             evidence_urls=list(dict.fromkeys(result.get('evidence_urls',[]) + search_links + [u for u,_ in pages]))
             result['evidence_urls']=evidence_urls
             constraints=extract_source_constraints(combined,evidence_urls)
             result['source_constraints']=constraints
-            result.update({'source':name,'http_status':obs['status'],'bytes':obs['bytes'],'sha256':obs['sha256'],'last_verified_at':datetime.now(timezone.utc).isoformat(),'source_verification_state':'LIVE_CONFIRMED'})
+            result.update({'source':name,'http_status':obs['status'],'bytes':obs['bytes'],'sha256':obs['sha256'],'last_verified_at':datetime.now(timezone.utc).isoformat(),'source_verification_state':'LIVE_CONFIRMED' if operational_reachable else 'DEAD','error': operational_error})
             blocked_countries = self.records.get(name, {}).get('execution_blacklist_countries') or ['Israel']
             classification = classify_source_lane(r, result, blocked_countries)
             result['source_lane'] = classification.lane
@@ -222,7 +510,7 @@ class SourceVerificationEngine:
             result['blacklisted_at'] = result.get('last_verified_at') if classification.blacklisted else None
             result['project_scan_interval_minutes'] = classification.interval_minutes if classification.lane == EXECUTION_LANE else 0
             result['intelligence_scan_interval_minutes'] = classification.interval_minutes if classification.lane == INTELLIGENCE_LANE else 0
-            result['verification_state'] = 'blocked' if classification.blacklisted else ('verified' if result.get('source_verification_state')=='LIVE_CONFIRMED' else 'documented')
+            result['verification_state'] = 'blocked' if classification.blacklisted else ('verified' if result.get('source_verification_state')=='LIVE_CONFIRMED' else 'degraded')
             current_maturity = str(r.get('capability_maturity') or 'REGISTERED')
             execution_evidence = bool(
                 result.get('source_verification_state') == 'LIVE_CONFIRMED'

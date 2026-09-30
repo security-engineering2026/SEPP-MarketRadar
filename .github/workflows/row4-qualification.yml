@@ -1,0 +1,32 @@
+name: Row 4 Qualification
+
+on:
+  push:
+  pull_request:
+    paths:
+      - "marketradar/source_verification.py"
+      - "marketradar/source_policy.py"
+      - "marketradar/source_onboarding.py"
+      - "marketradar/source_constraints.py"
+      - "tools/full_qualification.py"
+      - "tests/test_v415_source_verification.py"
+      - "config/sources.json"
+      - "config/source_targets.json"
+  workflow_dispatch:
+
+jobs:
+  row4:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Row 4 regression
+        run: python -m pytest -q tests/test_v415_source_verification.py
+      - name: Row 4 active source runtime qualification
+        shell: pwsh
+        run: |
+          python -c "import json; from tools.full_qualification import active_source_terms_gate; r=active_source_terms_gate(); print(json.dumps(r, ensure_ascii=False, indent=2)); raise SystemExit(0 if r['status'] == 'PASS' else 1)"

@@ -1,5 +1,5 @@
 from __future__ import annotations
-import hashlib, ipaddress, json, random, socket, ssl, time, http.client
+import hashlib, ipaddress, json, random, socket, ssl, time, http.client, threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from urllib.error import HTTPError, URLError
@@ -18,6 +18,27 @@ class Source:
     def __post_init__(self):
         if self.access_scope not in {"public", "local", "authorized", "private"}:
             raise ValueError('ACCESS_SCOPE_INVALID')
+
+def _bounded_getaddrinfo(host: str, port: int, timeout: float) -> list[str]:
+    """Resolve a hostname without allowing platform DNS to block a worker forever."""
+    result = []
+    error = []
+    def resolve():
+        try:
+            result.extend(info[4][0] for info in socket.getaddrinfo(host, port, type=socket.SOCK_STREAM))
+        except OSError as exc:
+            error.append(exc)
+    worker = threading.Thread(target=resolve, name="sepp-dns", daemon=True)
+    worker.start()
+    worker.join(max(0.1, float(timeout)))
+    if worker.is_alive():
+        raise TimeoutError("DNS_RESOLUTION_TIMEOUT")
+    if error:
+        raise ValueError("DNS_RESOLUTION_FAILED") from error[0]
+    addresses = list(dict.fromkeys(result))
+    if not addresses:
+        raise ValueError("DNS_RESOLUTION_FAILED")
+    return addresses
 
 def _is_public_ip(value: str) -> bool:
     try: ip = ipaddress.ip_address(value)
@@ -108,7 +129,7 @@ class Federation:
             if require_public and not _is_public_ip(host): raise ValueError('PRIVATE_IP_BLOCK')
             return p
         try:
-            addresses={info[4][0] for info in socket.getaddrinfo(host,p.port or (443 if p.scheme=='https' else 80),type=socket.SOCK_STREAM)}
+            addresses=set(_bounded_getaddrinfo(host,p.port or (443 if p.scheme=='https' else 80),self.timeout))
         except OSError as exc: raise ValueError('DNS_RESOLUTION_FAILED') from exc
         if not addresses: raise ValueError('DNS_RESOLUTION_FAILED')
         if require_public and not all(_is_public_ip(a) for a in addresses): raise ValueError('PRIVATE_IP_BLOCK')
@@ -123,7 +144,7 @@ class Federation:
             if source.access_scope in {'public','authorized'} and not _is_public_ip(host): raise ValueError('PRIVATE_IP_BLOCK')
             return host
         try:
-            addresses=[info[4][0] for info in socket.getaddrinfo(host,parsed.port or (443 if parsed.scheme=='https' else 80),type=socket.SOCK_STREAM)]
+            addresses=_bounded_getaddrinfo(host,parsed.port or (443 if parsed.scheme=='https' else 80),self.timeout)
         except OSError as exc: raise ValueError('DNS_RESOLUTION_FAILED') from exc
         if not addresses: raise ValueError('DNS_RESOLUTION_FAILED')
         if source.access_scope in {'public','authorized'} and not all(_is_public_ip(a) for a in addresses): raise ValueError('PRIVATE_IP_BLOCK')

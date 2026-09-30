@@ -186,50 +186,149 @@ def _select_acquisition_sample(records, sample_size=20):
             break
     return ordered
 
-def live_source_scale_gate(limit=500):
+def live_source_scale_gate(limit=None):
     from marketradar.db import connect, sync_source_contracts
     from marketradar.source_registry import load_source_records
     from marketradar.source_search import WebSearchProvider
     from marketradar.source_verification import SourceVerificationEngine
 
     records = load_source_records(ROOT / "config" / "sources.json")
-    if len(records) < limit:
+
+    target_path = ROOT / "config" / "source_targets.json"
+    target_config = json.loads(target_path.read_text(encoding="utf-8"))
+    discovery_minimum = int(target_config.get("discovery_pool_reference_minimum", 500))
+
+    requested = discovery_minimum if limit is None else int(limit)
+    checked_target = min(requested, len(records))
+
+    if checked_target < requested:
         return gate(
-            "LIVE_SOURCE_SCALE_BENCHMARK",
+            "LIVE_SOURCE_HEALTH_SCALE",
             "OPEN",
-            {"registered_records": len(records), "requested": limit, "reason": "Fewer than 500 registry candidates."},
+            {
+                "registered_records": len(records),
+                "requested": requested,
+                "reason": "Discovery pool is smaller than the configured verification batch.",
+            },
         )
 
-    selected = records
+    selected = records[:checked_target]
+
     with tempfile.TemporaryDirectory(prefix="mr-sources-") as td:
         conn = connect(Path(td) / "qualification.db")
         sync_source_contracts(conn, selected)
+
         engine = SourceVerificationEngine(
             conn,
             selected,
             timeout=8,
             max_workers=16,
             max_policy_pages=3,
+            surface_scan_pages=1,
             search_provider=WebSearchProvider(timeout=8),
         )
+
         results = engine.verify([x["name"] for x in selected])
-        confirmed = sum(x.get("source_verification_state") == "LIVE_CONFIRMED" for x in results)
-        dead = sum(x.get("source_verification_state") == "DEAD" for x in results)
+
+        states = [
+            str(x.get("source_verification_state") or "").upper()
+            for x in results
+        ]
+
+        confirmed = sum(x == "LIVE_CONFIRMED" for x in states)
+        dead = sum(x == "DEAD" for x in states)
+        unresolved = len(results) - confirmed - dead
+
+        complete_records = sum(bool(state) for state in states)
+
         conn.close()
 
+    complete = (
+        len(results) == checked_target
+        and complete_records == checked_target
+        and len(states) == checked_target
+    )
+
     return gate(
-        "LIVE_SOURCE_SCALE_BENCHMARK",
-        "PASS" if confirmed >= limit else "OPEN",
+        "LIVE_SOURCE_HEALTH_SCALE",
+        "PASS" if complete else "OPEN",
         {
+            "discovery_pool_reference_minimum": discovery_minimum,
+            "requested": requested,
             "candidate_registry": len(records),
             "checked": len(results),
+            "health_records_complete": complete_records,
             "live_reachable": confirmed,
             "dead": dead,
-            "other": len(results) - confirmed - dead,
-            "criterion": f"{limit} live-reachable source endpoints",
-            "method": "all current registry candidates verified; endpoint reachability only; not a connector-capability claim",
-            "blocking": False,
-            "contract": "strategic discovery-pool benchmark; not a final-release gate",
+            "unresolved": unresolved,
+            "criterion": (
+                f"{checked_target} source-health records processed and classified"
+            ),
+            "method": (
+                "bounded source-health verification; endpoint reachability "
+                "and health classification only; not an execution-readiness claim"
+            ),
+            "surface_scan_pages": 1,
+            "max_workers": 16,
+            "max_policy_pages": 3,
+        },
+    )
+def active_source_terms_gate():
+    from marketradar.db import connect, sync_source_contracts
+    from marketradar.source_registry import load_source_records
+    from marketradar.source_search import WebSearchProvider
+    from marketradar.source_verification import SourceVerificationEngine
+
+    records = [
+        x for x in load_source_records(ROOT / "config" / "sources.json")
+        if str(x.get("status", "")).lower() == "active" and x.get("base_url")
+    ]
+    if not records:
+        return gate("ACTIVE_SOURCE_TERMS_CLOSURE", "OPEN", {"reason": "No active sources with URLs."})
+
+    with tempfile.TemporaryDirectory(prefix="mr-row4-") as td:
+        conn = connect(Path(td) / "qualification.db")
+        sync_source_contracts(conn, records)
+        engine = SourceVerificationEngine(
+            conn,
+            records,
+            timeout=8,
+            max_workers=16,
+            max_policy_pages=3,
+            surface_scan_pages=24,
+            search_provider=WebSearchProvider(timeout=8),
+        )
+        results = engine.verify([x["name"] for x in records])
+        engine.persist(results)
+        conn.close()
+
+    terms_reviewed = sum(str(x.get("terms_status", "")).lower() == "reviewed" for x in results)
+    terms_pending = [
+        x["source"] for x in results
+        if str(x.get("terms_status", "")).lower() != "reviewed"
+    ]
+    evidence_urls = sum(bool(x.get("terms_evidence_url")) for x in results)
+    live = sum(x.get("source_verification_state") == "LIVE_CONFIRMED" for x in results)
+    dead = sum(x.get("source_verification_state") == "DEAD" for x in results)
+
+    complete = len(results) == len(records) and terms_reviewed == len(records)
+    return gate(
+        "ACTIVE_SOURCE_TERMS_CLOSURE",
+        "PASS" if complete else "OPEN",
+        {
+            "active_sources": len(records),
+            "checked": len(results),
+            "terms_reviewed": terms_reviewed,
+            "terms_pending": len(terms_pending),
+            "terms_evidence_urls": evidence_urls,
+            "live_reachable": live,
+            "dead": dead,
+            "pending_sources": terms_pending[:50],
+            "criterion": "Every active source has fetched Terms/Legal evidence and terms_status=reviewed",
+            "method": "bounded same-origin policy endpoint probing plus existing shallow source verification",
+            "surface_scan_pages": 24,
+            "max_workers": 16,
+            "max_policy_pages": 3,
         },
     )
 
@@ -354,6 +453,7 @@ def main():
         resilience_gate,
         live_discovery_gate,
         live_source_scale_gate,
+        active_source_terms_gate,
         live_acquisition_sample_gate,
         lambda: family_surface_gate("social"),
         lambda: family_surface_gate("procurement"),

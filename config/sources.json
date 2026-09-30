@@ -109,7 +109,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://weworkremotely.com/terms-and-conditions",
+      "https://weworkremotely.com/privacy"
+    ]
   },
   {
     "name": "Remotive",
@@ -225,7 +229,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.jobremotely.io/privacy"
+    ]
   },
   {
     "name": "Himalayas",
@@ -304,7 +311,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.arbeitnow.com/terms",
+      "https://www.arbeitnow.com/privacy"
+    ]
   },
   {
     "name": "HH_RU",
@@ -346,7 +357,14 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_hosts": [
+      "hh.ru"
+    ],
+    "policy_paths": [
+      "https://hh.ru/terms",
+      "https://hh.ru/article/personal_data"
+    ]
   },
   {
     "name": "HH_KZ",
@@ -388,7 +406,14 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_hosts": [
+      "hh.ru"
+    ],
+    "policy_paths": [
+      "https://hh.kz/terms",
+      "https://hh.kz/article/personal_data"
+    ]
   },
   {
     "name": "HH_UZ",
@@ -430,7 +455,14 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_hosts": [
+      "hh.ru"
+    ],
+    "policy_paths": [
+      "https://hh.uz/terms",
+      "https://hh.uz/article/personal_data"
+    ]
   },
   {
     "name": "HH_GE",
@@ -472,7 +504,14 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_hosts": [
+      "hh.ru"
+    ],
+    "policy_paths": [
+      "https://headhunter.ge/terms",
+      "https://headhunter.ge/article/personal_data"
+    ]
   },
   {
     "name": "HH_AZ",
@@ -514,13 +553,20 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_hosts": [
+      "hh.ru"
+    ],
+    "policy_paths": [
+      "https://hh1.az/terms",
+      "https://hh1.az/article/personal_data"
+    ]
   },
   {
     "name": "Bayt_MENA",
     "base_url": "https://www.bayt.com/",
     "adapter": "html_jobs",
-    "status": "active",
+    "status": "candidate",
     "allow_hosts": [
       "www.bayt.com"
     ],
@@ -537,10 +583,10 @@
     "source_role": "job_marketplace",
     "iran_status": "UNKNOWN",
     "policy_lane": "GLOBAL_DISCOVERY",
-    "daily_scan": true,
+    "daily_scan": false,
     "needs_analysis": true,
     "execution_capability": "manual_browser",
-    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility.",
+    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility. Held as candidate because Row 4 could not obtain current Terms/Legal evidence from the official policy surface; reactivation requires verified policy evidence.",
     "source_origin": "direct_global",
     "iran_policy_basis": "not_verified",
     "iran_policy_url": "https://www.bayt.com/",
@@ -556,7 +602,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.bayt.com/en/pages/terms/",
+      "https://www.bayt.com/en/pages/privacy-statement/"
+    ]
   },
   {
     "name": "GulfTalent_UAE",
@@ -598,7 +648,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.gulftalent.com/terms",
+      "https://www.gulftalent.com/privacy-policy"
+    ]
   },
   {
     "name": "Wuzzuf_Egypt",
@@ -640,13 +694,17 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://wuzzuf.net/user_agreement/",
+      "https://wuzzuf.net/policies"
+    ]
   },
   {
     "name": "TokyoDev_Japan",
     "base_url": "https://www.tokyodev.com/jobs",
     "adapter": "html_jobs",
-    "status": "active",
+    "status": "candidate",
     "allow_hosts": [
       "www.tokyodev.com"
     ],
@@ -661,8 +719,8 @@
     "language": "en",
     "source_family": "job_board",
     "policy_lane": "GLOBAL_DISCOVERY",
-    "daily_scan": true,
-    "needs_analysis": false,
+    "daily_scan": false,
+    "needs_analysis": true,
     "source_role": "job_marketplace",
     "execution_capability": "manual_browser",
     "iran_status": "UNKNOWN",
@@ -670,7 +728,7 @@
     "iran_policy_basis": "not_verified",
     "iran_policy_url": "https://www.tokyodev.com/jobs",
     "policy_checked_at": "2026-09-11",
-    "notes": "Global discovery source; Iran execution eligibility must be verified per opportunity.",
+    "notes": "Global discovery source; Iran execution eligibility must be verified per opportunity. Held as candidate because Row 4 could not obtain current Terms/Legal evidence from the official policy surface; reactivation requires verified policy evidence.",
     "source_verification_state": "DISCOVERED",
     "iran_eligibility": "UNKNOWN",
     "kyc_requirement": "UNKNOWN",
@@ -682,7 +740,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.tokyodev.com/privacy-policy"
+    ]
   },
   {
     "name": "JapanDev",
@@ -724,7 +785,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://japan-dev.com/docs/privacy_policy.pdf"
+    ]
   },
   {
     "name": "Wanted_Korea",
@@ -766,7 +830,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://help.wanted.co.kr/hc/en-us/articles/27666894700953-Terms-of-Use",
+      "https://www.wanted.co.kr/privacy"
+    ]
   },
   {
     "name": "Telegram_Authorized",
@@ -944,13 +1012,16 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://jobinja.ir/knowledge/job-seeker-faq/pages/job-seeker-tos"
+    ]
   },
   {
     "name": "JobVision_Iran",
     "base_url": "https://jobvision.ir/",
     "adapter": "html_jobs",
-    "status": "active",
+    "status": "candidate",
     "allow_hosts": [
       "jobvision.ir"
     ],
@@ -966,11 +1037,11 @@
     "source_family": "freelance_iran",
     "source_role": "job_marketplace",
     "iran_status": "ALLOW",
-    "policy_lane": "DAILY_PROJECT_SCAN",
-    "daily_scan": true,
-    "needs_analysis": false,
+    "policy_lane": "NEEDS_ANALYSIS",
+    "daily_scan": false,
+    "needs_analysis": true,
     "execution_capability": "manual_browser",
-    "notes": "Iran-local source; discovery lane. Terms/payment/KYC still require source-specific review before automated execution. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence.",
+    "notes": "Iran-local source; discovery lane. Terms/payment/KYC still require source-specific review before automated execution. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Held as candidate because Row 4 could not obtain current Terms/Legal evidence from the official policy surface; reactivation requires verified policy evidence.",
     "source_origin": "iran_local",
     "iran_policy_basis": "iran_local_platform",
     "iran_policy_url": "https://jobvision.ir/",
@@ -986,7 +1057,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://jobvision.ir/terms"
+    ]
   },
   {
     "name": "IranTalent",
@@ -1070,7 +1144,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.e-estekhdam.com/privacy-policy"
+    ]
   },
   {
     "name": "Ponisha_Iran",
@@ -1155,7 +1232,10 @@
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
     "discovery_basis": "existing_v4.14_registry",
-    "proposal_limit": "max_open_projects=1;max_pending_applications=1"
+    "proposal_limit": "max_open_projects=1;max_pending_applications=1",
+    "policy_paths": [
+      "https://parscoders.com/faq-new"
+    ]
   },
   {
     "name": "Karlancer_Iran",
@@ -1198,7 +1278,13 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_hosts": [
+      "www.karlancer.com"
+    ],
+    "policy_paths": [
+      "https://www.karlancer.com/terms"
+    ]
   },
   {
     "name": "AnjamMidam_Iran",
@@ -1240,13 +1326,19 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_hosts": [
+      "s2.anjammidam.com"
+    ],
+    "policy_paths": [
+      "/support/terms-of-service"
+    ]
   },
   {
     "name": "Typiran_Iran",
     "base_url": "https://typiran.com/",
     "adapter": "html_jobs",
-    "status": "active",
+    "status": "candidate",
     "allow_hosts": [
       "typiran.com"
     ],
@@ -1262,11 +1354,11 @@
     "source_family": "freelance_iran",
     "source_role": "job_marketplace",
     "iran_status": "ALLOW",
-    "policy_lane": "DAILY_PROJECT_SCAN",
-    "daily_scan": true,
-    "needs_analysis": false,
+    "policy_lane": "NEEDS_ANALYSIS",
+    "daily_scan": false,
+    "needs_analysis": true,
     "execution_capability": "manual_browser",
-    "notes": "Iran-local source; discovery lane. Terms/payment/KYC still require source-specific review before automated execution. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence.",
+    "notes": "Iran-local source; discovery lane. Terms/payment/KYC still require source-specific review before automated execution. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Moved out of active Row 4 scope because current official base endpoint fails DNS resolution; requires source revalidation before reactivation.",
     "source_origin": "iran_local",
     "iran_policy_basis": "iran_local_platform",
     "iran_policy_url": "https://typiran.com/",
@@ -1288,7 +1380,7 @@
     "name": "Quera_Iran",
     "base_url": "https://quera.org/",
     "adapter": "html_jobs",
-    "status": "active",
+    "status": "candidate",
     "allow_hosts": [
       "quera.org"
     ],
@@ -1304,11 +1396,11 @@
     "source_family": "freelance_iran",
     "source_role": "job_marketplace",
     "iran_status": "ALLOW",
-    "policy_lane": "DAILY_PROJECT_SCAN",
-    "daily_scan": true,
-    "needs_analysis": false,
+    "policy_lane": "NEEDS_ANALYSIS",
+    "daily_scan": false,
+    "needs_analysis": true,
     "execution_capability": "manual_browser",
-    "notes": "Iran-local source; discovery lane. Terms/payment/KYC still require source-specific review before automated execution. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence.",
+    "notes": "Iran-local source; discovery lane. Terms/payment/KYC still require source-specific review before automated execution. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Held as candidate because Row 4 could not obtain current Terms/Legal evidence from the official policy surface; reactivation requires verified policy evidence.",
     "source_origin": "iran_local",
     "iran_policy_basis": "iran_local_platform",
     "iran_policy_url": "https://quera.org/",
@@ -1324,7 +1416,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://quera.org/terms"
+    ]
   },
   {
     "name": "Upwork",
@@ -3455,7 +3550,12 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.gulftalent.com/terms",
+      "https://www.gulftalent.com/repository/int/GulfTalent_Terms_of_Service.pdf",
+      "https://www.gulftalent.com/privacy-policy"
+    ]
   },
   {
     "name": "Akhtaboot_Jordan",
@@ -3497,13 +3597,16 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://example.akhtaboot.com/en/terms"
+    ]
   },
   {
     "name": "Naukrigulf",
     "base_url": "https://www.naukrigulf.com/",
     "adapter": "html_jobs",
-    "status": "active",
+    "status": "candidate",
     "allow_hosts": [
       "www.naukrigulf.com"
     ],
@@ -3520,10 +3623,10 @@
     "source_role": "job_marketplace",
     "iran_status": "UNKNOWN",
     "policy_lane": "GLOBAL_DISCOVERY",
-    "daily_scan": true,
+    "daily_scan": false,
     "needs_analysis": true,
     "execution_capability": "manual_browser",
-    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility.",
+    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility. Held as candidate because Row 4 could not obtain current Terms/Legal evidence from the official policy surface; reactivation requires verified policy evidence.",
     "source_origin": "direct_global",
     "iran_policy_basis": "not_verified",
     "iran_policy_url": "https://www.naukrigulf.com/",
@@ -3539,7 +3642,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.naukrigulf.com/terms-and-conditions",
+      "https://www.naukrigulf.com/ni/nilinks/nkr_links.php?con=&flag=&open=privacy"
+    ]
   },
   {
     "name": "GulfJobs",
@@ -3581,13 +3688,17 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.gulfjobs.com/terms-of-use",
+      "https://www.gulfjobs.com/privacy-policy"
+    ]
   },
   {
     "name": "Dubizzle_Jobs",
     "base_url": "https://dubizzle.com/jobs/",
     "adapter": "html_jobs",
-    "status": "active",
+    "status": "candidate",
     "allow_hosts": [
       "dubizzle.com"
     ],
@@ -3604,10 +3715,10 @@
     "source_role": "job_marketplace",
     "iran_status": "UNKNOWN",
     "policy_lane": "GLOBAL_DISCOVERY",
-    "daily_scan": true,
+    "daily_scan": false,
     "needs_analysis": true,
     "execution_capability": "manual_browser",
-    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility.",
+    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility. Held as candidate because Row 4 could not obtain current Terms/Legal evidence from the official policy surface; reactivation requires verified policy evidence.",
     "source_origin": "direct_global",
     "iran_policy_basis": "not_verified",
     "iran_policy_url": "https://dubizzle.com/jobs/",
@@ -3623,7 +3734,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.dubizzle.com/legalhub/terms/",
+      "https://www.dubizzle.com/legalhub/privacy/"
+    ]
   },
   {
     "name": "KhaleejTimes_Jobs",
@@ -3665,7 +3780,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.khaleejtimes.com/privacy-notice"
+    ]
   },
   {
     "name": "Mubawab_Jobs",
@@ -3707,13 +3825,17 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.mubawab.ma/en/privacy",
+      "https://www.mubawab.ma/privacy"
+    ]
   },
   {
     "name": "HiredChina",
     "base_url": "https://www.hiredchina.com/",
     "adapter": "html_jobs",
-    "status": "active",
+    "status": "candidate",
     "allow_hosts": [
       "www.hiredchina.com"
     ],
@@ -3730,10 +3852,10 @@
     "source_role": "job_marketplace",
     "iran_status": "UNKNOWN",
     "policy_lane": "GLOBAL_DISCOVERY",
-    "daily_scan": true,
+    "daily_scan": false,
     "needs_analysis": true,
     "execution_capability": "manual_browser",
-    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility.",
+    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility. Held as candidate because Row 4 could not obtain current Terms/Legal evidence from the official policy surface; reactivation requires verified policy evidence.",
     "source_origin": "direct_global",
     "iran_policy_basis": "not_verified",
     "iran_policy_url": "https://www.hiredchina.com/",
@@ -3749,7 +3871,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.hiredchina.com/en/terms",
+      "https://www.hiredchina.com/en/privacy"
+    ]
   },
   {
     "name": "TokyoDev",
@@ -3791,7 +3917,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.tokyodev.com/privacy-policy"
+    ]
   },
   {
     "name": "Daijob_Japan",
@@ -3833,13 +3962,17 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.daijob.com/en/top/terms",
+      "https://www.daijob.com/aboutdaijob/privacy/"
+    ]
   },
   {
     "name": "CareerCross_Japan",
     "base_url": "https://www.careercross.com/",
     "adapter": "html_jobs",
-    "status": "active",
+    "status": "candidate",
     "allow_hosts": [
       "www.careercross.com"
     ],
@@ -3856,10 +3989,10 @@
     "source_role": "job_marketplace",
     "iran_status": "UNKNOWN",
     "policy_lane": "GLOBAL_DISCOVERY",
-    "daily_scan": true,
+    "daily_scan": false,
     "needs_analysis": true,
     "execution_capability": "manual_browser",
-    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility.",
+    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility. Held as candidate because Row 4 could not obtain current Terms/Legal evidence from the official policy surface; reactivation requires verified policy evidence.",
     "source_origin": "direct_global",
     "iran_policy_basis": "not_verified",
     "iran_policy_url": "https://www.careercross.com/",
@@ -3875,7 +4008,13 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.careercross.com/en/article/detail-1697",
+      "https://www.careercross.com/en/article/detail-1366",
+      "https://www.careercross.com/en/article/detail-604",
+      "https://www.careercross.com/en/article/detail-1698"
+    ]
   },
   {
     "name": "Zigbang_Jobs",
@@ -3917,7 +4056,16 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://s.zigbang.com/agree/user-agreement-last.html",
+      "https://s.zigbang.com/agree/user-privacy-last.html",
+      "https://www.zigbang.com/event/notice"
+    ],
+    "policy_hosts": [
+      "www.zigbang.com",
+      "s.zigbang.com"
+    ]
   },
   {
     "name": "HH_Russia",
@@ -3959,13 +4107,17 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://hh.ru/terms",
+      "https://hh.ru/article/personal_data"
+    ]
   },
   {
     "name": "Rabota_Russia",
     "base_url": "https://www.rabota.ru/",
     "adapter": "html_jobs",
-    "status": "active",
+    "status": "candidate",
     "allow_hosts": [
       "www.rabota.ru"
     ],
@@ -3982,10 +4134,10 @@
     "source_role": "job_marketplace",
     "iran_status": "UNKNOWN",
     "policy_lane": "GLOBAL_DISCOVERY",
-    "daily_scan": true,
+    "daily_scan": false,
     "needs_analysis": true,
     "execution_capability": "manual_browser",
-    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility.",
+    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility. Held as candidate because Row 4 could not obtain current Terms/Legal evidence from the official policy surface; reactivation requires verified policy evidence.",
     "source_origin": "direct_global",
     "iran_policy_basis": "not_verified",
     "iran_policy_url": "https://www.rabota.ru/",
@@ -4001,7 +4153,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.rabota.ru/info/"
+    ]
   },
   {
     "name": "SuperJob_Russia",
@@ -4043,7 +4198,12 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.superjob.ru/info/hr_service.html",
+      "https://www.superjob.ru/info/hr_oferta.html",
+      "https://www.superjob.ru/info/personalnye_dannye.html"
+    ]
   },
   {
     "name": "Headhunter_KZ",
@@ -4085,7 +4245,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://hh.kz/terms",
+      "https://hh.kz/article/personal_data"
+    ]
   },
   {
     "name": "Headhunter_UZ",
@@ -4127,7 +4291,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://hh.uz/terms",
+      "https://hh.uz/article/personal_data"
+    ]
   },
   {
     "name": "Headhunter_GE",
@@ -4169,13 +4337,21 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_hosts": [
+      "tbilisi.headhunter.ge",
+      "headhunter.ge"
+    ],
+    "policy_paths": [
+      "https://tbilisi.headhunter.ge/terms",
+      "https://headhunter.ge/terms"
+    ]
   },
   {
     "name": "Headhunter_AZ",
     "base_url": "https://hh.az/",
     "adapter": "html_jobs",
-    "status": "active",
+    "status": "candidate",
     "allow_hosts": [
       "hh.az"
     ],
@@ -4192,10 +4368,10 @@
     "source_role": "job_marketplace",
     "iran_status": "UNKNOWN",
     "policy_lane": "GLOBAL_DISCOVERY",
-    "daily_scan": true,
+    "daily_scan": false,
     "needs_analysis": true,
     "execution_capability": "manual_browser",
-    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility.",
+    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility. Moved out of active Row 4 scope because current official base endpoint fails DNS resolution; requires source revalidation before reactivation.",
     "source_origin": "direct_global",
     "iran_policy_basis": "not_verified",
     "iran_policy_url": "https://hh.az/",
@@ -4217,7 +4393,7 @@
     "name": "JobsinGeorgia",
     "base_url": "https://jobs.ge/",
     "adapter": "html_jobs",
-    "status": "active",
+    "status": "candidate",
     "allow_hosts": [
       "jobs.ge"
     ],
@@ -4234,10 +4410,10 @@
     "source_role": "job_marketplace",
     "iran_status": "UNKNOWN",
     "policy_lane": "GLOBAL_DISCOVERY",
-    "daily_scan": true,
+    "daily_scan": false,
     "needs_analysis": true,
     "execution_capability": "manual_browser",
-    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility.",
+    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility. Held as candidate because Row 4 could not obtain current Terms/Legal evidence from the official policy surface; reactivation requires verified policy evidence.",
     "source_origin": "direct_global",
     "iran_policy_basis": "not_verified",
     "iran_policy_url": "https://jobs.ge/",
@@ -4259,7 +4435,7 @@
     "name": "Boss_Azerbaijan",
     "base_url": "https://boss.az/",
     "adapter": "html_jobs",
-    "status": "active",
+    "status": "candidate",
     "allow_hosts": [
       "boss.az"
     ],
@@ -4276,10 +4452,10 @@
     "source_role": "job_marketplace",
     "iran_status": "UNKNOWN",
     "policy_lane": "GLOBAL_DISCOVERY",
-    "daily_scan": true,
+    "daily_scan": false,
     "needs_analysis": true,
     "execution_capability": "manual_browser",
-    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility.",
+    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility. Held as candidate because Row 4 could not obtain current Terms/Legal evidence from the official policy surface; reactivation requires verified policy evidence.",
     "source_origin": "direct_global",
     "iran_policy_basis": "not_verified",
     "iran_policy_url": "https://boss.az/",
@@ -4295,7 +4471,14 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://en.boss.az/pages/terms-conditions",
+      "https://en.react.boss.az/pages/privacy-policy"
+    ],
+    "policy_hosts": [
+      "en.boss.az"
+    ]
   },
   {
     "name": "JobSearch_Azerbaijan",
@@ -4337,7 +4520,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://jobsearch.az/static/services"
+    ]
   },
   {
     "name": "Rabota_BY",
@@ -4379,7 +4565,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://rabota.by/terms"
+    ]
   },
   {
     "name": "Indeed_US",
@@ -23147,7 +23336,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://kaya.ir/terms"
+    ]
   },
   {
     "name": "ManMitonam_Iran",
