@@ -357,6 +357,15 @@ def test_row4_policy_fallback_uses_proxy_stack_without_disabling_tls(tmp_path, m
     from marketradar.db import connect
     from marketradar.source_verification import SourceVerificationEngine
     import marketradar.source_verification as sv
+    import marketradar.federation as federation
+
+    # The .test host is intentionally non-resolving. Stub only DNS resolution
+    # so the production host-boundary/public-IP validation still executes.
+    monkeypatch.setattr(
+        federation.socket,
+        "getaddrinfo",
+        lambda host, port, **kwargs: [(2, 1, 6, "", ("93.184.216.34", port))],
+    )
 
     connection = connect(tmp_path / "row4-policy-fallback.db")
     source = {
