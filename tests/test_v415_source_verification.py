@@ -582,7 +582,12 @@ def test_row4_open_sources_terms_gate(tmp_path):
                 "SELECT terms_evidence_url FROM source_verification_state WHERE source=?",
                 (name,),
             ).fetchone()
+            contract = connection.execute(
+                "SELECT terms_status, terms_evidence_url FROM source_contracts WHERE source=?",
+                (name,),
+            ).fetchone()
             assert persisted is not None and persisted[0] == "reviewed" and persisted[1]
             assert verification is not None and verification[0] == persisted[1]
+            assert contract is not None and contract[0] == "reviewed" and contract[1] == persisted[1]
     finally:
         connection.close()
