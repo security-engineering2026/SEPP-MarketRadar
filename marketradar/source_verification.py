@@ -165,6 +165,11 @@ def classify_content(text: str, url: str, link_urls: list[str], declared_policy_
         'evidence_urls': list(dict.fromkeys([url] + terms[:2] + payout[:2] + kyc_links[:2])),
     }
 
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 class SourceVerificationEngine:
     """Automatic source-policy monitor.
 
@@ -195,11 +200,6 @@ class SourceVerificationEngine:
             ))
         self.policy_http=Federation(policy_sources, timeout=timeout, max_workers=max_workers)
         self.max_workers=max(1,min(max_workers,24)); self.max_policy_pages=max(1,min(max_policy_pages,8)); self.surface_scan_pages=max(1,min(int(surface_scan_pages),64)); self.search=search_provider or WebSearchProvider(timeout=timeout); self.policy_search_interval_days=max(1,int(policy_search_interval_days))
-
-class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
-
 
     def _policy_fetch_fallback(self, name, url):
         """Fetch a public policy page through the system HTTP proxy stack.
