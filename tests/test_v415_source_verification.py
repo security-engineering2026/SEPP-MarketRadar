@@ -405,6 +405,45 @@ def test_row4_policy_fallback_uses_proxy_stack_without_disabling_tls(tmp_path, m
     connection.close()
 
 
+def test_row4_absolute_declared_policy_url_preserves_its_host(tmp_path):
+    from marketradar.db import connect
+    from marketradar.source_verification import SourceVerificationEngine
+
+    connection = connect(tmp_path / "row4-absolute-policy.db")
+    source = {
+        "name": "Row4AbsolutePolicySource",
+        "base_url": "https://www.example.test/jobs",
+        "adapter": "html",
+        "status": "active",
+        "allow_hosts": ["www.example.test"],
+        "policy_hosts": ["www.example.test", "policy.example.test"],
+        "access_scope": "public",
+        "terms_status": "needs_review",
+        "policy_paths": ["https://policy.example.test/legal/terms"],
+    }
+    engine = SourceVerificationEngine(connection, [source], search_provider=False, surface_scan_pages=1)
+    seen = []
+
+    def fake_fetch(name, url=None):
+        if url is None:
+            return {"body": b"<html><body>Jobs</body></html>", "url": source["base_url"],
+                    "status": 200, "bytes": 32, "sha256": "home"}
+        seen.append(url)
+        if url == "https://policy.example.test/legal/terms":
+            return {"body": b"<html><body>Terms of Service. These conditions apply to users.</body></html>",
+                    "url": url, "status": 200, "bytes": 74, "sha256": "terms"}
+        raise RuntimeError("not found")
+
+    engine.http.fetch = fake_fetch
+    engine.policy_http.fetch = fake_fetch
+    result = engine._one(source["name"])
+
+    assert seen[0] == "https://policy.example.test/legal/terms"
+    assert result["terms_status"] == "reviewed"
+    assert result["terms_evidence_url"] == "https://policy.example.test/legal/terms"
+    connection.close()
+
+
 def test_row4_policy_registry_includes_new_official_surfaces():
     import json
     from pathlib import Path
