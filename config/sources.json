@@ -1239,7 +1239,9 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_hosts": ["www.karlancer.com"],
+    "policy_paths": ["https://www.karlancer.com/terms"]
   },
   {
     "name": "AnjamMidam_Iran",

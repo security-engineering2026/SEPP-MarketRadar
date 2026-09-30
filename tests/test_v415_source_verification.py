@@ -325,3 +325,10 @@ def test_row4_declared_policy_endpoint_counts_as_terms_evidence_without_terms_sl
     assert result["terms_status"] == "reviewed"
     connection.close()
 
+def test_row4_karlancer_registry_declares_official_policy_host_and_terms_path():
+    import json
+    from pathlib import Path
+    rows = json.loads((Path(__file__).parents[1] / "config" / "sources.json").read_text(encoding="utf-8"))
+    source = next(x for x in rows if x["name"] == "Karlancer_Iran")
+    assert source["policy_hosts"] == ["www.karlancer.com"]
+    assert source["policy_paths"] == ["https://www.karlancer.com/terms"]
