@@ -4001,7 +4001,13 @@
     "execution_ready": false,
     "discovery_basis": "existing_v4.14_registry",
     "policy_paths": [
+      "https://s.zigbang.com/agree/user-agreement-last.html",
+      "https://s.zigbang.com/agree/user-privacy-last.html",
       "https://www.zigbang.com/event/notice"
+    ],
+    "policy_hosts": [
+      "www.zigbang.com",
+      "s.zigbang.com"
     ]
   },
   {
@@ -4133,7 +4139,8 @@
     "execution_ready": false,
     "discovery_basis": "existing_v4.14_registry",
     "policy_paths": [
-      "https://www.superjob.ru/info/user_agreement.html",
+      "https://www.superjob.ru/info/hr_service.html",
+      "https://www.superjob.ru/info/hr_oferta.html",
       "https://www.superjob.ru/info/personalnye_dannye.html"
     ]
   },
@@ -4261,7 +4268,15 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_hosts": [
+      "tbilisi.headhunter.ge",
+      "headhunter.ge"
+    ],
+    "policy_paths": [
+      "https://tbilisi.headhunter.ge/terms",
+      "https://headhunter.ge/terms"
+    ]
   },
   {
     "name": "Headhunter_AZ",
