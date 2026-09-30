@@ -290,3 +290,38 @@ def test_row4_default_privacy_policy_candidate_can_close_terms(tmp_path):
     assert result["terms_evidence_url"] == "https://example.test/privacy-policy"
     assert result["terms_status"] == "reviewed"
     connection.close()
+
+def test_row4_declared_policy_endpoint_counts_as_terms_evidence_without_terms_slug(tmp_path):
+    from marketradar.db import connect
+    from marketradar.source_verification import SourceVerificationEngine
+
+    connection = connect(tmp_path / "row4-declared-policy-evidence.db")
+    source = {
+        "name": "Row4DeclaredPrivacyEndpointSource",
+        "base_url": "https://example.test/jobs",
+        "adapter": "json",
+        "status": "active",
+        "allow_hosts": ["example.test"],
+        "access_scope": "public",
+        "terms_status": "needs_review",
+        "policy_paths": ["/article/detail-590"],
+    }
+    engine = SourceVerificationEngine(connection, [source], search_provider=None, surface_scan_pages=1)
+
+    def fake_fetch(name, url=None):
+        if url is None:
+            return {"body": b"<html><body>Jobs</body></html>", "url": source["base_url"],
+                    "status": 200, "bytes": 32, "sha256": "home"}
+        if url == "https://example.test/article/detail-590":
+            return {"body": b"<html><body>Privacy Statement. This policy governs personal data.</body></html>",
+                    "url": url, "status": 200, "bytes": 88, "sha256": "policy"}
+        raise RuntimeError("not found")
+
+    engine.http.fetch = fake_fetch
+    engine.policy_http.fetch = fake_fetch
+    result = engine._one(source["name"])
+
+    assert result["terms_evidence_url"] == "https://example.test/article/detail-590"
+    assert result["terms_status"] == "reviewed"
+    connection.close()
+
