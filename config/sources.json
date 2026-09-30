@@ -229,7 +229,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.jobremotely.io/privacy"
+    ]
   },
   {
     "name": "Himalayas",
@@ -353,6 +356,10 @@
     "discovery_basis": "existing_v4.14_registry",
     "policy_hosts": [
       "hh.ru"
+    ],
+    "policy_paths": [
+      "https://hh.ru/terms",
+      "https://hh.ru/article/personal_data"
     ]
   },
   {
@@ -398,6 +405,10 @@
     "discovery_basis": "existing_v4.14_registry",
     "policy_hosts": [
       "hh.ru"
+    ],
+    "policy_paths": [
+      "https://hh.kz/terms",
+      "https://hh.kz/article/personal_data"
     ]
   },
   {
@@ -443,6 +454,10 @@
     "discovery_basis": "existing_v4.14_registry",
     "policy_hosts": [
       "hh.ru"
+    ],
+    "policy_paths": [
+      "https://hh.uz/terms",
+      "https://hh.uz/article/personal_data"
     ]
   },
   {
@@ -488,6 +503,10 @@
     "discovery_basis": "existing_v4.14_registry",
     "policy_hosts": [
       "hh.ru"
+    ],
+    "policy_paths": [
+      "https://headhunter.ge/terms",
+      "https://headhunter.ge/article/personal_data"
     ]
   },
   {
@@ -533,6 +552,10 @@
     "discovery_basis": "existing_v4.14_registry",
     "policy_hosts": [
       "hh.ru"
+    ],
+    "policy_paths": [
+      "https://hh1.az/terms",
+      "https://hh1.az/article/personal_data"
     ]
   },
   {
@@ -803,7 +826,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://help.wanted.co.kr/hc/en-us/articles/27666894700953-Terms-of-Use",
+      "https://www.wanted.co.kr/privacy"
+    ]
   },
   {
     "name": "Telegram_Authorized",
@@ -3555,7 +3582,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://example.akhtaboot.com/en/terms"
+    ]
   },
   {
     "name": "Naukrigulf",
@@ -3643,7 +3673,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.gulfjobs.com/terms-of-use",
+      "https://www.gulfjobs.com/privacy-policy"
+    ]
   },
   {
     "name": "Dubizzle_Jobs",
@@ -3685,7 +3719,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.dubizzle.com/legalhub/terms/",
+      "https://www.dubizzle.com/legalhub/privacy/"
+    ]
   },
   {
     "name": "KhaleejTimes_Jobs",
@@ -4050,7 +4088,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://hh.ru/terms",
+      "https://hh.ru/article/personal_data"
+    ]
   },
   {
     "name": "Rabota_Russia",
@@ -4496,7 +4538,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://rabota.by/terms"
+    ]
   },
   {
     "name": "Indeed_US",
