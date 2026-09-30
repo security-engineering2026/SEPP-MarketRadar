@@ -386,7 +386,11 @@ class SourceVerificationEngine:
             # surface_scan_pages limits successful evidence pages, not the number of
             # declared endpoints we may need to try when a provider returns 403/404.
             queue=list(dict.fromkeys(
-                explicit_policy_links + search_links + discovered_links + endpoint_links + default_policy_links
+                # Declared/search-discovered policy endpoints must be tried before
+                # generic same-host surface links. With a one-success-page budget,
+                # consuming the budget on an ordinary navigation page can hide a
+                # Terms/Privacy page that was already discoverable from the source.
+                explicit_policy_links + search_links + endpoint_links + discovered_links + default_policy_links
             ))
             seen=set(queue); fetched=0
             # Public internal surfaces are crawled shallowly so account limits, subscriptions, application rules, payout pages and terms are not missed merely because they are not linked from a policy page.
