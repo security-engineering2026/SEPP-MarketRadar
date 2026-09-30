@@ -3778,7 +3778,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://www.khaleejtimes.com/privacy-notice"
+    ]
   },
   {
     "name": "Mubawab_Jobs",
@@ -4240,7 +4243,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://hh.kz/terms",
+      "https://hh.kz/article/personal_data"
+    ]
   },
   {
     "name": "Headhunter_UZ",
@@ -4282,7 +4289,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://hh.uz/terms",
+      "https://hh.uz/article/personal_data"
+    ]
   },
   {
     "name": "Headhunter_GE",
