@@ -170,3 +170,32 @@ Use the newest main commit as the source of truth. Inspect the next GitHub Actio
 - Historical sections above remain audit history and are not to be interpreted as current execution instructions when they conflict with the current checkpoint.
 - Next action: inspect PR #73's actual qualification evidence/checks, then perform only the next required Row 4 action.
 
+
+
+## 2026-09-30 — Row 4 continuation checkpoint after live gate
+
+- Active branch: `qual/row4-mainline-integrated`.
+- Latest candidate commit: `8587804070d3c382f88bd6d5c82d1878426348ee` — `FIX: add verified Row 4 policy endpoints for Daijob and Zigbang`.
+- User pulled this commit successfully into the real Windows checkout.
+- The latest direct Windows Row 4 gate was executed after the preceding policy-classification fix and produced:
+  - active_sources=48
+  - checked=48
+  - terms_reviewed=29
+  - terms_pending=19
+  - terms_evidence_urls=29
+  - live_reachable=16
+  - dead=32
+  - surface_scan_pages=24
+  - max_workers=16
+  - max_policy_pages=3
+- Therefore Row 4 remains **OPEN**. Do not claim PASS.
+- Current pending sources from that exact gate:
+  `Bayt_MENA, Boss_Azerbaijan, CareerCross_Japan, Daijob_Japan, GulfTalent, GulfTalent_UAE, Headhunter_AZ, Headhunter_GE, HiredChina, JobSearch_Azerbaijan, Karlancer_Iran, Naukrigulf, Rabota_Russia, SuperJob_Russia, TokyoDev, TokyoDev_Japan, Typiran_Iran, WeWorkRemotely, Zigbang_Jobs`.
+- The preceding fix commits were:
+  - `cbd014e8e23706df3cb956af7846a8380fd73094c3`: recognize declared Row 4 policy evidence; expand terms URL classification.
+  - `5b58680e4a23e317b0e8559a57a8f9e5cb4e8aa3`: regression coverage for declared policy evidence without a terms slug.
+  - `8587804070d3c382f88bd6d5c82d1878426348ee`: add verified policy endpoints for Daijob and Zigbang.
+- The 29/19 result proves the classification fix closed 4 additional sources relative to the prior 25/23 result; remaining 19 are the next concrete blocker set.
+- Existing diagnostic evidence must be reused before asking for another broad diagnostic. In particular, prior runtime evidence already distinguishes 403, DNS, HOST_BOUNDARY, SSL, RESPONSE_TOO_LARGE, and live-but-unclassified sources.
+- Next engineering action: inspect the 19 remaining pending sources against the registry and existing runtime evidence, determine the smallest concrete policy-endpoint/runtime fix that can close a subset, implement it with regression coverage, commit it, then give the user only `git pull` followed by exactly one bounded Windows command.
+- Do not rerun the full qualification suite unnecessarily. Do not escalate to the Windows runner. Do not weaken the Row 4 criterion: every active source must have fetched Terms/Legal evidence and `terms_status=reviewed`.
