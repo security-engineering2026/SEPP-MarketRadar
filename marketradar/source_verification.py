@@ -184,6 +184,9 @@ class SourceVerificationEngine:
             policy_hosts=tuple(dict.fromkeys([*declared_policy_hosts, *operational_hosts]))
             policy_headers = dict(r.get('headers') or {})
             policy_headers['Accept'] = 'text/html,application/xhtml+xml,text/plain,*/*'
+            # Some public Terms pages reject API-style clients with 403. Policy evidence is an HTML surface, so use a browser-compatible identity without changing operational acquisition behavior.
+            policy_headers.setdefault('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0 Safari/537.36')
+            policy_headers.setdefault('Accept-Language', 'en-US,en;q=0.9')
             policy_sources.append(Source(
                 r['name'], _policy_origin(r, r.get('base_url','')),
                 r.get('adapter','json'), r.get('status','candidate'),
