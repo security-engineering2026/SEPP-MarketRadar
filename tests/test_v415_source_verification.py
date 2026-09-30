@@ -351,3 +351,56 @@ def test_row4_policy_registry_uses_verified_official_endpoints():
     by_name = {row['name']: row for row in rows}
     for name, url in expected.items():
         assert url in by_name[name].get('policy_paths', [])
+
+
+def test_row4_policy_fallback_uses_proxy_stack_without_disabling_tls(tmp_path, monkeypatch):
+    from marketradar.db import connect
+    from marketradar.source_verification import SourceVerificationEngine
+    import marketradar.source_verification as sv
+
+    connection = connect(tmp_path / "row4-policy-fallback.db")
+    source = {
+        "name": "Row4FallbackSource",
+        "base_url": "https://api.example.test/jobs",
+        "adapter": "json",
+        "status": "active",
+        "allow_hosts": ["api.example.test"],
+        "policy_hosts": ["www.example.test"],
+        "access_scope": "public",
+        "terms_status": "needs_review",
+    }
+    engine = SourceVerificationEngine(connection, [source], search_provider=None)
+
+    class FakeResponse:
+        status = 200
+        headers = {"Content-Type": "text/html; charset=utf-8"}
+        def read(self, limit):
+            return b"<html><body>Terms of Service</body></html>"
+        def geturl(self):
+            return "https://www.example.test/terms"
+        def close(self):
+            pass
+
+    class FakeOpener:
+        def open(self, request, timeout):
+            assert request.full_url == "https://www.example.test/terms"
+            assert request.get_header("User-agent")
+            return FakeResponse()
+
+    monkeypatch.setattr(sv.urllib.request, "build_opener", lambda *args: FakeOpener())
+    result = engine._policy_fetch_fallback(source["name"], "https://www.example.test/terms")
+
+    assert result["status"] == 200
+    assert result["url"] == "https://www.example.test/terms"
+    assert result["acquisition_provider"] == "policy-urlopen-fallback"
+    connection.close()
+
+
+def test_row4_policy_registry_includes_new_official_surfaces():
+    import json
+    from pathlib import Path
+    rows = json.loads((Path(__file__).parents[1] / "config" / "sources.json").read_text(encoding="utf-8"))
+    by_name = {row["name"]: row for row in rows}
+    assert "https://tbilisi.headhunter.ge/terms" in by_name["Headhunter_GE"].get("policy_paths", [])
+    assert "https://www.superjob.ru/info/hr_service.html" in by_name["SuperJob_Russia"].get("policy_paths", [])
+    assert "https://s.zigbang.com/agree/user-agreement-last.html" in by_name["Zigbang_Jobs"].get("policy_paths", [])
