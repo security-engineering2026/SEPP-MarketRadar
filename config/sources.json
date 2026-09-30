@@ -3899,7 +3899,8 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": ["https://www.daijob.com/en/top/terms","https://www.daijob.com/aboutdaijob/privacy/"]
   },
   {
     "name": "CareerCross_Japan",
@@ -3987,7 +3988,8 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": ["https://www.zigbang.com/event/notice"]
   },
   {
     "name": "HH_Russia",
