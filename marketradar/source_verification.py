@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, re, hashlib, urllib.error, urllib.request
+import json, re, hashlib, os, shutil, subprocess, tempfile, urllib.error, urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from html import unescape
@@ -279,8 +279,68 @@ class SourceVerificationEngine:
                 'acquisition_provider': 'policy-urlopen-fallback',
             }
 
+    def _policy_fetch_curl(self, name, url):
+        """Use system curl as a bounded policy-only transport fallback."""
+        curl = shutil.which("curl.exe") or shutil.which("curl")
+        if not curl:
+            raise RuntimeError("CURL_NOT_AVAILABLE")
+        source = self.policy_http.sources[name]
+        self.policy_http._validate_target(source, url)
+        headers = dict(source.headers)
+        headers.pop("Host", None)
+        body_path = None
+        try:
+            body_file = tempfile.NamedTemporaryFile(prefix="sepp-policy-", suffix=".body", delete=False)
+            body_path = body_file.name
+            body_file.close()
+            command = [
+                curl, "--silent", "--show-error",
+                "--max-time", str(max(1, int(self.policy_http.timeout))),
+                "--connect-timeout", str(max(1, int(self.policy_http.timeout))),
+                "--max-filesize", str(self.policy_http.max_bytes + 1),
+                "--output", body_path,
+                "--write-out", "%{http_code}\\t%{url_effective}\\t%{content_type}",
+                "--url", url,
+            ]
+            for key, value in headers.items():
+                if isinstance(key, str) and isinstance(value, str) and key.lower() not in {"host", "content-length"}:
+                    command.extend(["--header", f"{key}: {value}"])
+            completed = subprocess.run(
+                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                text=True, timeout=max(1.5, float(self.policy_http.timeout) + 1.0),
+                check=False,
+            )
+            if completed.returncode != 0:
+                detail = completed.stderr.strip()
+                raise RuntimeError(f"CURL_EXIT_{completed.returncode}" + (f": {detail[:240]}" if detail else ""))
+            meta = completed.stdout.strip().split("\\t", 2)
+            if len(meta) != 3:
+                raise RuntimeError("CURL_METADATA_INVALID")
+            status = int(meta[0])
+            final_url = meta[1] or url
+            content_type = meta[2] or ""
+            self.policy_http._validate_target(source, final_url)
+            with open(body_path, "rb") as handle:
+                body = handle.read(self.policy_http.max_bytes + 1)
+            if len(body) > self.policy_http.max_bytes:
+                raise ValueError("RESPONSE_TOO_LARGE")
+            if status < 200 or status >= 300:
+                raise urllib.error.HTTPError(final_url, status, "HTTP policy fetch failed", {}, None)
+            return {
+                "source": name, "url": final_url, "status": status,
+                "content_type": content_type.lower(), "bytes": len(body),
+                "sha256": hashlib.sha256(body).hexdigest(), "elapsed_ms": None,
+                "body": body, "attempts": 1, "acquisition_provider": "policy-curl-fallback",
+            }
+        finally:
+            if body_path:
+                try:
+                    os.unlink(body_path)
+                except OSError:
+                    pass
+
     def _bounded_policy_fetch_fallback(self, name, url):
-        """Run the proxy-stack fallback without letting a blocked resolver pin a worker."""
+        """Run policy fallbacks without letting a blocked resolver pin a worker."""
         result = []
         error = []
         def fetch():
@@ -293,11 +353,13 @@ class SourceVerificationEngine:
         worker.join(max(0.1, float(self.policy_http.timeout)))
         if worker.is_alive():
             raise TimeoutError("POLICY_FALLBACK_TIMEOUT")
-        if error:
-            raise error[0]
-        if not result:
-            raise RuntimeError("POLICY_FALLBACK_NO_RESULT")
-        return result[0]
+        if result:
+            return result[0]
+        first_error = error[0] if error else RuntimeError("POLICY_FALLBACK_NO_RESULT")
+        try:
+            return self._policy_fetch_curl(name, url)
+        except Exception:
+            raise first_error
 
     def _policy_search(self, r, text, links):
         """Use a search API only as an evidence locator; final classification still
