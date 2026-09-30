@@ -44,3 +44,8 @@ def test_source_policy_evidence_persists_to_db():
             assert row and row[0]=='iran_friendly_intermediary' and row[1]=='https://kaya.ir/' and row[2]=='2026-09-11' and row[3]=='iran_intermediary'
         finally:
             c.close()
+
+def test_karlancer_allows_canonical_www_redirect_host():
+    rows={r["name"]:r for r in load_source_records(ROOT/"config/sources.json")}
+    assert rows["Karlancer_Iran"]["base_url"]=="https://karlancer.com/"
+    assert set(rows["Karlancer_Iran"]["allow_hosts"]) >= {"karlancer.com","www.karlancer.com"}
