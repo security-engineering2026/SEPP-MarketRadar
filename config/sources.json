@@ -1057,7 +1057,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://jobvision.ir/terms"
+    ]
   },
   {
     "name": "IranTalent",
@@ -1334,7 +1337,7 @@
     "name": "Typiran_Iran",
     "base_url": "https://typiran.com/",
     "adapter": "html_jobs",
-    "status": "active",
+    "status": "candidate",
     "allow_hosts": [
       "typiran.com"
     ],
@@ -1351,10 +1354,10 @@
     "source_role": "job_marketplace",
     "iran_status": "ALLOW",
     "policy_lane": "DAILY_PROJECT_SCAN",
-    "daily_scan": true,
-    "needs_analysis": false,
+    "daily_scan": false,
+    "needs_analysis": true,
     "execution_capability": "manual_browser",
-    "notes": "Iran-local source; discovery lane. Terms/payment/KYC still require source-specific review before automated execution. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence.",
+    "notes": "Iran-local source; discovery lane. Terms/payment/KYC still require source-specific review before automated execution. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Moved out of active Row 4 scope because current official base endpoint fails DNS resolution; requires source revalidation before reactivation.",
     "source_origin": "iran_local",
     "iran_policy_basis": "iran_local_platform",
     "iran_policy_url": "https://typiran.com/",
@@ -1412,7 +1415,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://quera.org/terms"
+    ]
   },
   {
     "name": "Upwork",
@@ -4001,7 +4007,8 @@
     "policy_paths": [
       "https://www.careercross.com/en/article/detail-1697",
       "https://www.careercross.com/en/article/detail-1366",
-      "https://www.careercross.com/en/article/detail-604"
+      "https://www.careercross.com/en/article/detail-604",
+      "https://www.careercross.com/en/article/detail-1698"
     ]
   },
   {
@@ -4331,7 +4338,7 @@
     "name": "Headhunter_AZ",
     "base_url": "https://hh.az/",
     "adapter": "html_jobs",
-    "status": "active",
+    "status": "candidate",
     "allow_hosts": [
       "hh.az"
     ],
@@ -4348,10 +4355,10 @@
     "source_role": "job_marketplace",
     "iran_status": "UNKNOWN",
     "policy_lane": "GLOBAL_DISCOVERY",
-    "daily_scan": true,
+    "daily_scan": false,
     "needs_analysis": true,
     "execution_capability": "manual_browser",
-    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility.",
+    "notes": "Regional discovery source; source-specific terms and Iran access require verification. Public discovery lane; execution remains subject to opportunity-level eligibility, terms and payment evidence. Reclassified: Global source is not evidence of Iran eligibility. Moved out of active Row 4 scope because current official base endpoint fails DNS resolution; requires source revalidation before reactivation.",
     "source_origin": "direct_global",
     "iran_policy_basis": "not_verified",
     "iran_policy_url": "https://hh.az/",
