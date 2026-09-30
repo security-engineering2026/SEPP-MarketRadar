@@ -526,6 +526,9 @@ def test_row4_open_sources_terms_gate(tmp_path):
             search_provider=None,
         )
         results = engine.verify([r["name"] for r in pending])
+        assert {r["source"] for r in results} == {r["name"] for r in pending}, (
+            "Row 4 verifier must return exactly one result for every pending active source"
+        )
         unresolved = {
             r["source"]: {
                 "terms_status": r.get("terms_status"),
@@ -537,5 +540,22 @@ def test_row4_open_sources_terms_gate(tmp_path):
             if r.get("terms_status") != "reviewed" or not r.get("terms_evidence_url")
         }
         assert not unresolved, f"Row 4 terms gate unresolved: {unresolved}"
+
+        # Row 4 is an evidence gate, not only an in-memory fetch check.
+        # Persist the verifier output and prove that both runtime state tables
+        # retain the reviewed status and authoritative evidence URL.
+        engine.persist(results)
+        for source in pending:
+            name = source["name"]
+            persisted = connection.execute(
+                "SELECT terms_status, terms_evidence_url FROM sources WHERE name=?",
+                (name,),
+            ).fetchone()
+            verification = connection.execute(
+                "SELECT terms_evidence_url FROM source_verification_state WHERE source=?",
+                (name,),
+            ).fetchone()
+            assert persisted is not None and persisted[0] == "reviewed" and persisted[1]
+            assert verification is not None and verification[0] == persisted[1]
     finally:
         connection.close()
