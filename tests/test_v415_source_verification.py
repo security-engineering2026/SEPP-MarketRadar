@@ -516,6 +516,33 @@ def test_row4_open_sources_terms_gate(tmp_path):
 
     connection = connect(tmp_path / "row4-open-sources.db")
     try:
+        # Seed the same minimal runtime contract rows that production persistence
+        # updates; this prevents a false-positive test against an empty database.
+        for source in pending:
+            connection.execute(
+                "INSERT INTO sources(name,base_url,adapter,status,terms_status) VALUES(?,?,?,?,?)",
+                (
+                    source["name"],
+                    source["base_url"],
+                    source.get("adapter", "json"),
+                    source.get("status", "active"),
+                    source.get("terms_status", "needs_review"),
+                ),
+            )
+            connection.execute(
+                "INSERT INTO source_contracts(source,source_kind,acquisition,adapter,access_scope,verification_state,terms_status) VALUES(?,?,?,?,?,?,?)",
+                (
+                    source["name"],
+                    source.get("source_kind", "website"),
+                    source.get("acquisition", "http"),
+                    source.get("adapter", "json"),
+                    source.get("access_scope", "public"),
+                    source.get("verification_state", "unverified"),
+                    source.get("terms_status", "needs_review"),
+                ),
+            )
+        connection.commit()
+
         engine = SourceVerificationEngine(
             connection,
             pending,
