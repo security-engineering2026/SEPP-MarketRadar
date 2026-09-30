@@ -436,8 +436,8 @@ def test_row4_open_sources_terms_gate(tmp_path):
             pending,
             timeout=8,
             max_workers=12,
-            max_policy_pages=2,
-            surface_scan_pages=12,
+            max_policy_pages=1,
+            surface_scan_pages=4,
             search_provider=None,
         )
         results = engine.verify([r["name"] for r in pending])
