@@ -382,9 +382,12 @@ class SourceVerificationEngine:
             # Explicit registry URLs and search/discovered policy surfaces must win
             # over generic /terms guesses. A one-page gate otherwise spends its only
             # fetch on a 404/403 default candidate and never reaches the real Terms page.
+            # Keep every declared policy endpoint ahead of discovery/default guesses.
+            # surface_scan_pages limits successful evidence pages, not the number of
+            # declared endpoints we may need to try when a provider returns 403/404.
             queue=list(dict.fromkeys(
                 explicit_policy_links + search_links + discovered_links + endpoint_links + default_policy_links
-            ))[:self.surface_scan_pages]
+            ))
             seen=set(queue); fetched=0
             # Public internal surfaces are crawled shallowly so account limits, subscriptions, application rules, payout pages and terms are not missed merely because they are not linked from a policy page.
             while queue and fetched < self.surface_scan_pages:
