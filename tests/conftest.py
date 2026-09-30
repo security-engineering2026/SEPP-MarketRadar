@@ -4,8 +4,10 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+REPO_ROOT_STR = str(REPO_ROOT)
+while REPO_ROOT_STR in sys.path:
+    sys.path.remove(REPO_ROOT_STR)
+sys.path.insert(0, REPO_ROOT_STR)
 
 @pytest.fixture(scope="session", autouse=True)
 def isolate_market_radar_runtime(tmp_path_factory):
