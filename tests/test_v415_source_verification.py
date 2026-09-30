@@ -413,3 +413,44 @@ def test_row4_policy_registry_includes_new_official_surfaces():
     assert "https://tbilisi.headhunter.ge/terms" in by_name["Headhunter_GE"].get("policy_paths", [])
     assert "https://www.superjob.ru/info/hr_service.html" in by_name["SuperJob_Russia"].get("policy_paths", [])
     assert "https://s.zigbang.com/agree/user-agreement-last.html" in by_name["Zigbang_Jobs"].get("policy_paths", [])
+
+
+def test_row4_open_sources_terms_gate(tmp_path):
+    """Run the actual Row 4 verifier only for currently-open active sources."""
+    from marketradar.db import connect
+    from marketradar.source_verification import SourceVerificationEngine
+
+    rows = load_source_records(ROOT / "config" / "sources.json")
+    pending = [
+        r for r in rows
+        if r.get("status") == "active"
+        and r.get("terms_status") not in {"reviewed", "allowed", "n/a"}
+    ]
+    if not pending:
+        return
+
+    connection = connect(tmp_path / "row4-open-sources.db")
+    try:
+        engine = SourceVerificationEngine(
+            connection,
+            pending,
+            timeout=8,
+            max_workers=12,
+            max_policy_pages=2,
+            surface_scan_pages=12,
+            search_provider=None,
+        )
+        results = engine.verify([r["name"] for r in pending])
+        unresolved = {
+            r["source"]: {
+                "terms_status": r.get("terms_status"),
+                "terms_evidence_url": r.get("terms_evidence_url"),
+                "source_verification_state": r.get("source_verification_state"),
+                "error": r.get("error"),
+            }
+            for r in results
+            if r.get("terms_status") != "reviewed" or not r.get("terms_evidence_url")
+        }
+        assert not unresolved, f"Row 4 terms gate unresolved: {unresolved}"
+    finally:
+        connection.close()
