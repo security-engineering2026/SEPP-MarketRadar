@@ -405,6 +405,52 @@ def test_row4_policy_fallback_uses_proxy_stack_without_disabling_tls(tmp_path, m
     connection.close()
 
 
+def test_row4_declared_policy_endpoints_continue_after_first_fetch_failure(tmp_path):
+    from marketradar.db import connect
+    from marketradar.source_verification import SourceVerificationEngine
+
+    connection = connect(tmp_path / "row4-policy-retry.db")
+    source = {
+        "name": "Row4PolicyRetrySource",
+        "base_url": "https://www.example.test/jobs",
+        "adapter": "html",
+        "status": "active",
+        "allow_hosts": ["www.example.test"],
+        "access_scope": "public",
+        "terms_status": "needs_review",
+        "policy_paths": [
+            "https://www.example.test/terms",
+            "https://www.example.test/privacy",
+        ],
+    }
+    engine = SourceVerificationEngine(connection, [source], search_provider=False, surface_scan_pages=1)
+    seen = []
+
+    def fake_fetch(name, url=None):
+        if url is None:
+            return {"body": b"<html><body>Jobs</body></html>", "url": source["base_url"],
+                    "status": 200, "bytes": 32, "sha256": "home"}
+        seen.append(url)
+        if url == "https://www.example.test/terms":
+            raise RuntimeError("HTTPError: HTTP Error 403: Forbidden")
+        if url == "https://www.example.test/privacy":
+            return {"body": b"<html><body>Privacy Policy. These conditions apply to users.</body></html>",
+                    "url": url, "status": 200, "bytes": 74, "sha256": "privacy"}
+        raise RuntimeError("not found")
+
+    engine.http.fetch = fake_fetch
+    engine.policy_http.fetch = fake_fetch
+    result = engine._one(source["name"])
+
+    assert seen[:2] == [
+        "https://www.example.test/terms",
+        "https://www.example.test/privacy",
+    ]
+    assert result["terms_status"] == "reviewed"
+    assert result["terms_evidence_url"] == "https://www.example.test/privacy"
+    connection.close()
+
+
 def test_row4_absolute_declared_policy_url_preserves_its_host(tmp_path):
     from marketradar.db import connect
     from marketradar.source_verification import SourceVerificationEngine
