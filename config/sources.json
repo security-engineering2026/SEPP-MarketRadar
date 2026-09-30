@@ -4451,7 +4451,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
+    "policy_paths": [
+      "https://jobsearch.az/static/services"
+    ]
   },
   {
     "name": "Rabota_BY",
