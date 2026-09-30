@@ -311,11 +311,11 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
     "policy_paths": [
       "https://www.arbeitnow.com/terms",
       "https://www.arbeitnow.com/privacy"
-    ],
+    ]
   },
   {
     "name": "HH_RU",
@@ -1141,10 +1141,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
     "policy_paths": [
       "https://www.e-estekhdam.com/privacy-policy"
-    ],
+    ]
   },
   {
     "name": "Ponisha_Iran",
@@ -23316,10 +23316,10 @@
     "evidence_confidence": 0.85,
     "market_intelligence_value": "HIGH",
     "execution_ready": false,
-    "discovery_basis": "existing_v4.14_registry"
+    "discovery_basis": "existing_v4.14_registry",
     "policy_paths": [
       "https://kaya.ir/terms"
-    ],
+    ]
   },
   {
     "name": "ManMitonam_Iran",
