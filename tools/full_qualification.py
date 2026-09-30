@@ -295,7 +295,7 @@ def active_source_terms_gate():
             timeout=8,
             max_workers=16,
             max_policy_pages=3,
-            surface_scan_pages=8,
+            surface_scan_pages=24,
             search_provider=WebSearchProvider(timeout=8),
         )
         results = engine.verify([x["name"] for x in records])
@@ -326,7 +326,7 @@ def active_source_terms_gate():
             "pending_sources": terms_pending[:50],
             "criterion": "Every active source has fetched Terms/Legal evidence and terms_status=reviewed",
             "method": "bounded same-origin policy endpoint probing plus existing shallow source verification",
-            "surface_scan_pages": 8,
+            "surface_scan_pages": 24,
             "max_workers": 16,
             "max_policy_pages": 3,
         },
