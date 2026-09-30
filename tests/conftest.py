@@ -12,9 +12,21 @@ importlib.invalidate_caches()
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT_STR = str(REPO_ROOT)
-while REPO_ROOT_STR in sys.path:
-    sys.path.remove(REPO_ROOT_STR)
+
+# Normalize sys.path entries before forcing the repository root to the front.
+for _entry in list(sys.path):
+    try:
+        if Path(_entry or ".").resolve() == REPO_ROOT:
+            sys.path.remove(_entry)
+    except (OSError, RuntimeError):
+        pass
 sys.path.insert(0, REPO_ROOT_STR)
+
+# Purge again after path correction so any preloaded shadow package cannot survive.
+for _name in list(sys.modules):
+    if _name == "marketradar" or _name.startswith("marketradar."):
+        del sys.modules[_name]
+importlib.invalidate_caches()
 
 @pytest.fixture(scope="session", autouse=True)
 def isolate_market_radar_runtime(tmp_path_factory):
