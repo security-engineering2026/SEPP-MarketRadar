@@ -56,7 +56,7 @@ def test_row4_verification_fetches_direct_terms_candidate(tmp_path):
         "terms_status": "needs_review",
         "execution_capability": "authorized_api",
     }
-    engine = SourceVerificationEngine(connection, [source], search_provider=None, surface_scan_pages=1)
+    engine = SourceVerificationEngine(connection, [source], search_provider=False, surface_scan_pages=1)
 
     def fake_fetch(name, url=None):
         if url is None:
