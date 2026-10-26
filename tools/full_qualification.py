@@ -349,17 +349,63 @@ def active_source_terms_gate():
         )
         results = engine.verify([x["name"] for x in records])
         engine.persist(results)
+        persisted_rows = conn.execute("""
+            SELECT s.name, s.terms_status, s.terms_evidence_url,
+                   c.terms_status, c.terms_evidence_url, v.terms_evidence_url
+            FROM sources AS s
+            LEFT JOIN source_contracts AS c ON c.source=s.name
+            LEFT JOIN source_verification_state AS v ON v.source=s.name
+        """).fetchall()
+        persisted_by_name = {row[0]: row[1:] for row in persisted_rows}
+        persistence_missing = []
+        for source in records:
+            name = source["name"]
+            row = persisted_by_name.get(name)
+            if (
+                row is None
+                or str(row[0] or "").lower() != "reviewed"
+                or not row[1]
+                or str(row[2] or "").lower() != "reviewed"
+                or not row[3]
+                or not row[4]
+                or row[1] != row[3]
+                or row[1] != row[4]
+            ):
+                persistence_missing.append(name)
         conn.close()
 
     summary = summarize_active_source_terms(records, results)
     summary.update({
         "live_reachable": sum(x.get("source_verification_state") == "LIVE_CONFIRMED" for x in results),
         "dead": sum(x.get("source_verification_state") == "DEAD" for x in results),
-        "method": "bounded same-origin policy endpoint probing plus existing shallow source verification",
+        "persistence_complete": not persistence_missing,
+        "persistence_missing_sources": persistence_missing,
+        "source_evidence": [
+            {
+                "source": x.get("source"),
+                "terms_status": x.get("terms_status"),
+                "terms_evidence_url": x.get("terms_evidence_url"),
+                "verified_terms_urls": x.get("verified_terms_urls", []),
+                "source_verification_state": x.get("source_verification_state"),
+                "http_status": x.get("http_status"),
+                "last_verified_at": x.get("last_verified_at"),
+                "error": x.get("error"),
+            }
+            for x in sorted(results, key=lambda item: str(item.get("source", "")))
+        ],
+        "method": "bounded same-origin policy endpoint probing plus fetched evidence and three-table persistence verification",
         "surface_scan_pages": 24,
         "max_workers": 16,
         "max_policy_pages": 3,
     })
+    if persistence_missing:
+        summary["status"] = "OPEN"
+    artifact_dir = Path(os.environ.get("QUALIFICATION_ARTIFACT_DIR", "qualification-artifacts"))
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    (artifact_dir / "row4_active_source_terms.json").write_text(
+        json.dumps({"gate": "ACTIVE_SOURCE_TERMS_CLOSURE", **summary}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
     return gate("ACTIVE_SOURCE_TERMS_CLOSURE", summary.pop("status"), summary)
 
 def live_acquisition_sample_gate(sample_size=20):
