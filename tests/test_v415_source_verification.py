@@ -506,13 +506,8 @@ def test_row4_open_sources_terms_gate(tmp_path):
     from marketradar.source_verification import SourceVerificationEngine
 
     rows = load_source_records(ROOT / "config" / "sources.json")
-    pending = [
-        r for r in rows
-        if r.get("status") == "active"
-        and r.get("terms_status") not in {"reviewed", "allowed", "n/a"}
-    ]
-    if not pending:
-        return
+    pending = [r for r in rows if r.get("status") == "active"]
+    assert pending, "Row 4 must not silently pass when no active sources are present"
 
     connection = connect(tmp_path / "row4-open-sources.db")
     try:
