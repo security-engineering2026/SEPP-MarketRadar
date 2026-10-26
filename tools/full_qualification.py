@@ -186,52 +186,228 @@ def _select_acquisition_sample(records, sample_size=20):
             break
     return ordered
 
-def live_source_scale_gate(limit=500):
+def live_source_scale_gate(limit=None):
     from marketradar.db import connect, sync_source_contracts
     from marketradar.source_registry import load_source_records
     from marketradar.source_search import WebSearchProvider
     from marketradar.source_verification import SourceVerificationEngine
 
     records = load_source_records(ROOT / "config" / "sources.json")
-    if len(records) < limit:
+
+    target_path = ROOT / "config" / "source_targets.json"
+    target_config = json.loads(target_path.read_text(encoding="utf-8"))
+    discovery_minimum = int(target_config.get("discovery_pool_reference_minimum", 500))
+
+    requested = discovery_minimum if limit is None else int(limit)
+    checked_target = min(requested, len(records))
+
+    if checked_target < requested:
         return gate(
-            "LIVE_SOURCE_SCALE_BENCHMARK",
+            "LIVE_SOURCE_HEALTH_SCALE",
             "OPEN",
-            {"registered_records": len(records), "requested": limit, "reason": "Fewer than 500 registry candidates."},
+            {
+                "registered_records": len(records),
+                "requested": requested,
+                "reason": "Discovery pool is smaller than the configured verification batch.",
+            },
         )
 
-    selected = records
+    selected = records[:checked_target]
+
     with tempfile.TemporaryDirectory(prefix="mr-sources-") as td:
         conn = connect(Path(td) / "qualification.db")
         sync_source_contracts(conn, selected)
+
         engine = SourceVerificationEngine(
             conn,
             selected,
             timeout=8,
             max_workers=16,
             max_policy_pages=3,
+            surface_scan_pages=1,
             search_provider=WebSearchProvider(timeout=8),
         )
+
         results = engine.verify([x["name"] for x in selected])
-        confirmed = sum(x.get("source_verification_state") == "LIVE_CONFIRMED" for x in results)
-        dead = sum(x.get("source_verification_state") == "DEAD" for x in results)
+
+        states = [
+            str(x.get("source_verification_state") or "").upper()
+            for x in results
+        ]
+
+        confirmed = sum(x == "LIVE_CONFIRMED" for x in states)
+        dead = sum(x == "DEAD" for x in states)
+        unresolved = len(results) - confirmed - dead
+
+        complete_records = sum(bool(state) for state in states)
+
         conn.close()
 
+    complete = (
+        len(results) == checked_target
+        and complete_records == checked_target
+        and len(states) == checked_target
+    )
+
     return gate(
-        "LIVE_SOURCE_SCALE_BENCHMARK",
-        "PASS" if confirmed >= limit else "OPEN",
+        "LIVE_SOURCE_HEALTH_SCALE",
+        "PASS" if complete else "OPEN",
         {
+            "discovery_pool_reference_minimum": discovery_minimum,
+            "requested": requested,
             "candidate_registry": len(records),
             "checked": len(results),
+            "health_records_complete": complete_records,
             "live_reachable": confirmed,
             "dead": dead,
-            "other": len(results) - confirmed - dead,
-            "criterion": f"{limit} live-reachable source endpoints",
-            "method": "all current registry candidates verified; endpoint reachability only; not a connector-capability claim",
-            "blocking": False,
-            "contract": "strategic discovery-pool benchmark; not a final-release gate",
+            "unresolved": unresolved,
+            "criterion": (
+                f"{checked_target} source-health records processed and classified"
+            ),
+            "method": (
+                "bounded source-health verification; endpoint reachability "
+                "and health classification only; not an execution-readiness claim"
+            ),
+            "surface_scan_pages": 1,
+            "max_workers": 16,
+            "max_policy_pages": 3,
         },
     )
+def summarize_active_source_terms(records, results):
+    """Summarize Row 4 using both reviewed status and fetched evidence coverage."""
+    expected = {str(x["name"]) for x in records}
+    result_names = [str(x.get("source", "")) for x in results]
+    result_set = set(result_names)
+    duplicate_sources = sorted({name for name in result_names if result_names.count(name) > 1})
+    missing_sources = sorted(expected - result_set)
+    unexpected_sources = sorted(result_set - expected)
+    pending_details = [
+        {
+            "source": x.get("source"),
+            "terms_status": x.get("terms_status"),
+            "terms_evidence_url": x.get("terms_evidence_url"),
+            "source_verification_state": x.get("source_verification_state"),
+            "error": x.get("error"),
+        }
+        for x in results
+        if str(x.get("terms_status", "")).lower() != "reviewed"
+        or not str(x.get("terms_evidence_url") or "").strip()
+    ]
+    reviewed_with_evidence = sum(
+        str(x.get("terms_status", "")).lower() == "reviewed"
+        and bool(str(x.get("terms_evidence_url") or "").strip())
+        for x in results
+    )
+    evidence_urls = sum(bool(str(x.get("terms_evidence_url") or "").strip()) for x in results)
+    coverage_complete = (
+        len(results) == len(records)
+        and result_set == expected
+        and not duplicate_sources
+    )
+    complete = coverage_complete and reviewed_with_evidence == len(records) and not pending_details
+    return {
+        "status": "PASS" if complete else "OPEN",
+        "active_sources": len(records),
+        "checked": len(results),
+        "coverage_complete": coverage_complete,
+        "missing_sources": missing_sources,
+        "unexpected_sources": unexpected_sources,
+        "duplicate_sources": duplicate_sources,
+        "terms_reviewed": reviewed_with_evidence,
+        "terms_pending": len(pending_details),
+        "terms_evidence_urls": evidence_urls,
+        "pending_sources": [x["source"] for x in pending_details],
+        "pending_details": pending_details,
+        "criterion": "Every active source has fetched Terms/Legal evidence and terms_status=reviewed",
+    }
+
+
+def active_source_terms_gate():
+    from marketradar.db import connect, sync_source_contracts
+    from marketradar.source_registry import load_source_records
+    from marketradar.source_search import WebSearchProvider
+    from marketradar.source_verification import SourceVerificationEngine
+
+    records = [
+        x for x in load_source_records(ROOT / "config" / "sources.json")
+        if str(x.get("status", "")).lower() == "active" and x.get("base_url")
+    ]
+    if not records:
+        return gate("ACTIVE_SOURCE_TERMS_CLOSURE", "OPEN", {"reason": "No active sources with URLs."})
+
+    with tempfile.TemporaryDirectory(prefix="mr-row4-") as td:
+        conn = connect(Path(td) / "qualification.db")
+        sync_source_contracts(conn, records)
+        engine = SourceVerificationEngine(
+            conn,
+            records,
+            timeout=8,
+            max_workers=16,
+            max_policy_pages=3,
+            surface_scan_pages=24,
+            search_provider=WebSearchProvider(timeout=8),
+        )
+        results = engine.verify([x["name"] for x in records])
+        engine.persist(results)
+        persisted_rows = conn.execute("""
+            SELECT s.name, s.terms_status, s.terms_evidence_url,
+                   c.terms_status, c.terms_evidence_url, v.terms_evidence_url
+            FROM sources AS s
+            LEFT JOIN source_contracts AS c ON c.source=s.name
+            LEFT JOIN source_verification_state AS v ON v.source=s.name
+        """).fetchall()
+        persisted_by_name = {row[0]: row[1:] for row in persisted_rows}
+        persistence_missing = []
+        for source in records:
+            name = source["name"]
+            row = persisted_by_name.get(name)
+            if (
+                row is None
+                or str(row[0] or "").lower() != "reviewed"
+                or not row[1]
+                or str(row[2] or "").lower() != "reviewed"
+                or not row[3]
+                or not row[3]
+                or not row[4]
+                or row[1] != row[3]
+                or row[1] != row[4]
+            ):
+                persistence_missing.append(name)
+        conn.close()
+
+    summary = summarize_active_source_terms(records, results)
+    summary.update({
+        "live_reachable": sum(x.get("source_verification_state") == "LIVE_CONFIRMED" for x in results),
+        "dead": sum(x.get("source_verification_state") == "DEAD" for x in results),
+        "persistence_complete": not persistence_missing,
+        "persistence_missing_sources": persistence_missing,
+        "source_evidence": [
+            {
+                "source": x.get("source"),
+                "terms_status": x.get("terms_status"),
+                "terms_evidence_url": x.get("terms_evidence_url"),
+                "verified_terms_urls": x.get("verified_terms_urls", []),
+                "source_verification_state": x.get("source_verification_state"),
+                "http_status": x.get("http_status"),
+                "last_verified_at": x.get("last_verified_at"),
+                "error": x.get("error"),
+            }
+            for x in sorted(results, key=lambda item: str(item.get("source", "")))
+        ],
+        "method": "bounded same-origin policy endpoint probing plus fetched evidence and three-table persistence verification",
+        "surface_scan_pages": 24,
+        "max_workers": 16,
+        "max_policy_pages": 3,
+    })
+    if persistence_missing:
+        summary["status"] = "OPEN"
+    artifact_dir = Path(os.environ.get("QUALIFICATION_ARTIFACT_DIR", "qualification-artifacts"))
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    (artifact_dir / "row4_active_source_terms.json").write_text(
+        json.dumps({"gate": "ACTIVE_SOURCE_TERMS_CLOSURE", **summary}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return gate("ACTIVE_SOURCE_TERMS_CLOSURE", summary.pop("status"), summary)
 
 def live_acquisition_sample_gate(sample_size=20):
     from marketradar.db import connect, sync_source_contracts
@@ -354,6 +530,7 @@ def main():
         resilience_gate,
         live_discovery_gate,
         live_source_scale_gate,
+        active_source_terms_gate,
         live_acquisition_sample_gate,
         lambda: family_surface_gate("social"),
         lambda: family_surface_gate("procurement"),
