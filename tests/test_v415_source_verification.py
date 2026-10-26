@@ -591,3 +591,30 @@ def test_row4_open_sources_terms_gate(tmp_path):
             assert contract is not None and contract[0] == "reviewed" and contract[1] == persisted[1]
     finally:
         connection.close()
+
+
+def test_row4_closure_requires_fetched_evidence_for_every_active_source():
+    from tools.full_qualification import summarize_active_source_terms
+
+    records = [{"name": "SourceA"}, {"name": "SourceB"}]
+    results = [
+        {"source": "SourceA", "terms_status": "reviewed", "terms_evidence_url": "https://a.test/terms"},
+        # A stale/manual reviewed label without a fetched evidence URL must not pass.
+        {"source": "SourceB", "terms_status": "reviewed", "terms_evidence_url": None},
+    ]
+
+    summary = summarize_active_source_terms(records, results)
+    assert summary["status"] == "OPEN"
+    assert summary["terms_reviewed"] == 1
+    assert summary["pending_sources"] == ["SourceB"]
+
+    results[1]["terms_evidence_url"] = "https://b.test/legal"
+    summary = summarize_active_source_terms(records, results)
+    assert summary["status"] == "PASS"
+    assert summary["terms_reviewed"] == 2
+    assert summary["terms_evidence_urls"] == 2
+
+    summary = summarize_active_source_terms(records, results[:1])
+    assert summary["status"] == "OPEN"
+    assert summary["coverage_complete"] is False
+    assert summary["missing_sources"] == ["SourceB"]
