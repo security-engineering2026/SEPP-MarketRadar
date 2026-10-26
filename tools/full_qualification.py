@@ -368,8 +368,9 @@ def active_source_terms_gate():
                 or str(row[2] or "").lower() != "reviewed"
                 or not row[3]
                 or not row[4]
-                or row[1] != row[3]
-                or row[1] != row[4]
+                or not row[5]
+                or row[2] != row[4]
+                or row[2] != row[5]
             ):
                 persistence_missing.append(name)
         conn.close()
