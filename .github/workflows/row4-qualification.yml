@@ -31,3 +31,10 @@ jobs:
         shell: pwsh
         run: |
           python -c "import json; from tools.full_qualification import active_source_terms_gate; r=active_source_terms_gate(); print(json.dumps(r, ensure_ascii=False, indent=2)); raise SystemExit(0 if r['status'] == 'PASS' else 1)"
+      - name: Upload Row 4 evidence report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: row4-active-source-terms-evidence
+          path: qualification-artifacts/row4_active_source_terms.json
+          if-no-files-found: warn
