@@ -273,6 +273,55 @@ def live_source_scale_gate(limit=None):
             "max_policy_pages": 3,
         },
     )
+def summarize_active_source_terms(records, results):
+    """Summarize Row 4 using both reviewed status and fetched evidence coverage."""
+    expected = {str(x["name"]) for x in records}
+    result_names = [str(x.get("source", "")) for x in results]
+    result_set = set(result_names)
+    duplicate_sources = sorted({name for name in result_names if result_names.count(name) > 1})
+    missing_sources = sorted(expected - result_set)
+    unexpected_sources = sorted(result_set - expected)
+    pending_details = [
+        {
+            "source": x.get("source"),
+            "terms_status": x.get("terms_status"),
+            "terms_evidence_url": x.get("terms_evidence_url"),
+            "source_verification_state": x.get("source_verification_state"),
+            "error": x.get("error"),
+        }
+        for x in results
+        if str(x.get("terms_status", "")).lower() != "reviewed"
+        or not str(x.get("terms_evidence_url") or "").strip()
+    ]
+    reviewed_with_evidence = sum(
+        str(x.get("terms_status", "")).lower() == "reviewed"
+        and bool(str(x.get("terms_evidence_url") or "").strip())
+        for x in results
+    )
+    evidence_urls = sum(bool(str(x.get("terms_evidence_url") or "").strip()) for x in results)
+    coverage_complete = (
+        len(results) == len(records)
+        and result_set == expected
+        and not duplicate_sources
+    )
+    complete = coverage_complete and reviewed_with_evidence == len(records) and not pending_details
+    return {
+        "status": "PASS" if complete else "OPEN",
+        "active_sources": len(records),
+        "checked": len(results),
+        "coverage_complete": coverage_complete,
+        "missing_sources": missing_sources,
+        "unexpected_sources": unexpected_sources,
+        "duplicate_sources": duplicate_sources,
+        "terms_reviewed": reviewed_with_evidence,
+        "terms_pending": len(pending_details),
+        "terms_evidence_urls": evidence_urls,
+        "pending_sources": [x["source"] for x in pending_details],
+        "pending_details": pending_details,
+        "criterion": "Every active source has fetched Terms/Legal evidence and terms_status=reviewed",
+    }
+
+
 def active_source_terms_gate():
     from marketradar.db import connect, sync_source_contracts
     from marketradar.source_registry import load_source_records
@@ -302,35 +351,16 @@ def active_source_terms_gate():
         engine.persist(results)
         conn.close()
 
-    terms_reviewed = sum(str(x.get("terms_status", "")).lower() == "reviewed" for x in results)
-    terms_pending = [
-        x["source"] for x in results
-        if str(x.get("terms_status", "")).lower() != "reviewed"
-    ]
-    evidence_urls = sum(bool(x.get("terms_evidence_url")) for x in results)
-    live = sum(x.get("source_verification_state") == "LIVE_CONFIRMED" for x in results)
-    dead = sum(x.get("source_verification_state") == "DEAD" for x in results)
-
-    complete = len(results) == len(records) and terms_reviewed == len(records)
-    return gate(
-        "ACTIVE_SOURCE_TERMS_CLOSURE",
-        "PASS" if complete else "OPEN",
-        {
-            "active_sources": len(records),
-            "checked": len(results),
-            "terms_reviewed": terms_reviewed,
-            "terms_pending": len(terms_pending),
-            "terms_evidence_urls": evidence_urls,
-            "live_reachable": live,
-            "dead": dead,
-            "pending_sources": terms_pending[:50],
-            "criterion": "Every active source has fetched Terms/Legal evidence and terms_status=reviewed",
-            "method": "bounded same-origin policy endpoint probing plus existing shallow source verification",
-            "surface_scan_pages": 24,
-            "max_workers": 16,
-            "max_policy_pages": 3,
-        },
-    )
+    summary = summarize_active_source_terms(records, results)
+    summary.update({
+        "live_reachable": sum(x.get("source_verification_state") == "LIVE_CONFIRMED" for x in results),
+        "dead": sum(x.get("source_verification_state") == "DEAD" for x in results),
+        "method": "bounded same-origin policy endpoint probing plus existing shallow source verification",
+        "surface_scan_pages": 24,
+        "max_workers": 16,
+        "max_policy_pages": 3,
+    })
+    return gate("ACTIVE_SOURCE_TERMS_CLOSURE", summary.pop("status"), summary)
 
 def live_acquisition_sample_gate(sample_size=20):
     from marketradar.db import connect, sync_source_contracts
