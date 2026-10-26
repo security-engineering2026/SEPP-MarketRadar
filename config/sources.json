@@ -832,8 +832,13 @@
     "execution_ready": false,
     "discovery_basis": "existing_v4.14_registry",
     "policy_paths": [
-      "https://help.wanted.co.kr/hc/en-us/articles/27666894700953-Terms-of-Use",
-      "https://www.wanted.co.kr/privacy"
+      "https://www.wanted.co.kr/terms",
+      "https://www.wanted.co.kr/privacy",
+      "https://help.wanted.co.kr/hc/en-us/articles/27666894700953-Terms-of-Use"
+    ],
+    "policy_hosts": [
+      "www.wanted.co.kr",
+      "help.wanted.co.kr"
     ]
   },
   {
